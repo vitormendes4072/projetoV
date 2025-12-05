@@ -1,0 +1,26 @@
+# 1. SEGURANÇA (O mais importante)
+.env
+.venv
+env/
+venv/
+instance/
+
+# 2. Arquivos Compilados do Python (Lixo gerado automaticamente)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 3. Banco de Dados Local (Se um dia usar SQLite)
+*.sqlite
+*.db
+
+# 4. Logs e Depuração
+*.log
+
+# 5. Configurações de IDE (Opcional, mas bom para não subir config da sua máquina)
+.vscode/
+.idea/
+
+# 6. Arquivos de Sistema (Windows/Mac)
+.DS_Store
+Thumbs.db
