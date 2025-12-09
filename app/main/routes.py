@@ -44,7 +44,8 @@ def menu():
             'id': 'settings',
             'title': 'Configurações',
             'description': 'Dados da conta e segurança.',
-            'route': '#',
+            # O url_for(...) gera o link "/settings" correto
+            'route': url_for('settings.index'),
             'color': 'secondary'
         }
     ]
