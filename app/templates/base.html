@@ -25,7 +25,7 @@
         
         <div class="flex items-center gap-4">
             <span class="text-sm text-[#49739c] font-medium hidden md:block">Olá, {{ current_user.name.split()[0] }}</span>
-            <a href="{{ url_for('main.logout') }}" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e7edf4] text-[#0d141c] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d0dbe7] transition-colors">
+            <a href="{{ url_for('auth.logout') }}" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e7edf4] text-[#0d141c] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d0dbe7] transition-colors">
                 Sair
             </a>
         </div>
