@@ -1,7 +1,7 @@
 # app/settings/forms.py
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField # <--- Adicione PasswordField
-from wtforms.validators import DataRequired, Email, Length, ValidationError
+from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo
 from flask_login import current_user
 from app.models.user import User
 
@@ -19,3 +19,15 @@ class UpdateAccountForm(FlaskForm):
             user = User.query.filter_by(email=email.data).first()
             if user:
                 raise ValidationError('Este e-mail já está em uso por outra conta.')
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Senha Atual', validators=[DataRequired()])
+    new_password = PasswordField('Nova Senha', validators=[
+        DataRequired(),
+        Length(min=8, message="A nova senha deve ter no mínimo 8 caracteres.")
+    ])
+    confirm_password = PasswordField('Confirmar Nova Senha', validators=[
+        DataRequired(),
+        EqualTo('new_password', message='As senhas não conferem.')
+    ])
+    submit_password = SubmitField('Atualizar Senha')

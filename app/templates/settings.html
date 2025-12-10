@@ -3,6 +3,7 @@
 {% block content %}
 <div class="flex flex-col gap-6 py-4 relative">
     
+    <!-- Cabeçalho -->
     <div class="flex items-center gap-4">
         <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
@@ -13,6 +14,7 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Menu Lateral -->
         <div class="hidden lg:block lg:col-span-1">
             <div class="rounded-xl border border-[#d0dbe7] bg-white overflow-hidden shadow-sm">
                 <div class="p-4 bg-slate-50 border-b border-[#d0dbe7]">
@@ -27,7 +29,10 @@
             </div>
         </div>
 
+        <!-- Área Principal -->
         <div class="lg:col-span-2">
+            
+            <!-- CARD 1: DADOS PESSOAIS -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
                 <h2 class="text-xl font-bold text-[#0d141c] mb-6">Dados Pessoais</h2>
                 
@@ -58,75 +63,217 @@
                         </button>
                     </div>
 
+                    <!-- MODAL PERFIL (VERMELHO) -->
                     <div id="securityModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 backdrop-blur-sm">
-                        
                         <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden animate-jump-in">
-                            
                             <div class="bg-red-50 p-4 border-b border-red-100 flex items-center gap-3">
                                 <div class="p-2 bg-red-100 rounded-full text-red-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                 </div>
                                 <h3 class="text-lg font-bold text-[#0d141c]">Confirmação de Segurança</h3>
                             </div>
-                            
                             <div class="p-6 flex flex-col gap-4">
-                                <p class="text-sm text-slate-600">
-                                    Para sua segurança, confirme sua senha atual para salvar as alterações na conta.
-                                </p>
-                                
+                                <p class="text-sm text-slate-600">Confirme sua senha atual para salvar as alterações.</p>
                                 <label class="flex flex-col gap-1">
                                     <span class="text-sm font-medium text-[#0d141c]">Sua senha atual</span>
-                                    {{ form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-red-500 h-12 px-4", placeholder="Digite para confirmar", autofocus=True) }}
+                                    {{ form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-red-500 h-12 px-4", placeholder="Digite para confirmar", id="current_password") }}
                                     {% for error in form.current_password.errors %}
+                                        <p class="text-red-500 text-xs mt-1 font-medium">{{ error }}</p>
+                                    {% endfor %}
+                                </label>
+                            </div>
+                            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-slate-700 font-medium hover:bg-white transition-colors">Cancelar</button>
+                                {{ form.submit(class_="cursor-pointer px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors", value="Confirmar e Salvar") }}
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- CARD 2: ALTERAÇÃO DE SENHA -->
+            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm mt-6">
+                <h2 class="text-xl font-bold text-[#0d141c] mb-6">Alterar Senha</h2>
+                
+                <form method="POST" id="passwordForm" class="flex flex-col gap-5">
+                    {{ password_form.hidden_tag() }}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="flex flex-col gap-1">
+                            <span class="text-sm font-medium text-[#0d141c]">Nova Senha</span>
+                            
+                            {{ password_form.new_password(
+                                class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", 
+                                id="new_pass_input",
+                                value=password_form.new_password.data or '' 
+                            ) }}
+                            
+                            <span id="js_error_new" class="text-red-500 text-xs font-bold hidden"></span>
+                            {% for error in password_form.new_password.errors %}
+                                <span class="text-red-500 text-xs">{{ error }}</span>
+                            {% endfor %}
+                        </label>
+
+                        <label class="flex flex-col gap-1">
+                            <span class="text-sm font-medium text-[#0d141c]">Confirmar Nova Senha</span>
+                            
+                            {{ password_form.confirm_password(
+                                class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", 
+                                id="confirm_pass_input",
+                                value=password_form.confirm_password.data or ''
+                            ) }}
+                            
+                            <span id="js_error_confirm" class="text-red-500 text-xs font-bold hidden"></span>
+                            {% for error in password_form.confirm_password.errors %}
+                                <span class="text-red-500 text-xs">{{ error }}</span>
+                            {% endfor %}
+                        </label>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-end">
+                        <button type="button" onclick="validateAndOpenPasswordModal()" class="cursor-pointer rounded-lg bg-slate-800 text-white font-bold h-10 px-6 hover:bg-slate-900 transition-colors">
+                            Atualizar Senha
+                        </button>
+                    </div>
+
+                    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 backdrop-blur-sm">
+                        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden animate-jump-in">
+                            <div class="bg-slate-800 p-4 border-b border-slate-700 flex items-center gap-3">
+                                <div class="p-2 bg-slate-700 rounded-full text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                </div>
+                                <h3 class="text-lg font-bold text-white">Confirme a Troca</h3>
+                            </div>
+                            
+                            <div class="p-6 flex flex-col gap-4">
+                                <p class="text-sm text-slate-600">Para definir sua nova senha, digite a <strong>senha atual</strong>.</p>
+                                <label class="flex flex-col gap-1">
+                                    <span class="text-sm font-medium text-[#0d141c]">Senha Atual</span>
+                                    
+                                    {{ password_form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-slate-800 h-12 px-4", placeholder="Senha antiga", id="modal_current_password") }}
+                                    
+                                    {% for error in password_form.current_password.errors %}
                                         <p class="text-red-500 text-xs mt-1 font-medium">{{ error }}</p>
                                     {% endfor %}
                                 </label>
                             </div>
 
                             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-slate-700 font-medium hover:bg-white transition-colors">
-                                    Cancelar
-                                </button>
-                                {{ form.submit(class_="cursor-pointer px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors", value="Confirmar e Salvar") }}
+                                <button type="button" onclick="closePasswordModal()" class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-slate-700 font-medium hover:bg-white transition-colors">Cancelar</button>
+                                {{ password_form.submit_password(class_="cursor-pointer px-4 py-2 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors", value="Confirmar Troca") }}
                             </div>
                         </div>
                     </div>
-                    </form> </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const modal = document.getElementById('securityModal');
-    const passwordInput = document.getElementById('current_password'); // O ID padrão gerado pelo WTForms
+    // ============================================================
+    // 1. RESTAURAÇÃO DE SENHAS (Bypass de Segurança do Navegador)
+    // ============================================================
+    document.addEventListener("DOMContentLoaded", function() {
+        // Pega os valores enviados pelo Python de forma segura (JSON)
+        // Se for None, vira uma string vazia ""
+        const serverNewPass = {{ (password_form.new_password.data or '') | tojson }};
+        const serverConfirmPass = {{ (password_form.confirm_password.data or '') | tojson }};
 
-    function openModal() {
-        // Remove a classe 'hidden' e adiciona 'flex' para mostrar
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        // Coloca o foco no campo de senha automaticamente
-        setTimeout(() => { passwordInput.focus(); }, 100);
-    }
-
-    function closeModal() {
-        // Esconde de volta
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        // Limpa o campo de senha se cancelar
-        passwordInput.value = '';
-    }
-
-    // Fecha o modal se clicar fora da caixa branca (no fundo escuro)
-    modal.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            closeModal();
+        // Força o preenchimento dos campos se houver dados
+        if (serverNewPass) {
+            const newInput = document.getElementById('new_pass_input');
+            if (newInput) newInput.value = serverNewPass;
+        }
+        
+        if (serverConfirmPass) {
+            const confirmInput = document.getElementById('confirm_pass_input');
+            if (confirmInput) confirmInput.value = serverConfirmPass;
         }
     });
 
-    // Se houver erro de validação na senha (vindo do backend), abre o modal automaticamente
-    // para o usuário ver o erro.
+    // ============================================================
+    // 2. LÓGICA DOS MODAIS (Existente)
+    // ============================================================
+    
+    // --- PERFIL (VERMELHO) ---
+    const profileModal = document.getElementById('securityModal');
+    const profilePassInput = document.getElementById('current_password');
+
+    function openModal() {
+        profileModal.classList.remove('hidden');
+        profileModal.classList.add('flex');
+        setTimeout(() => { if(profilePassInput) profilePassInput.focus(); }, 100);
+    }
+    function closeModal() {
+        profileModal.classList.add('hidden');
+        profileModal.classList.remove('flex');
+        if(profilePassInput) profilePassInput.value = '';
+    }
+
+    // --- SENHA (ESCURO) ---
+    const passModal = document.getElementById('passwordModal');
+    const passInput = document.getElementById('modal_current_password');
+    const newPassInput = document.getElementById('new_pass_input');
+    const confirmPassInput = document.getElementById('confirm_pass_input');
+    const errorNew = document.getElementById('js_error_new');
+    const errorConfirm = document.getElementById('js_error_confirm');
+
+    // Função A: Abre Modal NA MARRA (Usada pelo Backend quando tem erro)
+    function forceOpenPasswordModal() {
+        passModal.classList.remove('hidden');
+        passModal.classList.add('flex');
+        setTimeout(() => { if(passInput) passInput.focus(); }, 100);
+    }
+
+    // Função B: Valida antes de abrir (Usada pelo Botão do Usuário)
+    function validateAndOpenPasswordModal() {
+        errorNew.classList.add('hidden');
+        errorConfirm.classList.add('hidden');
+        newPassInput.classList.remove('border-red-500');
+        confirmPassInput.classList.remove('border-red-500');
+
+        let isValid = true;
+        const newPass = newPassInput.value;
+        const confirmPass = confirmPassInput.value;
+
+        if (newPass.length < 8) {
+            errorNew.innerText = "A senha deve ter pelo menos 8 caracteres.";
+            errorNew.classList.remove('hidden');
+            newPassInput.classList.add('border-red-500');
+            isValid = false;
+        }
+        if (newPass !== confirmPass) {
+            errorConfirm.innerText = "As senhas não conferem.";
+            errorConfirm.classList.remove('hidden');
+            confirmPassInput.classList.add('border-red-500');
+            isValid = false;
+        }
+
+        if (!isValid) return; 
+
+        forceOpenPasswordModal();
+    }
+
+    function closePasswordModal() {
+        passModal.classList.add('hidden');
+        passModal.classList.remove('flex');
+        if(passInput) passInput.value = '';
+    }
+
+    // Fechar clicando fora
+    window.onclick = function(event) {
+        if (event.target == profileModal) closeModal();
+        if (event.target == passModal) closePasswordModal();
+    }
+
+    // --- DETECÇÃO DE ERROS DO BACKEND ---
     {% if form.current_password.errors %}
         openModal();
+    {% endif %}
+
+    {% if password_form.current_password.errors %}
+        forceOpenPasswordModal();
     {% endif %}
 </script>
 

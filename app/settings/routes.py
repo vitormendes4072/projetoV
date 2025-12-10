@@ -5,11 +5,11 @@ from flask_mail import Message
 from threading import Thread
 from itsdangerous import URLSafeTimedSerializer
 from app import db, mail
-from .forms import UpdateAccountForm
+from .forms import UpdateAccountForm, ChangePasswordForm
 
 settings_bp = Blueprint('settings', __name__)
 
-# --- FUNÇÃO AUXILIAR DE ENVIO DE E-MAIL ---
+# --- FUNÇÕES AUXILIARES ---
 def send_async_email(app, msg):
     with app.app_context():
         try:
@@ -19,7 +19,6 @@ def send_async_email(app, msg):
 
 def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    # Geramos um token contendo o NOVO e-mail dentro dele
     token = s.dumps({'new_email': new_email}, salt='email-update')
     
     msg = Message('Confirme seu novo E-mail - Marketplace Manager',
@@ -28,14 +27,9 @@ def send_update_email(user, new_email):
     link = url_for('settings.confirm_email_update', token=token, _external=True)
     
     msg.body = f'''Olá, {user.name}!
-Recebemos um pedido para alterar o e-mail da sua conta para este endereço.
-
-Para confirmar essa mudança, clique no link abaixo:
+Para confirmar a troca de e-mail, clique no link abaixo:
 {link}
-
-Se não foi você, ignore este e-mail. Sua conta permanece segura com o e-mail antigo.
 '''
-    # Envia em background
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
 # --- ROTAS ---
@@ -43,58 +37,81 @@ Se não foi você, ignore este e-mail. Sua conta permanece segura com o e-mail a
 @settings_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
 def index():
-    form = UpdateAccountForm()
-    
-    if form.validate_on_submit():
-        # 1. Verifica Senha (Segurança)
-        if not current_user.check_password(form.current_password.data):
-            flash('Senha incorreta. Alterações canceladas.', 'danger')
-            return render_template('settings.html', form=form)
-        
-        # 2. Atualiza o NOME imediatamente (não precisa de confirmação)
-        if form.name.data != current_user.name:
-            current_user.name = form.name.data
-            db.session.commit()
-            flash('Nome atualizado com sucesso!', 'success')
+    account_form = UpdateAccountForm()
+    password_form = ChangePasswordForm()
 
-        # 3. Lógica do E-MAIL (Segurança Crítica)
-        if form.email.data != current_user.email:
-            # NÃO salvamos no banco ainda!
-            # Enviamos o e-mail para o endereço NOVO para ver se ele existe/pertence ao usuário
-            send_update_email(current_user, form.email.data)
-            flash(f'Um link de confirmação foi enviado para {form.email.data}. O e-mail da conta só mudará após você clicar no link.', 'info')
+    # ==========================================================
+    # 1. LÓGICA DO PERFIL (Nome/Email) - MODAL VERMELHO
+    # ==========================================================
+    if 'submit' in request.form and account_form.validate_on_submit():
         
-        return redirect(url_for('settings.index'))
-    
-    elif request.method == 'GET':
-        form.name.data = current_user.name
-        form.email.data = current_user.email
+        # VERIFICAÇÃO DE SENHA (BACKEND)
+        if not current_user.check_password(account_form.current_password.data):
+            # TRUQUE DE UX:
+            # Em vez de flash, adicionamos o erro ao campo.
+            # O JavaScript no HTML detecta isso e reabre o modal automaticamente.
+            account_form.current_password.errors.append('Senha incorreta. Tente novamente.')
         
-    return render_template('settings.html', form=form)
+        else:
+            # Se a senha estiver certa, prossegue...
+            has_changes = False
+            
+            if account_form.name.data != current_user.name:
+                current_user.name = account_form.name.data
+                db.session.commit()
+                flash('Nome atualizado!', 'success')
+                has_changes = True
+            
+            if account_form.email.data != current_user.email:
+                send_update_email(current_user, account_form.email.data)
+                flash(f'Link de confirmação enviado para {account_form.email.data}', 'info')
+                has_changes = True
+
+            if has_changes:
+                return redirect(url_for('settings.index'))
+
+    # ==========================================================
+    # 2. LÓGICA DA SENHA (Troca de Senha) - MODAL ESCURO
+    # ==========================================================
+    if 'submit_password' in request.form and password_form.validate_on_submit():
+        
+        # VERIFICAÇÃO DE SENHA ATUAL (BACKEND)
+        if not current_user.check_password(password_form.current_password.data):
+            # TRUQUE DE UX: Adiciona erro ao campo para reabrir o modal escuro
+            password_form.current_password.errors.append('A senha atual informada está incorreta.')
+        
+        else:
+            # Tudo certo, troca a senha
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash('Sua senha foi alterada com sucesso!', 'success')
+            return redirect(url_for('settings.index'))
+
+    # Preenchimento inicial (GET)
+    if request.method == 'GET':
+        account_form.name.data = current_user.name
+        account_form.email.data = current_user.email
+
+    return render_template('settings.html', form=account_form, password_form=password_form)
+
 
 @settings_bp.route('/settings/confirm_email/<token>')
 @login_required
 def confirm_email_update(token):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
-        # Tenta ler o token e extrair o email (expira em 1 hora)
         data = s.loads(token, salt='email-update', max_age=3600)
         new_email = data.get('new_email')
     except:
-        flash('O link de confirmação é inválido ou expirou.', 'danger')
+        flash('Link inválido ou expirado.', 'danger')
         return redirect(url_for('settings.index'))
     
-    # Verifica se esse email já não foi pego por outro usuário nesse meio tempo
-    from app.models.user import User # Importação local para evitar ciclo
+    from app.models.user import User
     if User.query.filter_by(email=new_email).first():
-        flash('Este e-mail já está sendo usado por outra conta.', 'danger')
+        flash('Este e-mail já está em uso.', 'danger')
         return redirect(url_for('settings.index'))
     
-    # AGORA SIM: Atualiza o banco de dados
     current_user.email = new_email
-    # Opcional: Re-confirmar a conta se quiser, mas assumimos que o link prova existência
-    current_user.confirmed = True 
     db.session.commit()
-    
-    flash('Seu e-mail foi atualizado com sucesso!', 'success')
+    flash('E-mail atualizado com sucesso!', 'success')
     return redirect(url_for('settings.index'))
