@@ -1,9 +1,8 @@
 # app/precificacao/routes.py
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request # <--- Adicione request
 from flask_login import login_required
 from .forms import CalculatorForm
 
-# Define o Blueprint 'pricing' (ou precificacao)
 pricing = Blueprint('pricing', __name__)
 
 @pricing.route('/calculator', methods=['GET', 'POST'])
@@ -11,6 +10,26 @@ pricing = Blueprint('pricing', __name__)
 def calculator():
     form = CalculatorForm()
     results = None
+    
+    # --- NOVO: LÓGICA DE PREENCHIMENTO AUTOMÁTICO ---
+    # Se for um acesso GET (carregando a página) e tiver parâmetros na URL:
+    if request.method == 'GET':
+        price_arg = request.args.get('price')
+        cost_arg = request.args.get('cost')
+        
+        # Se veio na URL, joga dentro do campo do formulário
+        if price_arg:
+            try:
+                form.price.data = float(price_arg)
+            except:
+                pass # Se não for número, ignora
+                
+        if cost_arg:
+            try:
+                form.cost.data = float(cost_arg)
+            except:
+                pass
+    # ------------------------------------------------
     
     if form.validate_on_submit():
         price = form.price.data

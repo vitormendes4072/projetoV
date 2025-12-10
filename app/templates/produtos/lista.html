@@ -63,6 +63,15 @@
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center gap-3">
+                                <a href="{{ url_for('pricing.calculator', price=product.price, cost=product.cost) }}" 
+                                    class="text-green-600 hover:text-green-800 font-medium text-xs flex items-center gap-1" 
+                                    title="Calcular Lucro">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5a2.25 2.25 0 012.25 2.25v12a2.25 2.25 0 01-2.25 2.25H8.25A2.25 2.25 0 016 20.25V8.25A2.25 2.25 0 018.25 6z" /></svg>
+                                    Lucro
+                                </a>
+
+                                <span class="text-slate-300">|</span>
+
                                 <a href="{{ url_for('produtos.editar_produto', product_id=product.id) }}" class="text-blue-600 hover:text-blue-800 font-medium text-xs">Editar</a>
                                 
                                 <span class="text-slate-300">|</span>
