@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-8">
+    
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{{ url_for('produtos.lista_produtos') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+        </a>
+        <div>
+            <h1 class="text-[#0d141c] text-2xl font-bold">Histórico de Alterações</h1>
+            <p class="text-slate-500 text-sm">Produto: <span class="font-bold text-[#0d141c]">{{ product.name }}</span> ({{ product.sku }})</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
+        <table class="w-full text-left text-sm text-[#0d141c]">
+            <thead class="bg-slate-50 border-b border-[#d0dbe7]">
+                <tr>
+                    <th class="px-6 py-4 font-bold">Data / Hora</th>
+                    <th class="px-6 py-4 font-bold">Ação</th>
+                    <th class="px-6 py-4 font-bold text-right">Preço</th>
+                    <th class="px-6 py-4 font-bold text-right">Custo</th>
+                    <th class="px-6 py-4 font-bold text-right">Estoque</th>
+                    <th class="px-6 py-4 font-bold">Usuário</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#d0dbe7]">
+                {% for entry in historico %}
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4 text-slate-500">
+                        {{ entry.changed_at.strftime('%d/%m/%Y às %H:%M:%S') }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 rounded text-xs font-bold
+                            {% if 'Criação' in entry.action_type %} bg-green-100 text-green-700
+                            {% else %} bg-blue-50 text-blue-700 {% endif %}">
+                            {{ entry.action_type }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono">
+                        R$ {{ "%.2f"|format(entry.price) }}
+                    </td>
+                    <td class="px-6 py-4 text-right font-mono text-slate-500">
+                        R$ {{ "%.2f"|format(entry.cost) }}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        {{ entry.stock_quantity }}
+                    </td>
+                    <td class="px-6 py-4 text-xs text-slate-500">
+                        {{ entry.user.name }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="p-8 text-center text-slate-500">
+                        Nenhum histórico registrado para este produto.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -30,7 +30,7 @@ def menu():
             'id': 'products',
             'title': 'Meus Produtos',
             'description': 'Cadastre, edite e gerencie seu inventário.',
-            'route': '#', 
+            'route': url_for('produtos.lista_produtos'), 
             'color': 'info'
         },
         {

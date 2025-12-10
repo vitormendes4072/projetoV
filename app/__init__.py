@@ -72,11 +72,13 @@ def create_app(config_name=env_name):
     from app.main.routes import main
     from app.precificacao.routes import pricing
     from app.settings.routes import settings_bp
+    from app.produtos.routes import produtos_bp
 
     app.register_blueprint(auth)
     app.register_blueprint(main)
     app.register_blueprint(pricing)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(produtos_bp)
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
