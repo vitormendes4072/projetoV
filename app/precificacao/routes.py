@@ -1,6 +1,8 @@
 # app/precificacao/routes.py
-from flask import Blueprint, render_template, request # <--- Adicione request
-from flask_login import login_required
+from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask_login import login_required, current_user
+from app import db
+from app.models.pricing import PricingHistory # Importe o modelo novo
 from .forms import CalculatorForm
 
 pricing = Blueprint('pricing', __name__)
@@ -11,27 +13,15 @@ def calculator():
     form = CalculatorForm()
     results = None
     
-    # --- NOVO: LÓGICA DE PREENCHIMENTO AUTOMÁTICO ---
-    # Se for um acesso GET (carregando a página) e tiver parâmetros na URL:
+    # Preenchimento via URL (Mantido)
     if request.method == 'GET':
         price_arg = request.args.get('price')
         cost_arg = request.args.get('cost')
-        
-        # Se veio na URL, joga dentro do campo do formulário
-        if price_arg:
-            try:
-                form.price.data = float(price_arg)
-            except:
-                pass # Se não for número, ignora
-                
-        if cost_arg:
-            try:
-                form.cost.data = float(cost_arg)
-            except:
-                pass
-    # ------------------------------------------------
+        if price_arg: form.price.data = float(price_arg)
+        if cost_arg: form.cost.data = float(cost_arg)
     
     if form.validate_on_submit():
+        # Cálculos (Mantidos)
         price = form.price.data
         cost = form.cost.data
         fba_fee = form.fba_fee.data
@@ -62,4 +52,30 @@ def calculator():
                 'product_cost': cost
             }
         }
-    return render_template('calculator.html', form=form, results=results)
+
+        # --- LÓGICA DE SALVAR ---
+        # Verifica se o botão clicado foi o de salvar
+        if form.save.data:
+            historico = PricingHistory(
+                user_id=current_user.id,
+                title=form.title.data or f"Simulação R$ {price:.2f}",
+                price=price,
+                cost=cost,
+                fba_fee=fba_fee,
+                referral_fee=referral_pct,
+                tax_rate=tax_pct,
+                marketing=marketing,
+                net_profit=net_profit,
+                margin=margin,
+                roi=roi
+            )
+            db.session.add(historico)
+            db.session.commit()
+            flash('Simulação salva no histórico!', 'success')
+            # Redireciona para limpar o POST (PRG Pattern)
+            return redirect(url_for('pricing.calculator'))
+
+    # Carrega o histórico para mostrar na tela (Últimos 10)
+    history_items = PricingHistory.query.filter_by(user_id=current_user.id).order_by(PricingHistory.created_at.desc()).limit(10).all()
+
+    return render_template('calculator.html', form=form, results=results, history=history_items)
