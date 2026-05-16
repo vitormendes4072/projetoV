@@ -184,7 +184,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#d0dbe7]">
-                        {% for item in history %}
+                        {% for item in history.items %}
                         <tr class="hover:bg-slate-50">
                             <td class="px-6 py-4 font-medium">{{ item.title }}</td>
                             <td class="px-6 py-4 text-right">R$ {{ "%.2f"|format(item.price) }}</td>
@@ -204,5 +204,23 @@
             </div>
         </div>
     </div>
+
+    {% if history.pages > 1 %}
+    <div class="flex justify-center items-center gap-2 mt-4">
+        {% if history.has_prev %}
+        <a href="{{ url_for('pricing.calculator', page=history.prev_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">Anterior</a>
+        {% endif %}
+        {% for p in history.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <a href="{{ url_for('pricing.calculator', page=p) }}" class="px-3 py-1 rounded border text-sm {% if p == history.page %} bg-[#0d80f2] text-white border-[#0d80f2] {% else %} border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 {% endif %}">{{ p }}</a>
+            {% else %}
+            <span class="px-2 text-slate-400">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if history.has_next %}
+        <a href="{{ url_for('pricing.calculator', page=history.next_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">Próxima</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

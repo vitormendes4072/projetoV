@@ -26,7 +26,7 @@
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#d0dbe7]">
-                {% for entry in historico %}
+                {% for entry in historico.items %}
                 <tr class="hover:bg-slate-50">
                     <td class="px-6 py-4 text-slate-500">
                         {{ entry.changed_at.strftime('%d/%m/%Y às %H:%M:%S') }}
@@ -61,5 +61,23 @@
             </tbody>
         </table>
     </div>
+
+    {% if historico.pages > 1 %}
+    <div class="flex justify-center items-center gap-2 mt-4">
+        {% if historico.has_prev %}
+        <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=historico.prev_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">Anterior</a>
+        {% endif %}
+        {% for p in historico.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=p) }}" class="px-3 py-1 rounded border text-sm {% if p == historico.page %} bg-[#0d80f2] text-white border-[#0d80f2] {% else %} border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 {% endif %}">{{ p }}</a>
+            {% else %}
+            <span class="px-2 text-slate-400">…</span>
+            {% endif %}
+        {% endfor %}
+        {% if historico.has_next %}
+        <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=historico.next_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">Próxima</a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -76,6 +76,7 @@ def calculator():
             flash('Simulação salva no histórico!', 'success')
             return redirect(url_for('pricing.calculator'))
 
-    history_items = PricingHistory.query.filter_by(user_id=current_user.id).order_by(PricingHistory.created_at.desc()).limit(10).all()
+    page = request.args.get('page', 1, type=int)
+    history_items = PricingHistory.query.filter_by(user_id=current_user.id).order_by(PricingHistory.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
 
     return render_template('calculator.html', form=form, results=results, history=history_items, is_mei=is_mei)
