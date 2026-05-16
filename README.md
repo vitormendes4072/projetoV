@@ -81,7 +81,7 @@ users
 | E-mail | Flask-Mail + Gmail SMTP |
 | Segurança | Flask-Talisman (CSP/HTTPS) + Flask-Limiter |
 | Tokens | itsdangerous 2.2 (URLSafeTimedSerializer) |
-| Frontend | Tailwind CSS 3 via CDN |
+| Frontend | Tailwind CSS 3 (build local via CLI standalone) |
 | Deploy | Supabase (PostgreSQL) + qualquer WSGI host |
 
 ---
@@ -142,6 +142,36 @@ python run.py
 Acesse: `http://127.0.0.1:5000`
 
 O banco é criado automaticamente via `db.create_all()` na primeira execução.
+
+### 4. (Opcional) Rebuildar o CSS
+
+O CSS do Tailwind já vem versionado em `app/static/css/tailwind.css` (29KB minificado). Você só precisa rebuildá-lo se editar templates com classes novas.
+
+**Setup do binário (uma vez):**
+
+```bash
+# Windows
+mkdir tools
+curl -L -o tools/tailwindcss.exe https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-windows-x64.exe
+
+# Linux
+curl -L -o tools/tailwindcss https://github.com/tailwindlabs/tailwindcss/releases/download/v3.4.17/tailwindcss-linux-x64
+chmod +x tools/tailwindcss
+```
+
+**Build de produção:**
+
+```bash
+tools/tailwindcss.exe -i app/static/src/input.css -o app/static/css/tailwind.css --minify
+```
+
+**Modo watch (desenvolvimento):**
+
+```bash
+tools/tailwindcss.exe -i app/static/src/input.css -o app/static/css/tailwind.css --watch
+```
+
+Sem Node.js, sem `npm install` — o binário standalone (39MB) já inclui PostCSS, autoprefixer e os plugins `@tailwindcss/forms` e `@tailwindcss/container-queries`.
 
 ---
 

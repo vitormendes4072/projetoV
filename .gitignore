@@ -24,3 +24,7 @@ __pycache__/
 # 6. Arquivos de Sistema (Windows/Mac)
 .DS_Store
 Thumbs.db
+
+# 7. Binários de build (Tailwind CLI standalone — baixar conforme README)
+tools/
+node_modules/
