@@ -42,9 +42,7 @@ def create_app(config_name=env_name):
         'script-src': [
             '\'self\'',
             'https://cdn.jsdelivr.net',
-            'https://cdnjs.cloudflare.com',
-            'https://cdn.tailwindcss.com',
-            '\'unsafe-eval\''
+            'https://cdnjs.cloudflare.com'
         ],
         'style-src': [
             '\'self\'',
