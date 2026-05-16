@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import event
 from app import create_app, db as _db
 from app.models.user import User
 from app.models.product import Product, ProductHistory
@@ -33,6 +34,11 @@ def app():
 @pytest.fixture(scope="function")
 def db(app):
     with app.app_context():
+        # Habilita FK enforcement no SQLite (desabilitado por padrão)
+        @event.listens_for(_db.engine, "connect")
+        def set_sqlite_pragma(conn, _):
+            conn.execute("PRAGMA foreign_keys=ON")
+
         _db.metadata.create_all(_db.engine, tables=SQLITE_TABLES)
         yield _db
         _db.session.remove()

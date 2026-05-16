@@ -25,7 +25,20 @@ class User(UserMixin, db.Model):
     default_tax_rate = db.Column(db.Numeric(5, 2), default=4.0)
 
     # Relacionamento: um usuário tem muitos produtos
-    products = db.relationship("Product", backref="owner", lazy="dynamic")
+    products = db.relationship(
+        "Product",
+        backref="owner",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    pricing_history = db.relationship(
+        "PricingHistory",
+        backref="user",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     # Relacionamento 1:1 com credenciais Amazon
     amazon_credentials = db.relationship(
