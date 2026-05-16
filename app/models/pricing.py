@@ -6,7 +6,7 @@ class PricingHistory(db.Model):
     __tablename__ = 'pricing_history'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
     
     # Identificação (Opcional)
     title = db.Column(db.String(100), nullable=True, default="Simulação")

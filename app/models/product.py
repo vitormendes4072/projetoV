@@ -19,7 +19,7 @@ class Product(db.Model):
     stock_quantity = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(500), nullable=True)
     
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
@@ -35,7 +35,7 @@ class ProductHistory(db.Model):
     __tablename__ = 'product_history'
 
     id = db.Column(db.Integer, primary_key=True)
-    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete="CASCADE"), nullable=False)
     
     # O que mudou? Vamos salvar o estado crítico
     price = db.Column(db.Numeric(10, 2))
