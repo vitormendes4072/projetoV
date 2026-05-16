@@ -1,11 +1,14 @@
 # app/auth/routes.py
+import logging
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
 import time
-from threading import Thread # <--- MELHORIA DE PERFORMANCE
-from urllib.parse import urlsplit # <--- MELHORIA DE SEGURANÇA
+from threading import Thread
+from urllib.parse import urlsplit
+
+logger = logging.getLogger(__name__)
 
 # Importações locais
 from app import db, mail, limiter
@@ -23,7 +26,7 @@ def send_async_email(app, msg):
         try:
             mail.send(msg)
         except Exception as e:
-            print(f"ERRO EMAIL ASYNC: {e}")
+            logger.exception("Falha ao enviar email async")
 
 def send_reset_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])

@@ -1,4 +1,5 @@
 # app/settings/routes.py
+import logging
 from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
 from flask_mail import Message
@@ -6,6 +7,8 @@ from threading import Thread
 from itsdangerous import URLSafeTimedSerializer
 from app import db, mail
 from .forms import UpdateAccountForm, ChangePasswordForm, BusinessSettingsForm
+
+logger = logging.getLogger(__name__)
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -15,7 +18,7 @@ def send_async_email(app, msg):
         try:
             mail.send(msg)
         except Exception as e:
-            print(f"ERRO EMAIL SETTINGS: {e}")
+            logger.exception("Falha ao enviar email de confirmação")
 
 def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
@@ -96,7 +99,7 @@ def index():
             return redirect(url_for('settings.index'))
         else:
             # DEBUG: Mostra no terminal por que falhou (ex: "Campo Obrigatório")
-            print("ERRO AO SALVAR CONFIG FISCAL:", business_form.errors)
+            logger.warning("Falha ao salvar config fiscal: %s", business_form.errors)
 
     # Preenchimento inicial (GET)
     if request.method == 'GET':

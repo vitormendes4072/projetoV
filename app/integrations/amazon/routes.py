@@ -1,6 +1,9 @@
 # app/integrations/amazon/routes.py
+import logging
 import os
 import uuid
+
+logger = logging.getLogger(__name__)
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -130,7 +133,7 @@ def status():
 def connect():
     data = request.get_json(force=True) or {}
     # debug: pode remover depois
-    print("AMAZON CONNECT PAYLOAD:", data)
+    logger.debug("Amazon connect payload: %s", data)
 
     required = [
         "marketplace_id",
@@ -180,7 +183,7 @@ def test_connection():
         orders = list_orders(conn, created_after_iso=created_after)
         return jsonify({"ok": True, "orders_found": len(orders), "created_after": created_after})
     except Exception as e:
-        print("TEST ERROR:", repr(e))
+        logger.exception("Erro ao testar conexão Amazon")
         return jsonify({"ok": False, "error": repr(e), "created_after": created_after}), 400
 
 
@@ -229,7 +232,7 @@ def _sync_orders_and_items(conn: AmazonConnection, created_after_iso: str):
         try:
             items = list_order_items(conn, amazon_order_id)
         except Exception as e:
-            print(f"[WARN] Falha ao buscar itens do pedido {amazon_order_id}: {repr(e)}")
+            logger.warning("Falha ao buscar itens do pedido %s: %s", amazon_order_id, e)
             continue
 
         for it in items:
@@ -320,7 +323,7 @@ def sync_orders_only():
     try:
         orders = list_orders(conn, created_after_iso=created_after)
     except Exception as e:
-        print("SYNC_ORDERS_ONLY ERROR:", repr(e))
+        logger.exception("Erro em sync_orders_only")
         return jsonify({"ok": False, "error": repr(e), "created_after": created_after}), 400
 
     upserted = 0
@@ -384,7 +387,7 @@ def sync_orders():
         return jsonify({"ok": True, "from": start_iso, "orders": orders_upserted, "items": items_inserted, "returned": returned})
     except Exception as e:
         db.session.rollback()
-        print("SYNC_ORDERS ERROR:", repr(e))
+        logger.exception("Erro em sync_orders")
         return jsonify({"ok": False, "error": repr(e), "from": start_iso}), 400
 
 
@@ -433,7 +436,7 @@ def sync_finances():
         return jsonify({"ok": True, "from": start_iso, "financial_events": events_count, "wipe": wipe})
     except Exception as e:
         db.session.rollback()
-        print("SYNC_FINANCES ERROR:", repr(e))
+        logger.exception("Erro em sync_finances")
         return jsonify({"ok": False, "error": repr(e), "from": start_iso}), 400
 
 
@@ -482,7 +485,7 @@ def sync_full():
         )
     except Exception as e:
         db.session.rollback()
-        print("SYNC_FULL ERROR:", repr(e))
+        logger.exception("Erro em sync_full")
         return jsonify({"ok": False, "error": repr(e), "from": start_iso}), 400
 
 
