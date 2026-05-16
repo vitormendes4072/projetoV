@@ -1,7 +1,7 @@
 # app/settings/forms.py
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, PasswordField # <--- Adicione PasswordField
-from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo
+from wtforms import StringField, SubmitField, PasswordField, SelectField, FloatField # <--- Adicione PasswordField
+from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo, InputRequired
 from flask_login import current_user
 from app.models.user import User
 
@@ -31,3 +31,16 @@ class ChangePasswordForm(FlaskForm):
         EqualTo('new_password', message='As senhas não conferem.')
     ])
     submit_password = SubmitField('Atualizar Senha')
+
+class BusinessSettingsForm(FlaskForm):
+    tax_regime = SelectField('Regime Tributário', choices=[
+        ('simples', 'Simples Nacional'),
+        ('mei', 'MEI (Microempreendedor Individual)'),
+        ('presumido', 'Lucro Presumido'),
+        ('real', 'Lucro Real')
+    ])
+    
+    # 2. Use InputRequired aqui. Ele permite o valor 0.0!
+    default_tax_rate = FloatField('Alíquota Padrão de Imposto (%)', validators=[InputRequired()])
+    
+    submit_business = SubmitField('Salvar Configuração Fiscal')

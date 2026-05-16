@@ -1,0 +1,19 @@
+Olá, {{ user_name }}!
+
+Aqui estão seus alertas de custos fixos ({{ run_day }}).
+
+{% if due_items and due_items|length > 0 -%}
+VENCENDO HOJE:
+{% for it in due_items -%}
+- {{ it.nome }} ({{ it.categoria }}) — R$ {{ it.valor_mensal }} — vence em {{ it.vencimento }}
+{% endfor %}
+{% endif %}
+
+{% if before_items and before_items|length > 0 -%}
+VENCENDO EM {{ days_before }} DIA(S):
+{% for it in before_items -%}
+- {{ it.nome }} ({{ it.categoria }}) — R$ {{ it.valor_mensal }} — vence em {{ it.vencimento }}
+{% endfor %}
+{% endif %}
+
+Dica: você pode ajustar isso em Financeiro → Alertas.

@@ -1,61 +1,148 @@
 # app/main/routes.py
 from flask import Blueprint, render_template, url_for, redirect
 from flask_login import login_required, current_user
-# REMOVIDO: from app.forms import CalculatorForm (Não é mais usado aqui)
+from werkzeug.routing import BuildError
 
-main = Blueprint('main', __name__)
+main = Blueprint("main", __name__)
 
-@main.route('/')
+
+def safe_url_for(endpoint: str, fallback: str = "#") -> str:
+    """
+    Gera url_for(endpoint) sem quebrar a página caso o endpoint não exista.
+    """
+    try:
+        return url_for(endpoint)
+    except BuildError:
+        return fallback
+
+
+@main.route("/")
 def index():
     # Se já estiver logado, redireciona para a rota oficial do menu
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu')) # <--- MELHORIA DE UX
-    
-    # Aqui seria sua Landing Page (Página de vendas do SaaS)
-    # Por enquanto usamos o base.html ou login
-    return redirect(url_for('auth.login')) 
+        return redirect(url_for("main.menu"))
 
-@main.route('/menu')
+    # Landing Page futura (SaaS). Por enquanto, manda para login.
+    return redirect(url_for("auth.login"))
+
+
+@main.route("/menu")
 @login_required
 def menu():
-    tools = [
-        {
-            'id': 'dashboard',
-            'title': 'Dashboard & Analytics',
-            'description': 'Visão geral de vendas, lucros e métricas.',
-            'route': url_for('main.dashboard'),
-            'color': 'primary'
-        },
-        {
-            'id': 'products',
-            'title': 'Meus Produtos',
-            'description': 'Cadastre, edite e gerencie seu inventário.',
-            'route': url_for('produtos.lista_produtos'), 
-            'color': 'info'
-        },
-        {
-            'id': 'pricing',
-            'title': 'Calculadora de Preços',
-            'description': 'Simule margens de lucro e taxas.',
-            'route': url_for('pricing.calculator'), # Aponta para o módulo novo
-            'color': 'success'
-        },
-        {
-            'id': 'settings',
-            'title': 'Configurações',
-            'description': 'Dados da conta e segurança.',
-            # O url_for(...) gera o link "/settings" correto
-            'route': url_for('settings.index'),
-            'color': 'secondary'
-        }
-    ]
-    return render_template('menu.html', tools=tools)
+    # Rotas (calculadas 1x para não repetir safe_url_for várias vezes)
+    vendas_url = safe_url_for("vendas.index")
+    estoque_url = safe_url_for("estoque.index")
+    relatorios_url = safe_url_for("relatorios.index")
 
-@main.route('/dashboard')
+    # Para calculator/settings você confirmou que existe URL direta:
+    calculator_url = safe_url_for("main.calculator", fallback="/calculator")
+    settings_url = safe_url_for("main.settings", fallback="/settings")
+
+    tools = [
+        # ✅ EXISTE - Dashboard
+        {
+            "id": "dashboard",
+            "title": "Dashboard",
+            "description": "Visão geral de vendas, lucro, margem e alertas do negócio.",
+            "route": safe_url_for("main.dashboard"),
+            "color": "primary",
+            "enabled": True,
+        },
+
+        # ✅ EXISTE - Financeiro
+        {
+            "id": "finance_alertas",
+            "title": "Alertas Financeiros",
+            "description": "Acompanhe alertas de custo, margem, estoque e inconsistências.",
+            "route": safe_url_for("financeiro.alertas"),
+            "color": "warning",
+            "enabled": True,
+        },
+        {
+            "id": "finance_custos_fixos",
+            "title": "Custos Fixos",
+            "description": "Cadastre e controle custos fixos: vencimentos, categorias e totais.",
+            "route": safe_url_for("financeiro.custos_fixos"),
+            "color": "success",
+            "enabled": True,
+        },
+
+        # ✅ EXISTE - Produtos / Cadastro
+        {
+            "id": "products",
+            "title": "Produtos (SKUs)",
+            "description": "Cadastre produtos, SKUs e custos base.",
+            "route": safe_url_for("produtos.criar_produto"),
+            "color": "primary",
+            "enabled": True,
+        },
+
+        # ✅ EXISTE - Precificação (Simulador FBA)
+        # Se endpoint não existir, cai em /calculator, então segue enabled
+        {
+            "id": "pricing",
+            "title": "Precificação",
+            "description": "Simulador FBA: calcule e salve cenários de lucro.",
+            "route": safe_url_for("pricing.calculator", fallback="/calculator"),
+            "color": "primary",
+            "enabled": calculator_url != "#",
+        },
+
+        # ❌ Em breve (se não existir blueprint)
+        {
+            "id": "sales",
+            "title": "Vendas",
+            "description": "Consulte pedidos, performance por período e detalhamento por SKU.",
+            "route": vendas_url,
+            "color": "success",
+            "enabled": vendas_url != "#",
+            "badge": None if vendas_url != "#" else "Em breve",
+        },
+        {
+            "id": "inventory",
+            "title": "Estoque & Reposição",
+            "description": "Controle estoque e sugira reposição por lead time e giro.",
+            "route": estoque_url,
+            "color": "warning",
+            "enabled": estoque_url != "#",
+            "badge": None if estoque_url != "#" else "Em breve",
+        },
+        {
+            "id": "reports",
+            "title": "Relatórios",
+            "description": "Gere relatórios (CSV/PDF) e consolide indicadores por SKU e período.",
+            "route": relatorios_url,
+            "color": "primary",
+            "enabled": relatorios_url != "#",
+            "badge": None if relatorios_url != "#" else "Em breve",
+        },
+
+        # ✅ EXISTE - Configurações
+        # Se endpoint não existir, cai em /settings, então segue enabled
+        {
+            "id": "settings",
+            "title": "Configurações",
+            "description": "Dados da conta, parâmetros e configuração fiscal.",
+            "route": safe_url_for("settings.index", fallback="/settings"),
+            "color": "default",
+            "enabled": settings_url != "#",
+        },
+
+        {
+            "id": "amazon_orders",
+            "title": "Pedidos Amazon",
+            "description": "Listar pedidos importados da Amazon e ver lucro por pedido.",
+            "route": "/integrations/amazon/orders",
+            "color": "primary",
+            "enabled": True,
+        },
+
+    ]
+
+    return render_template("menu.html", tools=tools)
+
+
+@main.route("/dashboard")
 @login_required
 def dashboard():
-    # MELHORIA: Usa um template para manter a barra de navegação
-    # Crie um arquivo simples dashboard.html ou use o base com uma mensagem
-    return render_template('base.html', content="<h1>Dashboard em Construção 🚧</h1>") 
-    # Obs: Para isso funcionar bonito, o base.html precisaria de um ajuste, 
-    # mas por enquanto evita a tela branca da morte.
+    return render_template("dashboard.html")

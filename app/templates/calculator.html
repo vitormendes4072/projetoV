@@ -16,6 +16,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {% if is_mei %}
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-r">
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-bold text-blue-800">Regime MEI Detectado</p>
+                    <p class="text-sm text-blue-700">Seu imposto foi definido automaticamente como <strong>0%</strong> pois o MEI paga uma taxa fixa mensal (DAS), não por venda.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- COLUNA 1: FORMULÁRIO -->
         <div class="lg:col-span-2">
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">

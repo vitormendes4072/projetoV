@@ -24,3 +24,7 @@ __pycache__/
 # 6. Arquivos de Sistema (Windows/Mac)
 .DS_Store
 Thumbs.db
+
+# 7. Diretorios locais (worktrees do Claude, logs)
+.claude/
+logs/

@@ -1,16 +1,17 @@
 # app/produtos/forms.py
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, SubmitField
-from wtforms.validators import DataRequired, Length, ValidationError
+from wtforms.validators import DataRequired, Length, ValidationError, Optional, NumberRange
 from app.models.product import Product
 
 class ProductForm(FlaskForm):
     name = StringField('Nome do Produto', validators=[DataRequired(), Length(min=2, max=200)])
     sku = StringField('SKU (Código Interno)', validators=[DataRequired(), Length(max=50)])
-    asin = StringField('ASIN (Amazon)', validators=[Length(max=20)])
     
-    price = FloatField('Preço de Venda (R$)', validators=[DataRequired()])
+    price = FloatField('Preço de referência (opcional)', validators=[Optional(), NumberRange(min=0)], default=0.0)
     cost = FloatField('Custo de Aquisição (R$)', validators=[DataRequired()])
+    packaging_cost = FloatField('Custo de Embalagem (R$)', validators=[Optional(), NumberRange(min=0)], default=0.0)
+
     stock_quantity = IntegerField('Estoque Atual', default=0)
     image_url = StringField('URL da Imagem (Opcional)')
     submit = SubmitField('Salvar Produto')
