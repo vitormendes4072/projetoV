@@ -1,0 +1,414 @@
+<!-- app/templates/amazon/orders.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto py-6 flex flex-col gap-6">
+
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{{ url_for('main.menu') }}"
+         class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+      </a>
+
+      <div>
+        <h1 class="text-[#0d141c] text-2xl font-bold">Pedidos Amazon</h1>
+        <p class="text-[#49739c] text-sm">Lista de pedidos sincronizados via SP-API.</p>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="btnSyncOrders"
+        class="rounded-lg bg-slate-800 text-white font-bold h-10 px-5 hover:bg-slate-900 transition-colors">
+        Sincronizar pedidos
+      </button>
+
+      <button id="btnSyncItems"
+        class="rounded-lg border border-[#d0dbe7] bg-white text-slate-800 font-bold h-10 px-5 hover:bg-slate-50 transition-colors">
+        Sincronizar itens (15)
+      </button>
+    </div>
+  </div>
+
+  <div id="syncResult" class="hidden rounded-lg border p-3"></div>
+
+  <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+    <div class="flex flex-wrap gap-2">
+      <button type="button" class="status-filter filter-btn" data-filter="ALL">Todos</button>
+      <button type="button" class="status-filter filter-btn" data-filter="Shipped">Enviado</button>
+      <button type="button" class="status-filter filter-btn" data-filter="Pending">Pendente</button>
+      <button type="button" class="status-filter filter-btn" data-filter="Canceled">Cancelado</button>
+    </div>
+
+    <div class="w-full sm:w-72">
+      <input id="searchOrders" type="text"
+        class="w-full rounded-lg border border-[#d0dbe7] bg-white h-10 px-3 focus:border-[#0d80f2] focus:ring-0"
+        placeholder="Buscar por Order ID..." />
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+      <span class="font-bold text-slate-800 text-sm">Últimos pedidos</span>
+      <span class="text-xs text-slate-500">Mostrando até 200</span>
+    </div>
+
+    {% if orders|length == 0 %}
+      <div class="p-8 text-center text-slate-600">
+        Nenhum pedido no banco ainda.<br>
+        Clique em <strong>Sincronizar pedidos</strong>.
+      </div>
+    {% else %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="text-left px-4 py-3 w-10"></th>
+              <th class="text-left px-4 py-3">Amazon Order ID</th>
+              <th class="text-left px-4 py-3">Data</th>
+              <th class="text-left px-4 py-3">Status</th>
+              <th class="text-left px-4 py-3">Total</th>
+              <th class="text-left px-4 py-3">Moeda</th>
+              <th class="text-left px-4 py-3">Ações</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% set status_map = {
+              "Shipped": "Enviado",
+              "Pending": "Pendente",
+              "Canceled": "Cancelado",
+              "Unshipped": "Não enviado",
+              "PartiallyShipped": "Parcialmente enviado",
+              "InvoiceUnconfirmed": "Fatura não confirmada",
+              "Unfulfillable": "Não processável"
+            } %}
+
+            {% for o in orders %}
+              {% set raw_status = o.order_status or "" %}
+              {% set status_pt = status_map.get(raw_status, raw_status or "—") %}
+
+              <tr class="order-row hover:bg-slate-50"
+                  data-order-id="{{ o.amazon_order_id }}"
+                  data-status="{{ raw_status }}">
+                <td class="px-4 py-3">
+                  <button class="toggle-details text-slate-500 hover:text-slate-900 font-bold"
+                          data-order-id="{{ o.amazon_order_id }}">
+                    ▼
+                  </button>
+                </td>
+
+                <td class="px-4 py-3 font-mono text-xs">{{ o.amazon_order_id }}</td>
+
+                <td class="px-4 py-3">
+                  {% if o.purchase_date %}
+                    {{ o.purchase_date.strftime("%d/%m/%Y %H:%M") }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+
+                <td class="px-4 py-3">
+                  <span class="
+                    inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold
+                    {% if raw_status == 'Shipped' %}
+                      bg-green-100 text-green-700
+                    {% elif raw_status == 'Pending' %}
+                      bg-yellow-100 text-yellow-700
+                    {% elif raw_status == 'Canceled' %}
+                      bg-red-100 text-red-700
+                    {% else %}
+                      bg-slate-100 text-slate-700
+                    {% endif %}
+                  ">
+                    {{ status_pt }}
+                  </span>
+                </td>
+
+                <td class="px-4 py-3 font-semibold">
+                  {{ "%.2f"|format(o.order_total_amount or 0) }}
+                </td>
+
+                <td class="px-4 py-3">{{ o.currency or "—" }}</td>
+
+                <td class="px-4 py-3">
+                  <a class="text-[#0d80f2] font-bold hover:underline"
+                     href="/integrations/amazon/profit/order/{{ o.amazon_order_id }}">
+                    Ver lucro →
+                  </a>
+                </td>
+              </tr>
+
+              <!-- Linha expandível -->
+              <tr class="order-details hidden" id="details-{{ o.amazon_order_id }}">
+                <td colspan="7" class="px-4 pb-4">
+                  <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
+                    Carregando detalhes...
+                  </div>
+                </td>
+              </tr>
+
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .filter-btn{
+    border: 1px solid #d0dbe7;
+    background: #fff;
+    color: #0d141c;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 10px;
+    line-height: 1;
+    transition: all .15s ease;
+  }
+  .filter-btn:hover{ background: #f8fafc; }
+  .filter-btn.is-active{
+    background: #0f172a;
+    border-color: #0f172a;
+    color: #fff !important;
+  }
+</style>
+
+<script>
+  function setResult(msg, type="info") {
+    const el = document.getElementById("syncResult");
+    if (!el) return;
+
+    el.classList.remove("hidden");
+    const base = "rounded-lg border p-3";
+    if (type === "success") el.className = base + " border-green-200 bg-green-50 text-green-800";
+    else if (type === "error") el.className = base + " border-red-200 bg-red-50 text-red-800";
+    else el.className = base + " border-slate-200 bg-slate-50 text-slate-700";
+
+    el.textContent = msg;
+  }
+
+  async function loadOrderDetails(orderId) {
+    const row = document.getElementById(`details-${orderId}`);
+    if (!row) return;
+
+    // se já carregou uma vez, não refaz (só alterna)
+    if (row.dataset.loaded === "1") return;
+
+    const box = row.querySelector("div");
+    box.textContent = "Carregando detalhes...";
+
+    const res = await fetch(`/integrations/amazon/orders/${encodeURIComponent(orderId)}/details`);
+    const data = await res.json();
+
+    if (!res.ok || !data.ok) {
+      box.textContent = data.error || "Falha ao carregar detalhes.";
+      return;
+    }
+
+    // Totais do pedido (somando itens)
+    const totals = (data.items || []).reduce((acc, it) => {
+      acc.revenue += Number(it.revenue || 0);
+      acc.net += Number(it.net || 0);
+      acc.imposto += Number(it.imposto || 0);
+      acc.cmv += Number(it.cmv || 0);
+      acc.embalagem += Number(it.embalagem || 0);
+      acc.lucro += Number(it.lucro || 0);
+      return acc;
+    }, { revenue: 0, net: 0, imposto: 0, cmv: 0, embalagem: 0, lucro: 0 });
+
+    const margemTotal = totals.revenue > 0 ? (totals.lucro / totals.revenue * 100) : 0;
+
+    const hasFinance = !!data.has_finance_events;
+    const note = hasFinance
+      ? "Valores com taxas reais (Finances)."
+      : "Valores estimados (sem Finances para este pedido).";
+
+    // Aviso para pedidos Pending com valores zerados
+    const pendingHint = (data.order_status === "Pending" && totals.revenue === 0)
+      ? `<div class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+          Pedido <b>Pendente</b>: a Amazon pode não disponibilizar valores (preço/total) até confirmar o pagamento.
+        </div>`
+      : "";
+
+    const rowsHtml = (data.items || []).map(it => `
+      <tr class="border-t border-slate-200">
+        <td class="py-2 px-3">
+          <div class="font-bold text-slate-900">${it.sku || "-"}</div>
+          <div class="text-xs text-slate-500">ASIN: ${it.asin || "-"}</div>
+        </td>
+        <td class="py-2 px-3">${Number(it.qty || 0)}</td>
+        <td class="py-2 px-3">R$ ${Number(it.price || 0).toFixed(2)}</td>
+        <td class="py-2 px-3">R$ ${Number(it.net || 0).toFixed(2)}</td>
+        <td class="py-2 px-3">R$ ${Number(it.imposto || 0).toFixed(2)}</td>
+        <td class="py-2 px-3">R$ ${Number(it.cmv || 0).toFixed(2)}</td>
+        <td class="py-2 px-3">R$ ${Number(it.embalagem || 0).toFixed(2)}</td>
+        <td class="py-2 px-3 font-bold">R$ ${Number(it.lucro || 0).toFixed(2)}</td>
+        <td class="py-2 px-3">
+          <span class="inline-flex rounded-full px-2 py-1 text-xs font-bold ${Number(it.margem_pct || 0) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+            ${Number(it.margem_pct || 0).toFixed(2)}%
+          </span>
+        </td>
+      </tr>
+    `).join("");
+
+    box.innerHTML = `
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-3">
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">Receita</div>
+          <div class="font-bold">R$ ${totals.revenue.toFixed(2)}</div>
+        </div>
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">Líquido</div>
+          <div class="font-bold">R$ ${totals.net.toFixed(2)}</div>
+        </div>
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">Imposto</div>
+          <div class="font-bold">R$ ${totals.imposto.toFixed(2)}</div>
+        </div>
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">CMV</div>
+          <div class="font-bold">R$ ${totals.cmv.toFixed(2)}</div>
+        </div>
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">Embalagem</div>
+          <div class="font-bold">R$ ${totals.embalagem.toFixed(2)}</div>
+        </div>
+        <div class="p-3 bg-white border border-slate-200 rounded-lg">
+          <div class="text-xs text-slate-500">Lucro / Margem</div>
+          <div class="font-bold">R$ ${totals.lucro.toFixed(2)}</div>
+          <div class="text-xs text-slate-500">${margemTotal.toFixed(2)}%</div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs text-slate-600">
+          ${note} | Imposto padrão: <b>${Number(data.imposto_rate_pct || 0).toFixed(2)}%</b>
+          ${data.order_status ? ` | Status: <b>${data.order_status}</b>` : ""}
+        </div>
+        <div class="text-xs text-slate-500">
+          Itens: <b>${data.items_count}</b>
+        </div>
+      </div>
+
+      ${pendingHint}
+
+      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="text-left py-2 px-3">Item</th>
+              <th class="text-left py-2 px-3">Qtd</th>
+              <th class="text-left py-2 px-3">Preço</th>
+              <th class="text-left py-2 px-3">Líquido</th>
+              <th class="text-left py-2 px-3">Imposto</th>
+              <th class="text-left py-2 px-3">CMV</th>
+              <th class="text-left py-2 px-3">Embalagem</th>
+              <th class="text-left py-2 px-3">Lucro</th>
+              <th class="text-left py-2 px-3">Margem</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml || `<tr><td class="p-4 text-slate-600" colspan="9">Nenhum item encontrado. Clique em “Sincronizar itens (15)”.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    row.dataset.loaded = "1";
+  }
+
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // Botões principais
+    const btnSyncOrders = document.getElementById("btnSyncOrders");
+    const btnSyncItems = document.getElementById("btnSyncItems");
+
+    btnSyncOrders?.addEventListener("click", async () => {
+      try {
+        setResult("Sincronizando pedidos (últimos 30 dias)...", "info");
+        const res = await fetch("/integrations/amazon/sync_orders_only?days=30", { method: "GET" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ("Erro " + res.status));
+
+        setResult(`Sync OK. API: ${data.orders_returned_by_api} | Gravados: ${data.orders_upserted}`, "success");
+        setTimeout(() => location.reload(), 800);
+      } catch (e) {
+        setResult("Falha no sync: " + e.message, "error");
+      }
+    });
+
+    btnSyncItems?.addEventListener("click", async () => {
+      try {
+        setResult("Sincronizando itens (15 pedidos)...", "info");
+        const res = await fetch("/integrations/amazon/sync_items_batch?limit=15", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ("Erro " + res.status));
+
+        setResult(`Itens OK. Pedidos processados: ${data.processed_orders} | Itens inseridos: ${data.inserted_items}`, "success");
+      } catch (e) {
+        setResult("Falha ao sincronizar itens: " + e.message, "error");
+      }
+    });
+
+    // Filtros + busca
+    const buttons = Array.from(document.querySelectorAll(".status-filter"));
+    const rows = Array.from(document.querySelectorAll(".order-row"));
+    const search = document.getElementById("searchOrders");
+
+    let currentFilter = "ALL";
+    let currentSearch = "";
+
+    function applyFilters() {
+      const q = (currentSearch || "").trim().toLowerCase();
+      rows.forEach(row => {
+        const status = row.getAttribute("data-status") || "";
+        const orderId = (row.getAttribute("data-order-id") || "").toLowerCase();
+        const matchStatus = (currentFilter === "ALL") || (status === currentFilter);
+        const matchSearch = (!q) || orderId.includes(q);
+        row.style.display = (matchStatus && matchSearch) ? "" : "none";
+
+        const detailsRow = document.getElementById(`details-${row.getAttribute("data-order-id")}`);
+        if (detailsRow) detailsRow.style.display = row.style.display; // acompanha
+      });
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentFilter = btn.getAttribute("data-filter") || "ALL";
+        buttons.forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        applyFilters();
+      });
+    });
+
+    search?.addEventListener("input", (e) => {
+      currentSearch = e.target.value || "";
+      applyFilters();
+    });
+
+    const btnAll = buttons.find(b => (b.getAttribute("data-filter") === "ALL"));
+    if (btnAll) btnAll.click();
+  });
+
+  // Expand / collapse
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".toggle-details");
+    if (!btn) return;
+
+    const orderId = btn.getAttribute("data-order-id");
+    const detailsRow = document.getElementById(`details-${orderId}`);
+    if (!detailsRow) return;
+
+    const isHidden = detailsRow.classList.contains("hidden");
+    detailsRow.classList.toggle("hidden");
+    btn.textContent = isHidden ? "▲" : "▼";
+
+    if (isHidden) {
+      await loadOrderDetails(orderId);
+    }
+  });
+</script>
+{% endblock %}

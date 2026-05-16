@@ -7,55 +7,40 @@ from flask_mail import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
-# Importamos o dicionário de opções que criamos no novo config.py
-from config import config_options 
+from flask_migrate import Migrate
+
+from config import config_options  # seu dicionário do config.py
+
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 mail = Mail()
-limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+migrate = Migrate()
+limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
 
-# Define o ambiente padrão (se não tiver no .env, assume 'default' que é desenvolvimento)
-env_name = os.environ.get('FLASK_ENV', 'default')
 
-# AQUI ESTAVA O ERRO: Precisamos receber 'config_name' como argumento
-def create_app(config_name=env_name):
-    app = Flask(__name__)
-    
-    # Carrega a configuração correta baseada no nome ('development' ou 'production')
-    app.config.from_object(config_options[config_name])
-    
-    # Inicializa Extensões
-    db.init_app(app)
-    mail.init_app(app)
-    limiter.init_app(app)
-    login_manager.init_app(app)
-    
-    login_manager.login_view = 'auth.login'
-    login_manager.login_message = 'Por favor, faça login para acessar.'
-
-    # ---------------------------------------------------------
-    # SEGURANÇA (TALISMAN)
-    # ---------------------------------------------------------
+def _configure_security(app: Flask) -> None:
+    """
+    Configura Talisman/CSP.
+    Em debug: desliga CSP/HTTPS forçado para não atrapalhar desenvolvimento.
+    Em produção: aplica CSP.
+    """
     csp = {
-        'default-src': '\'self\'',
-        'script-src': [
-            '\'self\'',
-            'https://cdn.jsdelivr.net',
-            'https://cdnjs.cloudflare.com'
+        "default-src": ["'self'"],
+        "script-src": [
+            "'self'",
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
         ],
-        'style-src': [
-            '\'self\'',
-            '\'unsafe-inline\'',
-            'https://fonts.googleapis.com',
-            'https://cdn.jsdelivr.net',
-            'https://cdnjs.cloudflare.com'
+        "style-src": [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+            "https://cdn.jsdelivr.net",
+            "https://cdnjs.cloudflare.com",
         ],
-        'font-src': [
-            '\'self\'',
-            'https://fonts.gstatic.com'
-        ],
-        'img-src': ['\'self\'', 'data:']
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+        "img-src": ["'self'", "data:"],
     }
 
     if app.debug:
@@ -63,26 +48,80 @@ def create_app(config_name=env_name):
     else:
         Talisman(app, content_security_policy=csp)
 
-    # ---------------------------------------------------------
-    # BLUEPRINTS
-    # ---------------------------------------------------------
+
+def create_app(config_name: str | None = None) -> Flask:
+    """
+    App factory.
+    - Usa APP_ENV se definido, senão 'development' (ou 'default' se preferir manter).
+    - Não roda db.create_all(); usa Flask-Migrate.
+    """
+    # Preferir APP_ENV (mais moderno). Mantém fallback para FLASK_ENV por compatibilidade.
+    env_name = config_name or os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "development"
+
+    app = Flask(__name__)
+    if env_name not in config_options:
+        raise RuntimeError(f"Ambiente '{env_name}' inválido. Opções: {list(config_options.keys())}")
+
+    app.config.from_object(config_options[env_name])
+
+    # ---------------------------------------
+    # Extensões
+    # ---------------------------------------
+    db.init_app(app)
+    mail.init_app(app)
+    login_manager.init_app(app)
+    migrate.init_app(app, db)
+
+    # garante que todos models sejam carregados antes do migrate
+    from app.models import notification_settings, notification_log  # noqa: F401
+
+
+    # Limiter: em dev usa memória; em prod tente Redis (se existir), senão cai pra memória
+    # (ideal: setar REDIS_URL no .env de produção)
+    storage_uri = "memory://"
+    if not app.debug:
+        storage_uri = os.environ.get("REDIS_URL", "memory://")
+    limiter.storage_uri = storage_uri
+    limiter.init_app(app)
+
+    login_manager.login_view = "auth.login"
+    login_manager.login_message = "Por favor, faça login para acessar."
+
+    # ---------------------------------------
+    # Segurança (Talisman)
+    # ---------------------------------------
+    _configure_security(app)
+
+    # ---------------------------------------
+    # Blueprints
+    # ---------------------------------------
     from app.auth.routes import auth
     from app.main.routes import main
     from app.precificacao.routes import pricing
     from app.settings.routes import settings_bp
     from app.produtos.routes import produtos_bp
+    from app.financeiro.routes import financeiro_bp
+    from app.integrations.amazon.routes import amazon
+    from app.commands import register_commands
 
     app.register_blueprint(auth)
     app.register_blueprint(main)
     app.register_blueprint(pricing)
     app.register_blueprint(settings_bp)
     app.register_blueprint(produtos_bp)
+    app.register_blueprint(financeiro_bp)
+    app.register_blueprint(amazon)
 
+    # ---------------------------------------
+    # Erros
+    # ---------------------------------------
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        return render_template('429.html', error=e), 429
+        return render_template("429.html", error=e), 429
 
-    with app.app_context():
-        db.create_all()
+    # ---------------------------------------
+    # CLI Commands
+    # ---------------------------------------
+    register_commands(app)
 
     return app
