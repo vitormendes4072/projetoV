@@ -1,5 +1,4 @@
 from datetime import datetime
-from sqlalchemy.dialects.postgresql import JSONB
 from app import db
 
 class CustoFixoHistory(db.Model):
@@ -9,8 +8,8 @@ class CustoFixoHistory(db.Model):
     item_id = db.Column(db.BigInteger, nullable=False, index=True)
 
     action = db.Column(db.String(32), nullable=False)  # create|update|toggle_paid|toggle_active|bulk|delete
-    diff = db.Column(JSONB, nullable=True)             # {"campo": {"from": x, "to": y}}
-    snapshot = db.Column(JSONB, nullable=True)         # {"before": {...}, "after": {...}} (opcional)
+    diff = db.Column(db.JSON, nullable=True)
+    snapshot = db.Column(db.JSON, nullable=True)
     note = db.Column(db.Text, nullable=True)
 
     changed_by = db.Column(db.BigInteger, nullable=True, index=True)

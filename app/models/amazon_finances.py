@@ -1,5 +1,4 @@
 from app import db
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime, timezone
 
 def utcnow():
@@ -20,5 +19,5 @@ class AmazonFinancialEvent(db.Model):
     amount = db.Column(db.Numeric(12, 2), nullable=True)
     currency = db.Column(db.String, nullable=True)
 
-    raw_json = db.Column(JSONB, nullable=False, default=dict)
+    raw_json = db.Column(db.JSON, nullable=False, default=dict)
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow)

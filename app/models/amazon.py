@@ -1,6 +1,6 @@
 # app/models/amazon.py
 from app import db
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Uuid
 from datetime import datetime, timezone
 import uuid
 
@@ -11,7 +11,7 @@ class AmazonConnection(db.Model):
     __tablename__ = "amazon_connections"
     __table_args__ = {"schema": "public"}  # <- força schema certo
 
-    id = db.Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)  # uuid no DB
+    id = db.Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     user_id = db.Column(db.String, nullable=False, unique=True)
 
     marketplace_id = db.Column(db.String, nullable=False)
@@ -49,7 +49,7 @@ class AmazonOrder(db.Model):
     currency = db.Column(db.String, nullable=True)
     order_total_amount = db.Column(db.Numeric(12, 2), nullable=True)
 
-    raw_json = db.Column(JSONB, nullable=False, default=dict)
+    raw_json = db.Column(db.JSON, nullable=False, default=dict)
 
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -69,7 +69,7 @@ class AmazonOrderItem(db.Model):
     item_price = db.Column(db.Numeric(12, 2), nullable=True)
     currency = db.Column(db.String, nullable=True)
 
-    raw_json = db.Column(JSONB, nullable=False, default=dict)
+    raw_json = db.Column(db.JSON, nullable=False, default=dict)
 
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
 

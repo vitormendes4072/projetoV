@@ -74,9 +74,19 @@ class ProductionConfig(Config):
         raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
 
 
+class TestingConfig(Config):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    WTF_CSRF_ENABLED = False
+    MAIL_SUPPRESS_SEND = True
+    SECRET_KEY = "test-secret-key"
+    RATELIMIT_ENABLED = False
+
+
 # Mapeamento de ambientes
 config_options = {
     "development": DevelopmentConfig,
     "production": ProductionConfig,
+    "testing": TestingConfig,
     "default": DevelopmentConfig,
 }
