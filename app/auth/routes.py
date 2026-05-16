@@ -61,12 +61,13 @@ def register():
         return redirect(url_for('main.menu'))
     form = RegistrationForm()
     if form.validate_on_submit():
-        existing_user = User.query.filter_by(email=form.email.data).first()
+        email = form.email.data.strip().lower()
+        existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash('Este email já está cadastrado.', 'danger')
             return redirect(url_for('auth.register'))
-        
-        user = User(email=form.email.data, name=form.name.data)
+
+        user = User(email=email, name=form.name.data)
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
@@ -85,7 +86,7 @@ def login():
         return redirect(url_for('main.menu'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        user = User.query.filter_by(email=form.email.data.strip().lower()).first()
         if user and user.check_password(form.password.data):
             if not user.confirmed:
                 flash('Confirme seu e-mail antes de logar.', 'warning')
@@ -120,7 +121,7 @@ def reset_request():
     form = RequestResetForm()
     if form.validate_on_submit():
         start_time = time.time()
-        user = User.query.filter_by(email=form.email.data).first()
+        user = User.query.filter_by(email=form.email.data.strip().lower()).first()
         if user:
             send_reset_email(user)
         
