@@ -36,9 +36,9 @@ def test_salvar_historico(client, db):
 
 
 def test_calculadora_requer_login(client, db):
-    r = client.get("/calculator", follow_redirects=False)
-    assert r.status_code == 302
-    assert "/login" in r.headers["Location"]
+    r = client.get("/calculator", follow_redirects=True)
+    assert r.status_code == 200
+    assert r.request.path == "/login"
 
 
 def test_preco_invalido(client, db):

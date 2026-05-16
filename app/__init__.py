@@ -43,7 +43,7 @@ def _configure_security(app: Flask) -> None:
         "img-src": ["'self'", "data:"],
     }
 
-    if app.debug:
+    if app.debug or app.testing:
         Talisman(app, force_https=False, content_security_policy=None)
     else:
         Talisman(app, content_security_policy=csp)
