@@ -20,6 +20,8 @@ class Config:
     MAIL_USE_SSL = os.environ.get('MAIL_USE_SSL', 'False').lower() == 'true'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    # Remetente padrão: usa MAIL_DEFAULT_SENDER se definido, senão cai no MAIL_USERNAME
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or os.environ.get('MAIL_USERNAME')
 
 class DevelopmentConfig(Config):
     """Configurações só para o seu PC"""

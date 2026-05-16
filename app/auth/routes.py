@@ -29,7 +29,8 @@ def send_reset_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='password-reset') 
     msg = Message('Redefinição de Senha - Marketplace Manager',
-                  sender='noreply@demo.com', recipients=[user.email])
+                  sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                  recipients=[user.email])
     link = url_for('auth.reset_token', token=token, _external=True)
     msg.body = f'''Para redefinir sua senha, visite: {link}'''
     
@@ -41,7 +42,8 @@ def send_confirmation_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='email-confirm') 
     msg = Message('Confirme sua Conta - Marketplace Manager',
-                  sender='noreply@demo.com', recipients=[user.email])
+                  sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                  recipients=[user.email])
     link = url_for('auth.confirm_email', token=token, _external=True)
     msg.body = f'''Ative sua conta aqui: {link}'''
     

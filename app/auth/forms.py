@@ -27,6 +27,12 @@ class RequestResetForm(FlaskForm):
     submit = SubmitField('Redefinir Senha')
 
 class ResetPasswordForm(FlaskForm):
-    password = PasswordField('Nova Senha', validators=[DataRequired(), Length(min=6)])
-    confirm_password = PasswordField('Confirmar Senha', validators=[DataRequired(), EqualTo('password')])
+    password = PasswordField('Nova Senha', validators=[
+        DataRequired(),
+        Length(min=8, message="Sua senha deve ter pelo menos 8 caracteres.")
+    ])
+    confirm_password = PasswordField('Confirmar Senha', validators=[
+        DataRequired(),
+        EqualTo('password', message='As senhas devem ser iguais.')
+    ])
     submit = SubmitField('Mudar Senha')
