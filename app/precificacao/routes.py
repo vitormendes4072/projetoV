@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 from app import db
 from app.models.pricing import PricingHistory
+from app.services.pricing import calcular_fba
 from .forms import CalculatorForm
 
 pricing = Blueprint('pricing', __name__)
@@ -54,29 +55,7 @@ def calculator():
         if is_mei and tax_pct > 0:
             flash('Atenção: MEI geralmente possui alíquota zero sobre venda unitária (DAS é fixo).', 'warning')
         
-        referral_cost = price * (referral_pct / 100)
-        tax_cost = price * (tax_pct / 100)
-        total_fees = referral_cost + fba_fee + tax_cost + marketing
-        total_cost = cost + total_fees
-        net_profit = price - total_cost
-        
-        margin = (net_profit / price) * 100 if price > 0 else 0
-        roi = (net_profit / cost) * 100 if cost > 0 else 0
-        
-        results = {
-            'revenue': price,
-            'total_cost': total_cost,
-            'net_profit': net_profit,
-            'margin': margin,
-            'roi': roi,
-            'breakdown': {
-                'referral': referral_cost,
-                'fba': fba_fee,
-                'tax': tax_cost,
-                'marketing': marketing,
-                'product_cost': cost
-            }
-        }
+        results = calcular_fba(price, cost, fba_fee, referral_pct, tax_pct, marketing)
 
         if form.save.data:
             historico = PricingHistory(
@@ -88,9 +67,9 @@ def calculator():
                 referral_fee=referral_pct,
                 tax_rate=tax_pct,
                 marketing=marketing,
-                net_profit=net_profit,
-                margin=margin,
-                roi=roi
+                net_profit=results["net_profit"],
+                margin=results["margin"],
+                roi=results["roi"],
             )
             db.session.add(historico)
             db.session.commit()
