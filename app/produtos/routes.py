@@ -22,7 +22,8 @@ def registrar_historico(produto, user, acao):
 @produtos_bp.route('/produtos', methods=['GET'])
 @login_required
 def lista_produtos():
-    products = current_user.products.all()
+    page = request.args.get('page', 1, type=int)
+    products = current_user.products.order_by(Product.name).paginate(page=page, per_page=20, error_out=False)
     return render_template('produtos/lista.html', products=products)
 
 @produtos_bp.route('/produtos/novo', methods=['GET', 'POST'])
@@ -96,7 +97,7 @@ def historico_produto(product_id):
     if product.owner != current_user:
         abort(403)
         
-    # Busca o histórico ordenado do mais recente para o mais antigo
-    historico = product.history.order_by(ProductHistory.changed_at.desc()).all()
-    
+    page = request.args.get('page', 1, type=int)
+    historico = product.history.order_by(ProductHistory.changed_at.desc()).paginate(page=page, per_page=10, error_out=False)
+
     return render_template('produtos/historico.html', product=product, historico=historico)
