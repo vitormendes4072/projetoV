@@ -64,8 +64,8 @@ def index():
                 flash('Nome atualizado!', 'success')
                 has_changes = True
             
-            if account_form.email.data != current_user.email:
-                send_update_email(current_user, account_form.email.data)
+            if account_form.email.data.strip().lower() != current_user.email:
+                send_update_email(current_user, account_form.email.data.strip().lower())
                 flash(f'Link de confirmação enviado para {account_form.email.data}', 'info')
                 has_changes = True
 
@@ -122,7 +122,7 @@ def confirm_email_update(token):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         data = s.loads(token, salt='email-update', max_age=3600)
-        new_email = data.get('new_email')
+        new_email = data.get('new_email', '').strip().lower()
         token_user_id = data.get('user_id')
     except Exception:
         flash('Link inválido ou expirado.', 'danger')
