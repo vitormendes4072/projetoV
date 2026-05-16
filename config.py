@@ -69,7 +69,9 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # URI compartilhada: múltiplas conexões veem o mesmo banco em memória
+    SQLALCHEMY_DATABASE_URI = "sqlite:///file:testdb?mode=memory&cache=shared&uri=true"
+    SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"check_same_thread": False}}
     WTF_CSRF_ENABLED = False
     MAIL_SUPPRESS_SEND = True
     SECRET_KEY = "test-secret-key"
