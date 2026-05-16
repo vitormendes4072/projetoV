@@ -66,13 +66,6 @@ class ProductionConfig(Config):
         .replace("postgres://", "postgresql://")
     )
 
-    # Segurança: se não tiver SECRET_KEY em produção, falha
-    if not os.environ.get("SECRET_KEY"):
-        raise RuntimeError("SECRET_KEY não configurada no ambiente de produção.")
-
-    if not os.environ.get("CREDENTIALS_ENCRYPTION_KEY"):
-        raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
-
 
 class TestingConfig(Config):
     TESTING = True
