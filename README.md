@@ -13,15 +13,15 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 
 | Login | Menu Principal |
 |-------|----------------|
-| ![Login](docs/screenshots/login.png) | ![Menu](docs/screenshots/menu.png) |
+| ![Login](docs/screenshots/login.jpeg) | ![Menu](docs/screenshots/menu.jpeg) |
 
 | Dashboard | Calculadora de Preços |
 |-----------|----------------------|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Calculator](docs/screenshots/calculator.png) |
+| ![Dashboard](docs/screenshots/dashboard.jpeg) | ![Calculator](docs/screenshots/calculator.jpeg) |
 
 | Gestão de Produtos |
 |--------------------|
-| ![Products](docs/screenshots/products.png) |
+| ![Products](docs/screenshots/products.jpeg) |
 
 ---
 
