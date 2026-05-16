@@ -64,6 +64,13 @@ def create_app(config_name: str | None = None) -> Flask:
 
     app.config.from_object(config_options[env_name])
 
+    # Validações obrigatórias em produção (aqui o env já é conhecido)
+    if env_name == "production":
+        if not os.environ.get("SECRET_KEY"):
+            raise RuntimeError("SECRET_KEY não configurada no ambiente de produção.")
+        if not os.environ.get("CREDENTIALS_ENCRYPTION_KEY"):
+            raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
+
     # ---------------------------------------
     # Extensões
     # ---------------------------------------
