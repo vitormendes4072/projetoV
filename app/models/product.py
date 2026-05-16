@@ -4,10 +4,13 @@ from datetime import datetime
 
 class Product(db.Model):
     __tablename__ = 'products'
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'sku', name='uq_products_user_sku'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
-    sku = db.Column(db.String(50), unique=True, index=True, nullable=False)
+    sku = db.Column(db.String(50), index=True, nullable=False)
     asin = db.Column(db.String(20), index=True, nullable=True)
     
     price = db.Column(db.Float, nullable=False, default=0.0)
