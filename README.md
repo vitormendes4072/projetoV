@@ -15,13 +15,21 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 |-------|----------------|
 | ![Login](docs/screenshots/login.jpeg) | ![Menu](docs/screenshots/menu.jpeg) |
 
-| Dashboard | Calculadora de Preços |
-|-----------|----------------------|
+| Dashboard Analítico | Calculadora FBA |
+|---------------------|------------------|
 | ![Dashboard](docs/screenshots/dashboard.jpeg) | ![Calculator](docs/screenshots/calculator.jpeg) |
 
-| Gestão de Produtos |
-|--------------------|
-| ![Products](docs/screenshots/products.jpeg) |
+| Gestão de Produtos | Configurações da Conta |
+|--------------------|------------------------|
+| ![Products](docs/screenshots/products.jpeg) | ![Settings](docs/screenshots/settings.jpeg) |
+
+| Custos Fixos | Alertas Financeiros |
+|--------------|---------------------|
+| ![Custos Fixos](docs/screenshots/custos_fixos.jpeg) | ![Alertas](docs/screenshots/alertas.jpeg) |
+
+| Integração Amazon — Pedidos |
+|-----------------------------|
+| ![Amazon Orders](docs/screenshots/amazon_orders.jpeg) |
 
 ---
 
@@ -29,10 +37,13 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 
 - **Autenticação completa** — registro com confirmação por e-mail, login com rate limiting (5 req/min), recuperação de senha com token JWT (30 min TTL)
 - **Dashboard analítico** — KPIs em tempo real: total de produtos, simulações, margem média, ROI médio, alertas de estoque baixo e histórico de atividades
-- **Calculadora de Preços** — simulação de lucro líquido com FBA fee, referral fee, imposto e marketing; persiste histórico por usuário
+- **Calculadora de Preços (FBA)** — simulação de lucro líquido com FBA fee, referral fee, imposto e marketing; persiste histórico por usuário
 - **Gestão de Produtos** — CRUD completo com rastreio de SKU (ASIN opcional), controle de estoque e trilha de auditoria por produto
+- **Custos Fixos** — cadastro de despesas recorrentes, vencimentos, histórico de pagamentos e categorização
+- **Alertas Financeiros** — sistema de notificações configurável (e-mail) para custos vencidos, estoque baixo e margem abaixo do alvo
+- **Integração Amazon SP-API** — importação de pedidos, link SKU↔ASIN, snapshot de inventário e finance events (com mocks para dev)
 - **Multi-tenancy** — cada usuário vê apenas seus próprios dados; SKU único por usuário, não globalmente
-- **Configurações de conta** — troca de senha com validação
+- **Configurações de conta** — troca de nome/e-mail (com confirmação por token) e senha com validação
 
 ---
 
@@ -52,19 +63,32 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 ### Arquitetura
 
 - **App Factory Pattern** (`create_app()`) — separa criação da aplicação da configuração, facilita testes
-- **Blueprint por domínio** — `auth`, `main`, `produtos`, `precificacao`, `settings` completamente desacoplados
+- **Blueprint por domínio** — `auth`, `main`, `produtos`, `precificacao`, `settings`, `financeiro`, `amazon` completamente desacoplados
+- **Migrations versionadas** — Alembic via Flask-Migrate (sem `db.create_all()` em produção)
+- **Camada de serviço** — `services/profit_calc.py`, `services/audit_custos_fixos.py` separam regras de negócio das views
 - **E-mail assíncrono** — `Thread` em background evita bloquear o response enquanto o SMTP envia
 - **Multi-tenancy por linha** — `UniqueConstraint('user_id', 'sku')` garante isolamento de SKU por conta sem vazar informação entre usuários
-- **Audit trail** — `ProductHistory` registra toda alteração de preço, custo e estoque com timestamp e autor
-- **Configuração por ambiente** — `DevelopmentConfig` / `ProductionConfig` via `FLASK_ENV`
+- **Audit trail** — `ProductHistory` e `CustoFixoHistory` registram toda alteração com timestamp e autor
+- **Credenciais criptografadas** — tokens da Amazon SP-API são criptografados em repouso via `app/utils/crypto.py` (Fernet)
+- **Configuração por ambiente** — `DevelopmentConfig` / `ProductionConfig` via `APP_ENV` (com fallback `FLASK_ENV`)
 
-### Banco de Dados
+### Banco de Dados (visão simplificada)
 
 ```
 users
- ├── products (1:N, lazy='dynamic', cascade delete)
- │    └── product_history (1:N, cascade delete-orphan)
- └── pricing_history (1:N)
+ ├── products (1:N) ── product_history (1:N)
+ ├── pricing_history (1:N)
+ ├── custos_fixos (1:N)
+ │    ├── custos_fixos_history (1:N)
+ │    └── custos_fixos_pagamentos (1:N)
+ ├── notification_settings (1:1)
+ ├── notification_recipients (1:N)
+ ├── notification_log (1:N)
+ └── amazon_credentials (1:1, criptografado)
+      ├── amazon_orders (1:N)
+      ├── amazon_inventory (1:N)
+      ├── amazon_finances (1:N)
+      └── amazon_sku_links (1:N)
 ```
 
 ---
@@ -75,13 +99,17 @@ users
 |--------|-----------|
 | Framework | Flask 3.1.1 |
 | ORM | Flask-SQLAlchemy 3.1.1 + SQLAlchemy 2.0 |
+| Migrations | Alembic via Flask-Migrate |
 | Banco | PostgreSQL via Supabase |
 | Auth | Flask-Login 0.6.3 |
 | Formulários | Flask-WTF 1.2.2 + WTForms 3.2 |
 | E-mail | Flask-Mail + Gmail SMTP |
 | Segurança | Flask-Talisman (CSP/HTTPS) + Flask-Limiter |
+| Criptografia | cryptography (Fernet) para tokens Amazon |
 | Tokens | itsdangerous 2.2 (URLSafeTimedSerializer) |
+| Integração externa | Amazon SP-API (com mocks de finance events para dev) |
 | Frontend | Tailwind CSS 3 (build local via CLI standalone) |
+| Rate limit (prod) | Redis (opcional via `REDIS_URL`, cai para in-memory se ausente) |
 | Deploy | Supabase (PostgreSQL) + qualquer WSGI host |
 
 ---
@@ -141,7 +169,11 @@ python run.py
 
 Acesse: `http://127.0.0.1:5000`
 
-O banco é criado automaticamente via `db.create_all()` na primeira execução.
+Antes da primeira execução, aplique as migrations Alembic:
+
+```bash
+flask --app run.py db upgrade
+```
 
 ### 4. (Opcional) Rebuildar o CSS
 
@@ -180,30 +212,37 @@ Sem Node.js, sem `npm install` — o binário standalone (39MB) já inclui PostC
 ```
 projetoV1/
 ├── app/
-│   ├── __init__.py          # App Factory, extensões, blueprints, CSP
+│   ├── __init__.py             # App Factory, extensões, blueprints, CSP, migrate
+│   ├── commands.py             # CLI commands (Flask)
+│   ├── emailer.py              # Helper de e-mail assíncrono
 │   ├── models/
-│   │   ├── user.py          # User, hash de senha, flask-login loader
-│   │   ├── product.py       # Product, ProductHistory, UniqueConstraint
-│   │   └── pricing.py       # PricingHistory (inputs + outputs da simulação)
-│   ├── auth/
-│   │   ├── routes.py        # register, login, logout, reset, confirm
-│   │   └── forms.py         # RegistrationForm, LoginForm, ResetPasswordForm
-│   ├── main/
-│   │   └── routes.py        # index, menu, dashboard (KPIs + queries)
-│   ├── precificacao/
-│   │   ├── routes.py        # /calculator GET/POST, histórico
-│   │   └── forms.py         # PricingForm com NumberRange validators
-│   ├── produtos/
-│   │   ├── routes.py        # CRUD produtos, ProductHistory logging
-│   │   └── forms.py         # ProductForm com validação SKU por usuário
-│   └── settings/
-│       ├── routes.py        # troca de senha, perfil
-│       └── forms.py         # ChangePasswordForm
-├── config.py                # DevelopmentConfig, ProductionConfig
-├── run.py                   # Entry point
+│   │   ├── user.py             # User + flask-login loader
+│   │   ├── product.py          # Product, ProductHistory, UniqueConstraint
+│   │   ├── pricing.py          # PricingHistory
+│   │   ├── custo_fixo.py       # CustoFixo + history + pagamentos
+│   │   ├── notification_*.py   # Settings, recipients, log de notificações
+│   │   └── amazon_*.py         # Credentials (criptografados), orders, inventory, finances
+│   ├── auth/                   # register, login, logout, reset, confirm
+│   ├── main/                   # index, menu (10 tools), dashboard (KPIs)
+│   ├── precificacao/           # Simulador FBA + histórico
+│   ├── produtos/               # CRUD produtos + audit trail
+│   ├── settings/               # Perfil, troca de senha (com confirmação)
+│   ├── financeiro/             # Custos fixos + alertas
+│   │   ├── routes.py
+│   │   └── alerts_custos_fixos.py
+│   ├── integrations/amazon/    # SP-API: orders, inventory, finances, SKU links
+│   ├── services/               # profit_calc, audit_custos_fixos
+│   ├── utils/                  # crypto (Fernet)
+│   ├── static/                 # CSS/JS (Tailwind buildado, JS modular do financeiro)
+│   └── templates/              # Jinja2 (base, menu, dashboard, financeiro/, amazon/, emails/)
+├── migrations/                 # Alembic (9 versions)
+├── scripts/send_alerts.bat     # Job de envio de alertas
+├── tools/tailwindcss.exe       # CLI standalone (gitignored, baixar via README)
+├── config.py                   # DevelopmentConfig, ProductionConfig
+├── tailwind.config.js
+├── run.py                      # Entry point
 ├── requirements.txt
-└── docs/
-    └── screenshots/
+└── docs/screenshots/
 ```
 
 ---
@@ -212,9 +251,11 @@ projetoV1/
 
 | Variável | Obrigatório | Descrição |
 |----------|-------------|-----------|
-| `SECRET_KEY` | Sim | Chave para assinar sessões e tokens. Use valor longo e aleatório em produção. |
+| `SECRET_KEY` | Sim | Chave para assinar sessões e tokens. Em produção, ausência levanta `RuntimeError`. |
 | `DATABASE_URL` | Sim | URI PostgreSQL completa (`postgresql://...`). Supabase usa porta 6543 (pooler). |
-| `FLASK_ENV` | Não | `development` (padrão) ou `production`. |
+| `CREDENTIALS_ENCRYPTION_KEY` | Em prod | Chave Fernet para criptografar tokens Amazon. Gere com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`. Obrigatória em produção. |
+| `APP_ENV` / `FLASK_ENV` | Não | `development` (padrão) ou `production`. |
+| `REDIS_URL` | Não | Storage do rate limiter em produção. Sem isso, cai para in-memory. |
 | `MAIL_SERVER` | Para e-mail | Ex: `smtp.gmail.com` |
 | `MAIL_PORT` | Para e-mail | Ex: `587` (TLS) |
 | `MAIL_USE_TLS` | Para e-mail | `True` para Gmail |
