@@ -27,9 +27,9 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 |--------------|---------------------|
 | ![Custos Fixos](docs/screenshots/custos_fixos.jpeg) | ![Alertas](docs/screenshots/alertas.jpeg) |
 
-| Integração Amazon — Pedidos |
-|-----------------------------|
-| ![Amazon Orders](docs/screenshots/amazon_orders.jpeg) |
+| Integração Amazon — Pedidos (visão geral) | Integração Amazon — Pedidos (detalhe) |
+|--------------------------------------------|----------------------------------------|
+| ![Amazon Orders 1](docs/screenshots/amazon_orders1.png) | ![Amazon Orders 2](docs/screenshots/amazon_orders2.png) |
 
 ---
 
