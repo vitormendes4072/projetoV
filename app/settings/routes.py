@@ -19,7 +19,7 @@ def send_async_email(app, msg):
 
 def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    token = s.dumps({'new_email': new_email}, salt='email-update')
+    token = s.dumps({'new_email': new_email, 'user_id': user.id}, salt='email-update')
     
     msg = Message('Confirme seu novo E-mail - Marketplace Manager',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'), recipients=[new_email])
@@ -120,15 +120,20 @@ def confirm_email_update(token):
     try:
         data = s.loads(token, salt='email-update', max_age=3600)
         new_email = data.get('new_email')
-    except:
+        token_user_id = data.get('user_id')
+    except Exception:
         flash('Link inválido ou expirado.', 'danger')
         return redirect(url_for('settings.index'))
-    
+
+    if token_user_id != current_user.id:
+        flash('Link inválido.', 'danger')
+        return redirect(url_for('settings.index'))
+
     from app.models.user import User
     if User.query.filter_by(email=new_email).first():
         flash('Este e-mail já está em uso.', 'danger')
         return redirect(url_for('settings.index'))
-    
+
     current_user.email = new_email
     db.session.commit()
     flash('E-mail atualizado com sucesso!', 'success')
