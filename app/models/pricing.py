@@ -12,17 +12,17 @@ class PricingHistory(db.Model):
     title = db.Column(db.String(100), nullable=True, default="Simulação")
     
     # Inputs (O que ele digitou)
-    price = db.Column(db.Float, nullable=False)
-    cost = db.Column(db.Float, nullable=False)
-    fba_fee = db.Column(db.Float, nullable=False)
-    referral_fee = db.Column(db.Float, nullable=False)
-    tax_rate = db.Column(db.Float, nullable=False)
-    marketing = db.Column(db.Float, default=0.0)
-    
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    cost = db.Column(db.Numeric(10, 2), nullable=False)
+    fba_fee = db.Column(db.Numeric(10, 2), nullable=False)
+    referral_fee = db.Column(db.Numeric(5, 2), nullable=False)
+    tax_rate = db.Column(db.Numeric(5, 2), nullable=False)
+    marketing = db.Column(db.Numeric(10, 2), default=0.0)
+
     # Outputs (O resultado)
-    net_profit = db.Column(db.Float, nullable=False)
-    margin = db.Column(db.Float, nullable=False)
-    roi = db.Column(db.Float, nullable=False)
+    net_profit = db.Column(db.Numeric(10, 2), nullable=False)
+    margin = db.Column(db.Numeric(5, 2), nullable=False)
+    roi = db.Column(db.Numeric(5, 2), nullable=False)
     
     created_at = db.Column(db.DateTime, default=datetime.now)
 
