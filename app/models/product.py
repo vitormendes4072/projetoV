@@ -13,9 +13,9 @@ class Product(db.Model):
     sku = db.Column(db.String(50), index=True, nullable=False)
     asin = db.Column(db.String(20), index=True, nullable=True)
     
-    price = db.Column(db.Float, nullable=False, default=0.0)
-    cost = db.Column(db.Float, nullable=False, default=0.0)
-    packaging_cost = db.Column(db.Float, nullable=False, default=0.0)
+    price = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
+    cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
+    packaging_cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     stock_quantity = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(500), nullable=True)
     
@@ -38,8 +38,8 @@ class ProductHistory(db.Model):
     product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False)
     
     # O que mudou? Vamos salvar o estado crítico
-    price = db.Column(db.Float)
-    cost = db.Column(db.Float)
+    price = db.Column(db.Numeric(10, 2))
+    cost = db.Column(db.Numeric(10, 2))
     stock_quantity = db.Column(db.Integer)
     
     # Tipo de mudança: 'Criação' ou 'Edição'

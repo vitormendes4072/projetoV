@@ -22,7 +22,7 @@ class User(UserMixin, db.Model):
 
     # --- CAMPOS TRIBUTÁRIOS ---
     tax_regime = db.Column(db.String(50), nullable=True)
-    default_tax_rate = db.Column(db.Float, default=4.0)
+    default_tax_rate = db.Column(db.Numeric(5, 2), default=4.0)
 
     # Relacionamento: um usuário tem muitos produtos
     products = db.relationship("Product", backref="owner", lazy="dynamic")
