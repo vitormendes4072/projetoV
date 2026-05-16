@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col gap-6 py-4">
+
+    <!-- Cabeçalho -->
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+        </a>
+        <div>
+            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Dashboard</h1>
+            <p class="text-[#49739c] text-sm">Visão geral da sua operação.</p>
+        </div>
+    </div>
+
+    {% if total_products == 0 and total_simulations == 0 %}
+    <!-- Estado Vazio -->
+    <div class="rounded-xl border border-dashed border-[#d0dbe7] bg-[#f8f9fa] p-12 text-center flex flex-col items-center gap-4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#49739c">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
+        </svg>
+        <div>
+            <p class="text-[#0d141c] font-semibold text-lg">Nenhum dado ainda</p>
+            <p class="text-[#49739c] text-sm mt-1">Comece cadastrando seus produtos para ver as métricas aqui.</p>
+        </div>
+        <div class="flex gap-3 mt-2">
+            <a href="{{ url_for('produtos.criar_produto') }}" class="px-5 py-2.5 bg-[#0d80f2] text-white rounded-lg font-semibold text-sm hover:bg-blue-600 transition-colors">
+                Cadastrar Produto
+            </a>
+            <a href="{{ url_for('pricing.calculator') }}" class="px-5 py-2.5 bg-white border border-[#d0dbe7] text-[#0d141c] rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors">
+                Simular Preço
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Produtos -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Produtos</span>
+                <span class="p-2 rounded-lg bg-blue-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#0d80f2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" /></svg>
+                </span>
+            </div>
+            <p class="text-3xl font-black text-[#0d141c]">{{ total_products }}</p>
+            <p class="text-xs text-[#49739c]">cadastrados</p>
+        </div>
+
+        <!-- Total Simulações -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Simulações</span>
+                <span class="p-2 rounded-lg bg-emerald-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#059669"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V18zm2.498-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5v2.25h-7.5V6zM12 2.25c-1.892 0-3.758.11-5.593.322S3.087 3.204 1.5 3.75V19.5a.75.75 0 00.75.75h19.5a.75.75 0 00.75-.75V3.75c-1.587-.546-3.355-.93-5.157-1.178A48.400 48.400 0 0012 2.25z" /></svg>
+                </span>
+            </div>
+            <p class="text-3xl font-black text-[#0d141c]">{{ total_simulations }}</p>
+            <p class="text-xs text-[#49739c]">salvas</p>
+        </div>
+
+        <!-- Margem Média -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Margem Média</span>
+                <span class="p-2 rounded-lg bg-violet-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#7c3aed"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+                </span>
+            </div>
+            <p class="text-3xl font-black {% if avg_margin > 15 %}text-green-600{% elif avg_margin > 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                {{ "%.1f"|format(avg_margin) }}%
+            </p>
+            <p class="text-xs text-[#49739c]">nas simulações salvas</p>
+        </div>
+
+        <!-- ROI Médio -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">ROI Médio</span>
+                <span class="p-2 rounded-lg bg-amber-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#d97706"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+            </div>
+            <p class="text-3xl font-black text-[#0d141c]">{{ "%.0f"|format(avg_roi) }}%</p>
+            <p class="text-xs text-[#49739c]">nas simulações salvas</p>
+        </div>
+    </div>
+
+    <!-- Alerta de Estoque Baixo -->
+    {% if low_stock %}
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
+        <div class="flex items-start gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#d97706" class="mt-0.5 shrink-0">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div class="flex-1">
+                <p class="font-semibold text-amber-800 text-sm">{{ low_stock|length }} produto(s) com estoque baixo ou zerado</p>
+                <ul class="mt-2 flex flex-col gap-1">
+                    {% for product in low_stock %}
+                    <li class="flex items-center justify-between text-sm">
+                        <a href="{{ url_for('produtos.editar_produto', product_id=product.id) }}" class="text-amber-700 hover:underline font-medium">{{ product.name }}</a>
+                        <span class="font-bold {% if product.stock_quantity == 0 %}text-red-600{% else %}text-amber-700{% endif %}">
+                            {{ product.stock_quantity }} un.
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Atividade Recente: 2 colunas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Últimas Simulações -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-[#d0dbe7]">
+                <h2 class="font-bold text-[#0d141c]">Últimas Simulações</h2>
+                <a href="{{ url_for('pricing.calculator') }}" class="text-xs text-[#0d80f2] hover:underline font-medium">Nova simulação</a>
+            </div>
+            {% if recent_simulations %}
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 text-[#49739c] text-xs uppercase">
+                    <tr>
+                        <th class="px-6 py-3 font-bold">Cenário</th>
+                        <th class="px-6 py-3 font-bold text-right">Lucro</th>
+                        <th class="px-6 py-3 font-bold text-right">Margem</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#d0dbe7]">
+                    {% for sim in recent_simulations %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-6 py-3">
+                            <p class="font-medium text-[#0d141c] truncate max-w-[160px]">{{ sim.title or 'Simulação' }}</p>
+                            <p class="text-xs text-[#49739c]">{{ sim.created_at.strftime('%d/%m/%Y') }}</p>
+                        </td>
+                        <td class="px-6 py-3 text-right font-bold {% if sim.net_profit > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                            R$ {{ "%.2f"|format(sim.net_profit) }}
+                        </td>
+                        <td class="px-6 py-3 text-right {% if sim.margin > 15 %}text-green-600{% elif sim.margin > 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
+                            {{ "%.1f"|format(sim.margin) }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="px-6 py-8 text-center text-[#49739c] text-sm">
+                Nenhuma simulação salva ainda.
+                <a href="{{ url_for('pricing.calculator') }}" class="text-[#0d80f2] hover:underline ml-1">Simular agora</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Últimas Alterações de Produtos -->
+        <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-[#d0dbe7]">
+                <h2 class="font-bold text-[#0d141c]">Atividade de Produtos</h2>
+                <a href="{{ url_for('produtos.lista_produtos') }}" class="text-xs text-[#0d80f2] hover:underline font-medium">Ver todos</a>
+            </div>
+            {% if recent_changes %}
+            <table class="w-full text-sm text-left">
+                <thead class="bg-slate-50 text-[#49739c] text-xs uppercase">
+                    <tr>
+                        <th class="px-6 py-3 font-bold">Produto</th>
+                        <th class="px-6 py-3 font-bold">Ação</th>
+                        <th class="px-6 py-3 font-bold text-right">Data</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-[#d0dbe7]">
+                    {% for change in recent_changes %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-6 py-3">
+                            {% if change.product %}
+                            <a href="{{ url_for('produtos.editar_produto', product_id=change.product_id) }}" class="font-medium text-[#0d141c] hover:text-[#0d80f2] truncate block max-w-[160px]">
+                                {{ change.product.name }}
+                            </a>
+                            {% else %}
+                            <span class="text-[#49739c] italic">Produto removido</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                                {% if change.action_type == 'Criação Inicial' %}bg-emerald-100 text-emerald-700
+                                {% else %}bg-blue-100 text-blue-700{% endif %}">
+                                {{ change.action_type }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-3 text-right text-[#49739c]">
+                            {{ change.changed_at.strftime('%d/%m %H:%M') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="px-6 py-8 text-center text-[#49739c] text-sm">
+                Nenhuma atividade ainda.
+                <a href="{{ url_for('produtos.criar_produto') }}" class="text-[#0d80f2] hover:underline ml-1">Cadastrar produto</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="flex flex-wrap gap-3">
+        <a href="{{ url_for('produtos.criar_produto') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0d80f2] text-white rounded-lg font-semibold text-sm hover:bg-blue-600 transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+            Novo Produto
+        </a>
+        <a href="{{ url_for('pricing.calculator') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-[#d0dbe7] text-[#0d141c] rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zm0 2.25h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V18zm2.498-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5v2.25h-7.5V6zM12 2.25c-1.892 0-3.758.11-5.593.322S3.087 3.204 1.5 3.75V19.5a.75.75 0 00.75.75h19.5a.75.75 0 00.75-.75V3.75c-1.587-.546-3.355-.93-5.157-1.178A48.400 48.400 0 0012 2.25z" /></svg>
+            Nova Simulação
+        </a>
+    </div>
+
+    {% endif %}
+</div>
+{% endblock %}
