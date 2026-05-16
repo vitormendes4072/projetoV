@@ -1,5 +1,6 @@
 # app/__init__.py
 import os
+import logging
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -70,6 +71,12 @@ def create_app(config_name: str | None = None) -> Flask:
             raise RuntimeError("SECRET_KEY não configurada no ambiente de produção.")
         if not os.environ.get("CREDENTIALS_ENCRYPTION_KEY"):
             raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
+
+    # ---------------------------------------
+    # Logging
+    # ---------------------------------------
+    log_level = logging.DEBUG if app.debug else logging.WARNING
+    logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
 
     # ---------------------------------------
     # Extensões
