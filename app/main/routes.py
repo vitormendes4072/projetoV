@@ -1,7 +1,7 @@
 # app/main/routes.py
 from flask import Blueprint, render_template, url_for, redirect
 from flask_login import login_required, current_user
-# REMOVIDO: from app.forms import CalculatorForm (Não é mais usado aqui)
+from app import db
 
 main = Blueprint('main', __name__)
 
@@ -54,8 +54,34 @@ def menu():
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    # MELHORIA: Usa um template para manter a barra de navegação
-    # Crie um arquivo simples dashboard.html ou use o base com uma mensagem
-    return render_template('base.html', content="<h1>Dashboard em Construção 🚧</h1>") 
-    # Obs: Para isso funcionar bonito, o base.html precisaria de um ajuste, 
-    # mas por enquanto evita a tela branca da morte.
+    from app.models.pricing import PricingHistory
+    from app.models.product import Product, ProductHistory
+
+    user_id = current_user.id
+
+    total_products = current_user.products.count()
+    total_simulations = PricingHistory.query.filter_by(user_id=user_id).count()
+    avg_margin = db.session.query(db.func.avg(PricingHistory.margin))\
+                           .filter_by(user_id=user_id).scalar() or 0
+    avg_roi = db.session.query(db.func.avg(PricingHistory.roi))\
+                        .filter_by(user_id=user_id).scalar() or 0
+
+    recent_simulations = PricingHistory.query.filter_by(user_id=user_id)\
+        .order_by(PricingHistory.created_at.desc()).limit(5).all()
+
+    recent_changes = ProductHistory.query.filter_by(user_id=user_id)\
+        .order_by(ProductHistory.changed_at.desc()).limit(5).all()
+
+    low_stock = current_user.products\
+        .filter(Product.stock_quantity <= 5)\
+        .order_by(Product.stock_quantity.asc()).limit(5).all()
+
+    return render_template('dashboard.html',
+        total_products=total_products,
+        total_simulations=total_simulations,
+        avg_margin=avg_margin,
+        avg_roi=avg_roi,
+        recent_simulations=recent_simulations,
+        recent_changes=recent_changes,
+        low_stock=low_stock
+    )
