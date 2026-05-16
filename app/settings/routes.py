@@ -22,7 +22,7 @@ def send_update_email(user, new_email):
     token = s.dumps({'new_email': new_email}, salt='email-update')
     
     msg = Message('Confirme seu novo E-mail - Marketplace Manager',
-                  sender='noreply@demo.com', recipients=[new_email])
+                  sender=current_app.config.get('MAIL_DEFAULT_SENDER'), recipients=[new_email])
     
     link = url_for('settings.confirm_email_update', token=token, _external=True)
     
