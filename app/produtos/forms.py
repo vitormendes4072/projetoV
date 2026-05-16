@@ -2,6 +2,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, SubmitField
 from wtforms.validators import DataRequired, Length, ValidationError
+from flask_login import current_user
 from app.models.product import Product
 
 class ProductForm(FlaskForm):
@@ -21,12 +22,12 @@ class ProductForm(FlaskForm):
         self.original_sku = original_sku
 
     def validate_sku(self, sku):
-        # Se o SKU digitado for IGUAL ao original (estou apenas editando preço, por exemplo)
-        # então não faz a validação de duplicidade.
         if self.original_sku and sku.data == self.original_sku:
             return
 
-        # Se for diferente, verifica se já existe outro produto com esse SKU
-        product = Product.query.filter_by(sku=sku.data).first()
+        product = Product.query.filter_by(
+            sku=sku.data,
+            user_id=current_user.id
+        ).first()
         if product:
-            raise ValidationError('Este SKU já está cadastrado.')
+            raise ValidationError('Este SKU já está cadastrado para sua conta.')
