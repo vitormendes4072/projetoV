@@ -2,16 +2,23 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'" href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"/>
-    <title>VEntregaz - Manager</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900">
+    <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900">
+    </noscript>
+    <title>{% block title %}VEntregaz - Manager{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
     <style>
         body { font-family: 'Inter', "Noto Sans", sans-serif; }
     </style>
+
+    {% block styles %}{% endblock %}
 </head>
 <body class="bg-slate-50 text-[#0d141c]">
-    
+
     {% if current_user.is_authenticated %}
     <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7edf4] px-10 py-3 bg-white">
         <div class="flex items-center gap-4 text-[#0d141c]">
@@ -22,7 +29,7 @@
             </div>
             <h2 class="text-[#0d141c] text-lg font-bold leading-tight tracking-[-0.015em]">VEntregaz</h2>
         </div>
-        
+
         <div class="flex items-center gap-4">
             <span class="text-sm text-[#49739c] font-medium hidden md:block">Olá, {{ current_user.name.split()[0] }}</span>
             <a href="{{ url_for('auth.logout') }}" class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e7edf4] text-[#0d141c] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d0dbe7] transition-colors">
@@ -36,7 +43,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm rounded-lg border 
+                    <div class="p-4 mb-4 text-sm rounded-lg border
                         {% if category == 'success' %} bg-green-50 text-green-800 border-green-200
                         {% elif category == 'danger' %} bg-red-50 text-red-800 border-red-200
                         {% elif category == 'warning' %} bg-yellow-50 text-yellow-800 border-yellow-200
@@ -54,5 +61,6 @@
         </div>
     </main>
 
+    {% block scripts %}{% endblock %}
 </body>
 </html>

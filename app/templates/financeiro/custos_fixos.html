@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/financeiro/custos_fixos.css') }}">
+{% endblock %}
+
+{% block content %}
+
+{% set cat_styles = {
+  "Administrativo": "bg-blue-100 text-blue-800 border-blue-200",
+  "Marketing": "bg-pink-100 text-pink-800 border-pink-200",
+  "Pessoal": "bg-violet-100 text-violet-800 border-violet-200",
+  "Infraestrutura": "bg-amber-100 text-amber-900 border-amber-200",
+  "Financeiro": "bg-emerald-100 text-emerald-800 border-emerald-200",
+  "Impostos": "bg-red-100 text-red-800 border-red-200",
+  "Outros": "bg-slate-100 text-slate-700 border-slate-200",
+  "Ferramentas": "bg-cyan-100 text-cyan-800 border-cyan-200"
+} %}
+{% set chip_active_cls = "ring-2 ring-slate-300" %}
+
+<div class="max-w-6xl mx-auto p-6"
+    data-page="custos-fixos"
+    data-update-url-template="{{ url_for('financeiro.update_custo_fixo', item_id=0) }}"
+    data-sort="{{ sort }}"
+    data-view="{{ view }}"
+    data-q="{{ (q or '')|urlencode }}"
+    data-cat="{{ cat or 'all' }}"
+    data-ativo="{{ ativo or 'all' }}"
+    data-paid="{{ paid or 'all' }}"
+>
+
+  <!-- HEADER -->
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold">Custos Fixos</h1>
+
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+        <p class="text-slate-600">
+          Total de custos fixos ativos em {{ "%02d"|format(mes) }}/{{ ano }}:
+          <span class="font-semibold">R$ {{ "%.2f"|format(total_vigente) }}</span>
+        </p>
+
+        {% if totais_por_categoria and totais_por_categoria|length > 0 %}
+          <div class="flex flex-wrap gap-2">
+            {% for catname, total in totais_por_categoria %}
+              {% set cls = cat_styles.get(catname, "bg-slate-100 text-slate-700 border-slate-200") %}
+              {% if total_vigente and total_vigente > 0 %}
+                {% set pct = (total / total_vigente) * 100 %}
+              {% else %}
+                {% set pct = 0 %}
+              {% endif %}
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold {{ cls }}">
+                <span>{{ catname }}</span>
+                <span class="font-bold">R$ {{ "%.2f"|format(total) }}</span>
+                <span class="opacity-80">({{ "%.0f"|format(pct) }}%)</span>
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if total_proximos_7_dias is not none %}
+          <a
+            href="{{ url_for('financeiro.custos_fixos', sort=sort, view='next7', q=q, cat=cat, ativo=ativo, paid=paid) }}#itens"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold
+                   bg-indigo-50 text-indigo-800 border-indigo-200 hover:opacity-90
+                   {{ chip_active_cls if view == 'next7' else '' }}"
+          >
+            <span>Próximos 7 dias</span>
+            <span class="font-bold">R$ {{ "%.2f"|format(total_proximos_7_dias) }}</span>
+          </a>
+        {% endif %}
+
+        {% if total_em_aberto_mes is not none %}
+          <a
+            href="{{ url_for('financeiro.custos_fixos', sort=sort, view='open_month', q=q, cat=cat, ativo=ativo, paid=paid) }}#itens"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold
+                   bg-slate-50 text-slate-700 border-slate-200 hover:opacity-90
+                   {{ chip_active_cls if view == 'open_month' else '' }}"
+          >
+            <span>Em aberto até o fim do mês</span>
+            <span class="font-bold">R$ {{ "%.2f"|format(total_em_aberto_mes) }}</span>
+          </a>
+        {% endif %}
+
+        {% if view and view != "all" %}
+          <a
+            href="{{ url_for('financeiro.custos_fixos', sort=sort, view='all', q=q, cat=cat, ativo=ativo, paid=paid) }}#itens"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold
+                   bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+          >
+            <span>Mostrar tudo</span>
+            <span class="text-slate-400">✕</span>
+          </a>
+        {% endif %}
+
+        {% set has_filters = ((q and q|trim) or (cat and cat != 'all') or (ativo and ativo != 'all') or (paid and paid != 'all')) %}
+        {% if has_filters %}
+          <a
+            href="{{ url_for('financeiro.custos_fixos', sort=sort, view=view) }}#itens"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold
+                   bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+          >
+            <span>Limpar filtros</span>
+            <span class="text-slate-400">✕</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <a href="{{ url_for('financeiro.alertas') }}" class="px-4 py-2 rounded-lg border bg-white">
+      Alertas
+    </a>
+    <a href="{{ url_for('main.dashboard') }}" class="px-4 py-2 rounded-lg border bg-white">
+      Voltar
+    </a>
+
+
+  </div>
+
+  <!-- FORM -->
+  <div class="mt-6 bg-white border rounded-2xl p-5">
+    <h2 class="text-lg font-semibold">Adicionar custo fixo</h2>
+
+    <form method="post" class="mt-4 grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+      <div class="md:col-span-2">
+        <label class="text-sm text-slate-600">Nome</label>
+        <input name="nome" required class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="Ex: Contador">
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Categoria</label>
+        <select name="categoria" class="mt-1 w-full border rounded-lg px-3 py-2">
+          <option value="Administrativo">Administrativo</option>
+          <option value="Ferramentas">Ferramentas</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Pessoal">Pessoal</option>
+          <option value="Infraestrutura">Infraestrutura</option>
+          <option value="Financeiro">Financeiro</option>
+          <option value="Impostos">Impostos</option>
+          <option value="Outros" selected>Outros</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Valor mensal</label>
+        <input name="valor_mensal" class="mt-1 w-full border rounded-lg px-3 py-2"
+               placeholder="0,00" inputmode="decimal" data-money>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Dia de pagamento</label>
+        <input name="dia_pagamento" type="number" min="1" max="31"
+               class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="Ex: 10">
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Início</label>
+        <input type="date" name="data_inicio" required class="mt-1 w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div class="md:col-span-2">
+        <label class="text-sm text-slate-600">Fim (opcional)</label>
+        <input type="date" name="data_fim" class="mt-1 w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div class="md:col-span-4 flex justify-end">
+        <button type="submit" class="mt-2 px-6 py-2 rounded-lg bg-black text-white">Salvar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- LISTA -->
+  <div id="itens" class="mt-6 bg-white border rounded-2xl p-5">
+    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div class="flex items-center justify-between gap-3">
+        {% if view == "next7" %}
+          <h2 class="text-lg font-semibold">Fila de pagamentos (7 dias)</h2>
+        {% elif view == "open_month" %}
+          <h2 class="text-lg font-semibold">Em aberto até o fim do mês</h2>
+        {% else %}
+          <h2 class="text-lg font-semibold">Itens cadastrados</h2>
+        {% endif %}
+      </div>
+
+      <!-- FILTROS + SORT -->
+      <div class="w-full md:w-auto">
+        <form id="filtersForm" method="get" action="{{ url_for('financeiro.custos_fixos') }}#itens"
+              class="flex flex-col gap-2 md:items-end">
+
+          <input type="hidden" name="view" value="{{ view or 'all' }}">
+          <input type="hidden" id="hid_q" name="q" value="{{ q or '' }}">
+          <input type="hidden" id="hid_cat" name="cat" value="{{ cat or 'all' }}">
+          <input type="hidden" id="hid_ativo" name="ativo" value="{{ ativo or 'all' }}">
+          <input type="hidden" id="hid_paid" name="paid" value="{{ paid or 'all' }}">
+
+          <div class="flex flex-col md:flex-row md:items-end md:justify-end gap-2">
+            <div class="flex flex-wrap items-end gap-2 justify-end min-h-[52px] flex-1">
+              <div>
+                <label class="text-xs text-slate-600">Adicionar filtro</label>
+                <select id="filterType" class="mt-1 border rounded-lg px-3 py-2 text-sm bg-white min-w-[190px]">
+                  <option value="" selected>Escolha…</option>
+                  <option value="q">Buscar</option>
+                  <option value="cat">Categoria</option>
+                  <option value="ativo">Status</option>
+                  <option value="paid">Pagamento (mês)</option>
+                </select>
+              </div>
+
+              <div id="filterValueWrap" class="hidden">
+                <label class="text-xs text-slate-600" id="filterValueLabel">Valor</label>
+
+                <input id="val_q" class="mt-1 hidden border rounded-lg px-3 py-2 text-sm bg-white w-[200px]" placeholder="Nome…">
+
+                <select id="val_cat" class="mt-1 hidden border rounded-lg px-3 py-2 text-sm bg-white min-w-[180px]">
+                  <option value="all">Todas</option>
+                  {% for c in (categorias_db or []) %}
+                    <option value="{{ c }}">{{ c }}</option>
+                  {% endfor %}
+                </select>
+
+                <select id="val_ativo" class="mt-1 hidden border rounded-lg px-3 py-2 text-sm bg-white min-w-[150px]">
+                  <option value="all">Todos</option>
+                  <option value="active">Ativos</option>
+                  <option value="inactive">Inativos</option>
+                </select>
+
+                <select id="val_paid" class="mt-1 hidden border rounded-lg px-3 py-2 text-sm bg-white min-w-[190px]">
+                  <option value="all">Todos</option>
+                  <option value="paid">Pago</option>
+                  <option value="unpaid">Não pago</option>
+                </select>
+              </div>
+
+              <button type="button" id="addFilterBtn" class="h-[42px] px-4 rounded-lg bg-black text-white text-sm hidden">
+                Adicionar
+              </button>
+            </div>
+
+            <div class="flex-shrink-0 min-w-[260px] md:min-w-[290px]">
+              <label class="text-xs text-slate-600">Ordenar por</label>
+              <select id="sortSelect" name="sort" class="mt-1 border rounded-lg px-3 py-2 text-sm bg-white w-full">
+                <option value="agenda" {{ "selected" if sort == "agenda" else "" }}>Agenda (dia de pagamento)</option>
+                <option value="nome" {{ "selected" if sort == "nome" else "" }}>Nome</option>
+                <option value="categoria" {{ "selected" if sort == "categoria" else "" }}>Categoria</option>
+                <option value="valor_desc" {{ "selected" if sort == "valor_desc" else "" }}>Valor (maior → menor)</option>
+                <option value="valor_asc" {{ "selected" if sort == "valor_asc" else "" }}>Valor (menor → maior)</option>
+                <option value="inicio" {{ "selected" if sort == "inicio" else "" }}>Data de início (mais recente)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 justify-end min-h-[34px]" id="activeFilters"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- AÇÕES EM MASSA -->
+    <form id="bulkForm" method="post" action="{{ url_for('financeiro.bulk_action_custos_fixos') }}#itens" class="mt-4">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="view" value="{{ view or 'all' }}">
+      <input type="hidden" name="q" value="{{ q or '' }}">
+      <input type="hidden" name="cat" value="{{ cat or 'all' }}">
+      <input type="hidden" name="ativo" value="{{ ativo or 'all' }}">
+      <input type="hidden" name="paid" value="{{ paid or 'all' }}">
+
+      <input type="hidden" name="action" id="bulkAction" value="">
+      <div id="bulkIds"></div>
+
+      <div id="bulkBar" class="hidden mb-3 p-3 rounded-xl border bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-sm text-slate-700">
+          <span class="font-semibold" id="bulkCount">0</span> selecionado(s)
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 text-sm" data-bulk-action="mark_paid">Marcar pago</button>
+          <button type="button" class="px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 text-sm" data-bulk-action="unmark_paid">Desmarcar pago</button>
+          <button type="button" class="px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 text-sm" data-bulk-action="activate">Ativar</button>
+          <button type="button" class="px-3 py-2 rounded-lg border bg-white hover:bg-slate-50 text-sm" data-bulk-action="deactivate">Desativar</button>
+          <button type="button" class="px-3 py-2 rounded-lg border border-red-300 bg-white hover:bg-red-50 text-red-700 text-sm" data-bulk-action="delete" data-confirm="true">Excluir</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="mt-2 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-600 border-b">
+            <th class="py-2 w-10">
+              <input type="checkbox" id="selectAll" class="w-4 h-4 align-middle rounded-md border-slate-300" title="Selecionar todos">
+            </th>
+            <th class="py-2">Nome</th>
+            <th class="py-2">Categoria</th>
+            <th class="py-2">Valor</th>
+            <th class="py-2">Início</th>
+            <th class="py-2">Fim</th>
+            <th class="py-2">Pagamento</th>
+            <th class="py-2">Situação</th>
+            <th class="py-2">Status</th>
+            <th class="py-2 text-right">Ações</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for i in itens %}
+            {% set st = status_map.get(i.id) %}
+            {% set is_paid = (st and st[0] == "Pago") %}
+            <tr class="border-b">
+              <td class="py-2">
+                <input type="checkbox" class="rowCheck w-4 h-4 align-middle rounded-md border-slate-300" data-id="{{ i.id }}">
+              </td>
+
+              <td class="py-2 font-medium">{{ i.nome }}</td>
+
+              <td class="py-2">
+                {% set cls = cat_styles.get(i.categoria, "bg-slate-100 text-slate-700 border-slate-200") %}
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border {{ cls }}">
+                  {{ i.categoria }}
+                </span>
+              </td>
+
+              <td class="py-2">R$ {{ "%.2f"|format(i.valor_mensal) }}</td>
+              <td class="py-2">{{ i.data_inicio }}</td>
+              <td class="py-2">{{ i.data_fim or "-" }}</td>
+
+              <td class="py-2 whitespace-nowrap">
+                {% if i.dia_pagamento %}Dia {{ i.dia_pagamento }}{% else %}-{% endif %}
+              </td>
+
+              <td class="py-2">
+                {% if st %}
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ st[1] }}">
+                    {{ st[0] }}
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">-</span>
+                {% endif %}
+              </td>
+
+              <td class="py-2">
+                {% if i.ativo %}
+                  <span class="px-2 py-1 rounded-full bg-green-100 text-green-800">Ativo</span>
+                {% else %}
+                  <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-700">Inativo</span>
+                {% endif %}
+              </td>
+
+              <td class="py-2 text-right">
+                <div class="relative inline-block">
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center w-9 h-9 rounded-lg border bg-white hover:bg-slate-50"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    data-menu-btn="{{ i.id }}"
+                    title="Ações"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-700" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="5" cy="12" r="1.8"></circle>
+                      <circle cx="12" cy="12" r="1.8"></circle>
+                      <circle cx="19" cy="12" r="1.8"></circle>
+                    </svg>
+                  </button>
+
+                  <div class="hidden absolute right-0 mt-2 w-56 rounded-xl border bg-white shadow-lg overflow-hidden z-20"
+                       role="menu" data-menu="{{ i.id }}">
+                    <button
+                      type="button"
+                      class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+                      role="menuitem"
+                      data-edit-btn="1"
+                      data-id="{{ i.id }}"
+                      data-nome="{{ i.nome|e }}"
+                      data-categoria="{{ i.categoria|e }}"
+                      data-valor="{{ "%.2f"|format(i.valor_mensal)|replace('.', ',') }}"
+                      data-dia="{{ i.dia_pagamento or '' }}"
+                      data-inicio="{{ i.data_inicio }}"
+                      data-fim="{{ i.data_fim or '' }}"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      type="button"
+                      class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50"
+                      data-history-btn="1"
+                      data-history-url="{{ url_for('financeiro.custos_fixos_history', item_id=i.id) }}"
+                    >
+                      Histórico
+                    </button>
+
+
+
+                    <div class="h-px bg-slate-100"></div>
+
+                    <form method="post" action="{{ url_for('financeiro.toggle_pago_custo_fixo', item_id=i.id, sort=sort, view=view, q=q, cat=cat, ativo=ativo, paid=paid) }}#itens">
+                      <button type="submit" class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50" role="menuitem">
+                        {% if is_paid %}Desmarcar pago{% else %}{% if not i.dia_pagamento %}Marcar pago (manual){% else %}Marcar pago{% endif %}{% endif %}
+                      </button>
+                    </form>
+
+                    <form method="post" action="{{ url_for('financeiro.toggle_custo_fixo', item_id=i.id, sort=sort, view=view, q=q, cat=cat, ativo=ativo, paid=paid) }}#itens">
+                      <button type="submit" class="w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50" role="menuitem">
+                        {{ "Desativar" if i.ativo else "Ativar" }}
+                      </button>
+                    </form>
+
+                    <div class="h-px bg-slate-100"></div>
+
+                    <form method="post"
+                          action="{{ url_for('financeiro.delete_custo_fixo', item_id=i.id, sort=sort, view=view, q=q, cat=cat, ativo=ativo, paid=paid) }}#itens"
+                          onsubmit="return confirm('Remover este custo fixo?');">
+                      <button type="submit" class="w-full text-left px-4 py-2.5 text-sm text-red-700 hover:bg-red-50" role="menuitem">
+                        Excluir
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if itens|length == 0 %}
+        <p class="text-slate-600 mt-4">
+          {% if view == "next7" %}
+            Nenhum pagamento pendente nos próximos 7 dias.
+          {% elif view == "open_month" %}
+            Nenhum pagamento pendente até o fim do mês.
+          {% else %}
+            Nenhum custo fixo cadastrado ainda.
+          {% endif %}
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="editModal" class="hidden fixed inset-0 z-50" aria-hidden="true">
+  <div id="editOverlay" class="absolute inset-0 bg-black/40"></div>
+
+  <div class="relative mx-auto max-w-xl w-[92%] mt-24">
+    <div class="bg-white rounded-2xl border shadow-xl overflow-hidden">
+      <div class="px-5 py-4 border-b flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold">Editar custo fixo</h3>
+          <p class="text-sm text-slate-500">Altere os campos e salve.</p>
+        </div>
+        <button type="button" id="editCloseBtn" class="w-9 h-9 rounded-lg border bg-white hover:bg-slate-50" title="Fechar">✕</button>
+      </div>
+
+      <form id="editForm" method="post" action="">
+        <div class="p-5 grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div class="md:col-span-3">
+            <label class="text-sm text-slate-600">Nome</label>
+            <input id="edit_nome" name="nome" required class="mt-1 w-full border rounded-lg px-3 py-2">
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="text-sm text-slate-600">Categoria</label>
+            <select id="edit_categoria" name="categoria" class="mt-1 w-full border rounded-lg px-3 py-2">
+              <option value="Administrativo">Administrativo</option>
+              <option value="Ferramentas">Ferramentas</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Pessoal">Pessoal</option>
+              <option value="Infraestrutura">Infraestrutura</option>
+              <option value="Financeiro">Financeiro</option>
+              <option value="Impostos">Impostos</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm text-slate-600">Valor mensal</label>
+            <input id="edit_valor" name="valor_mensal" class="mt-1 w-full border rounded-lg px-3 py-2"
+                   inputmode="decimal" data-money>
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm text-slate-600">Dia de pagamento</label>
+            <input id="edit_dia" name="dia_pagamento" type="number" min="1" max="31"
+                   class="mt-1 w-full border rounded-lg px-3 py-2" placeholder="Ex: 10">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="text-sm text-slate-600">Início</label>
+            <input id="edit_inicio" type="date" name="data_inicio" required class="mt-1 w-full border rounded-lg px-3 py-2">
+          </div>
+
+          <div class="md:col-span-3">
+            <label class="text-sm text-slate-600">Fim (opcional)</label>
+            <input id="edit_fim" type="date" name="data_fim" class="mt-1 w-full border rounded-lg px-3 py-2">
+          </div>
+
+          <div class="md:col-span-3 flex justify-end gap-2 items-end">
+            <button type="button" id="editCancelBtn" class="mt-2 px-4 py-2 rounded-lg border bg-white hover:bg-slate-50">Cancelar</button>
+            <button type="submit" class="mt-2 px-5 py-2 rounded-lg bg-black text-white">Salvar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HISTÓRICO -->
+<div id="historyModal" class="hidden fixed inset-0 z-50" aria-hidden="true">
+  <div id="historyOverlay" class="absolute inset-0 bg-black/40"></div>
+
+  <div class="relative mx-auto max-w-2xl w-[92%] mt-10 md:mt-16">
+    <!-- ✅ limita altura + vira coluna -->
+    <div class="bg-white rounded-2xl border shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
+      <!-- ✅ header fixo -->
+      <div class="px-5 py-4 border-b flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold">Histórico</h3>
+          <p class="text-sm text-slate-500" id="historySubtitle">Alterações do item</p>
+        </div>
+        <button
+          type="button"
+          id="historyCloseBtn"
+          class="w-9 h-9 rounded-lg border bg-white hover:bg-slate-50"
+          title="Fechar"
+        >✕</button>
+      </div>
+
+      <!-- ✅ corpo com scroll interno -->
+      <div class="p-5">
+        <div id="historyLoading" class="text-sm text-slate-500 hidden">Carregando…</div>
+        <div id="historyEmpty" class="text-sm text-slate-500 hidden">Sem alterações registradas.</div>
+
+        <div data-history-scroll class="max-h-[65vh] overflow-y-auto pr-1">
+          <ul id="historyList" class="space-y-3"></ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/financeiro/custos_fixos/index.js') }}"></script>
+{% endblock %}

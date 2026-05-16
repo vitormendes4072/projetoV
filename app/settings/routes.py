@@ -5,7 +5,7 @@ from flask_mail import Message
 from threading import Thread
 from itsdangerous import URLSafeTimedSerializer
 from app import db, mail
-from .forms import UpdateAccountForm, ChangePasswordForm
+from .forms import UpdateAccountForm, ChangePasswordForm, BusinessSettingsForm
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -39,6 +39,7 @@ Para confirmar a troca de e-mail, clique no link abaixo:
 def index():
     account_form = UpdateAccountForm()
     password_form = ChangePasswordForm()
+    business_form = BusinessSettingsForm()
 
     # ==========================================================
     # 1. LÓGICA DO PERFIL (Nome/Email) - MODAL VERMELHO
@@ -47,9 +48,7 @@ def index():
         
         # VERIFICAÇÃO DE SENHA (BACKEND)
         if not current_user.check_password(account_form.current_password.data):
-            # TRUQUE DE UX:
-            # Em vez de flash, adicionamos o erro ao campo.
-            # O JavaScript no HTML detecta isso e reabre o modal automaticamente.
+            # TRUQUE DE UX: Adiciona erro ao campo para reabrir o modal
             account_form.current_password.errors.append('Senha incorreta. Tente novamente.')
         
         else:
@@ -77,22 +76,41 @@ def index():
         
         # VERIFICAÇÃO DE SENHA ATUAL (BACKEND)
         if not current_user.check_password(password_form.current_password.data):
-            # TRUQUE DE UX: Adiciona erro ao campo para reabrir o modal escuro
             password_form.current_password.errors.append('A senha atual informada está incorreta.')
         
         else:
-            # Tudo certo, troca a senha
             current_user.set_password(password_form.new_password.data)
             db.session.commit()
             flash('Sua senha foi alterada com sucesso!', 'success')
             return redirect(url_for('settings.index'))
+    
+    # ==========================================================
+    # 3. LÓGICA: DADOS TRIBUTÁRIOS (Fiscal)
+    # ==========================================================
+    if 'submit_business' in request.form:
+        if business_form.validate_on_submit():
+            current_user.tax_regime = business_form.tax_regime.data
+            current_user.default_tax_rate = business_form.default_tax_rate.data
+            db.session.commit()
+            flash('Configurações tributárias atualizadas!', 'success')
+            return redirect(url_for('settings.index'))
+        else:
+            # DEBUG: Mostra no terminal por que falhou (ex: "Campo Obrigatório")
+            print("ERRO AO SALVAR CONFIG FISCAL:", business_form.errors)
 
     # Preenchimento inicial (GET)
     if request.method == 'GET':
         account_form.name.data = current_user.name
         account_form.email.data = current_user.email
 
-    return render_template('settings.html', form=account_form, password_form=password_form)
+        # Preenche os dados fiscais atuais do banco
+        business_form.tax_regime.data = current_user.tax_regime
+        business_form.default_tax_rate.data = current_user.default_tax_rate
+
+    return render_template('settings.html', 
+                           form=account_form, 
+                           password_form=password_form, 
+                           business_form=business_form)
 
 
 @settings_bp.route('/settings/confirm_email/<token>')

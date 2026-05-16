@@ -2,51 +2,116 @@
 
 {% block content %}
 <div class="flex flex-col gap-6 py-4">
-    
-    <div class="flex flex-col gap-2">
-        <h1 class="text-[#0d141c] tracking-tight text-[32px] font-bold leading-tight">
-            Painel de Controle
-        </h1>
-        <p class="text-[#49739c] text-base font-normal leading-normal">
-            Selecione uma ferramenta para gerenciar seu negócio.
+
+  <div class="flex flex-col gap-2">
+    <h1 class="text-[#0d141c] tracking-tight text-[32px] font-bold leading-tight">
+      Painel de Controle
+    </h1>
+    <p class="text-[#49739c] text-base font-normal leading-normal">
+      Selecione uma ferramenta para gerenciar seu negócio.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    {% for tool in tools %}
+
+      {# Link e classes variam conforme enabled #}
+      {% set is_enabled = tool.enabled if tool.enabled is defined else True %}
+      {% set href = tool.route if is_enabled else "javascript:void(0)" %}
+
+      <a
+        href="{{ href }}"
+        class="
+          group relative flex flex-col gap-4 rounded-xl border bg-white p-5 shadow-sm transition-all
+          {% if is_enabled %}
+            border-[#d0dbe7] hover:shadow-md hover:border-[#0d80f2] cursor-pointer
+          {% else %}
+            border-[#d0dbe7] opacity-60 cursor-not-allowed pointer-events-none
+          {% endif %}
+        "
+        {% if not is_enabled %} aria-disabled="true" tabindex="-1" {% endif %}
+      >
+
+        {# Badge (ex: Em breve) #}
+        {% if tool.badge %}
+          <span class="absolute right-4 top-4 text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            {{ tool.badge }}
+          </span>
+        {% endif %}
+
+        <div class="flex items-center gap-4">
+          <div class="flex items-center justify-center size-12 rounded-lg
+            {% if tool.color == 'primary' %} bg-blue-100 text-[#0d80f2]
+            {% elif tool.color == 'success' %} bg-green-100 text-green-600
+            {% elif tool.color == 'warning' %} bg-yellow-100 text-yellow-600
+            {% else %} bg-slate-100 text-slate-600 {% endif %}">
+
+            {% if tool.id == 'dashboard' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+              </svg>
+
+            {% elif tool.id == 'products' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+
+            {% elif tool.id == 'pricing' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+
+            {% elif tool.id == 'finance_alertas' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9a6 6 0 00-12 0v.75A8.967 8.967 0 013.689 15.772a23.848 23.848 0 005.454 1.31M15 19.5a3 3 0 11-6 0" />
+              </svg>
+
+            {% elif tool.id == 'finance_custos_fixos' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 14.25l2.25 2.25L15 12.75M7.5 3.75h9A2.25 2.25 0 0118.75 6v12A2.25 2.25 0 0116.5 20.25h-9A2.25 2.25 0 015.25 18V6A2.25 2.25 0 017.5 3.75z" />
+              </svg>
+
+            {% elif tool.id == 'settings' %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+
+            {% else %}
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            {% endif %}
+          </div>
+
+          <h3 class="text-[#0d141c] text-lg font-bold leading-tight">
+            {{ tool.title }}
+          </h3>
+        </div>
+
+        <p class="text-[#49739c] text-sm font-normal leading-normal">
+          {{ tool.description }}
         </p>
-    </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        
-        {% for tool in tools %}
-        <a href="{{ tool.route }}" class="group flex flex-col gap-4 rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm hover:shadow-md hover:border-[#0d80f2] transition-all cursor-pointer">
-            
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center size-12 rounded-lg 
-                    {% if tool.color == 'primary' %} bg-blue-100 text-[#0d80f2]
-                    {% elif tool.color == 'success' %} bg-green-100 text-green-600
-                    {% elif tool.color == 'warning' %} bg-yellow-100 text-yellow-600
-                    {% else %} bg-slate-100 text-slate-600 {% endif %}">
-                    
-                    {% if tool.id == 'dashboard' %}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
-                    {% elif tool.id == 'products' %}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                    {% elif tool.id == 'pricing' %}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    {% else %}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    {% endif %}
-                </div>
-                
-                <h3 class="text-[#0d141c] text-lg font-bold leading-tight">{{ tool.title }}</h3>
-            </div>
+        <div class="mt-auto pt-2 text-sm font-bold flex items-center
+          {% if is_enabled %}
+            text-[#0d80f2] group-hover:underline
+          {% else %}
+            text-slate-400
+          {% endif %}
+        ">
+          {% if is_enabled %}
+            Acessar ferramenta <span class="ml-1">→</span>
+          {% else %}
+            Indisponível <span class="ml-1">⏳</span>
+          {% endif %}
+        </div>
 
-            <p class="text-[#49739c] text-sm font-normal leading-normal">
-                {{ tool.description }}
-            </p>
-            
-            <div class="mt-auto pt-2 text-[#0d80f2] text-sm font-bold flex items-center group-hover:underline">
-                Acessar ferramenta <span class="ml-1">→</span>
-            </div>
-        </a>
-        {% endfor %}
-    </div>
+      </a>
+    {% endfor %}
+
+  </div>
 </div>
 {% endblock %}

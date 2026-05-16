@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif;">
+    <h2>Olá, {{ user_name }}!</h2>
+    <p>Alertas de custos fixos ({{ run_day }}).</p>
+
+    {% if due_items and due_items|length > 0 %}
+      <h3>Vencendo hoje</h3>
+      <ul>
+        {% for it in due_items %}
+          <li><b>{{ it.nome }}</b> ({{ it.categoria }}) — R$ {{ it.valor_mensal }} — vence em {{ it.vencimento }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% if before_items and before_items|length > 0 %}
+      <h3>Vencendo em {{ days_before }} dia(s)</h3>
+      <ul>
+        {% for it in before_items %}
+          <li><b>{{ it.nome }}</b> ({{ it.categoria }}) — R$ {{ it.valor_mensal }} — vence em {{ it.vencimento }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <p style="color:#666;">Você pode ajustar isso em Financeiro → Alertas.</p>
+  </body>
+</html>

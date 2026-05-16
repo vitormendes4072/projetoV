@@ -16,6 +16,7 @@ __pycache__/
 
 # 4. Logs e Depuração
 *.log
+logs/
 
 # 5. Configurações de IDE (Opcional, mas bom para não subir config da sua máquina)
 .vscode/
@@ -28,3 +29,6 @@ Thumbs.db
 # 7. Binários de build (Tailwind CLI standalone — baixar conforme README)
 tools/
 node_modules/
+
+# 8. Worktrees do Claude
+.claude/

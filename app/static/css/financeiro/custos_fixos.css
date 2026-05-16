@@ -1,0 +1,17 @@
+/* Evita seleção de texto estranha em botões/menus e melhora UX */
+[data-menu-btn],
+[data-bulk-action],
+#addFilterBtn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Se quiser um “fade” leve do modal (opcional) */
+#editModal[aria-hidden="false"] {
+  animation: cf-fade-in 120ms ease-out;
+}
+
+@keyframes cf-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
