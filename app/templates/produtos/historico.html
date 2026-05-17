@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto py-8">
-    
+
     <div class="flex items-center gap-4 mb-6">
         <a href="{{ url_for('produtos.lista_produtos') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
@@ -12,6 +12,13 @@
             <p class="text-slate-500 text-sm">Produto: <span class="font-bold text-[#0d141c]">{{ product.name }}</span> ({{ product.sku }})</p>
         </div>
     </div>
+
+    {% if grafico.labels|length > 1 %}
+    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mb-6">
+        <h2 class="text-base font-bold text-[#0d141c] mb-4">Evolução de Preço e Custo</h2>
+        <canvas id="graficoPreco" height="100"></canvas>
+    </div>
+    {% endif %}
 
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
         <table class="w-full text-left text-sm text-[#0d141c]">
@@ -80,4 +87,55 @@
     </div>
     {% endif %}
 </div>
+
+{% if grafico.labels|length > 1 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    const dados = {{ grafico | tojson }};
+    new Chart(document.getElementById('graficoPreco'), {
+        type: 'line',
+        data: {
+            labels: dados.labels,
+            datasets: [
+                {
+                    label: 'Preço (R$)',
+                    data: dados.precos,
+                    borderColor: '#0d80f2',
+                    backgroundColor: 'rgba(13,128,242,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                },
+                {
+                    label: 'Custo (R$)',
+                    data: dados.custos,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245,158,11,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => 'R$ ' + ctx.parsed.y.toFixed(2)
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: val => 'R$ ' + val.toFixed(2)
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}

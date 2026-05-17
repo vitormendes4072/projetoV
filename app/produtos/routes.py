@@ -191,4 +191,11 @@ def historico_produto(product_id):
     page = request.args.get('page', 1, type=int)
     historico = product.history.order_by(ProductHistory.changed_at.desc()).paginate(page=page, per_page=10, error_out=False)
 
-    return render_template('produtos/historico.html', product=product, historico=historico)
+    serie = product.history.order_by(ProductHistory.changed_at.asc()).limit(200).all()
+    grafico = {
+        "labels": [e.changed_at.strftime('%d/%m %H:%M') for e in serie],
+        "precos": [float(e.price) for e in serie],
+        "custos": [float(e.cost) for e in serie],
+    }
+
+    return render_template('produtos/historico.html', product=product, historico=historico, grafico=grafico)
