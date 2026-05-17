@@ -6,7 +6,7 @@ from app import db
 class NotificationLog(db.Model):
     __tablename__ = "notification_log"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
 
     user_id = db.Column(
         db.Integer,
