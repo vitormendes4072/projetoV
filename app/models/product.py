@@ -25,7 +25,7 @@ class Product(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     # Relacionamento com o histórico (Um produto tem muitos históricos)
-    history = db.relationship('ProductHistory', backref='product', lazy='dynamic', cascade="all, delete-orphan")
+    history = db.relationship('ProductHistory', backref='product', lazy='select', cascade="all, delete-orphan")
 
     def __repr__(self):
         return f'<Product {self.sku}>'
