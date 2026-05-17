@@ -147,7 +147,7 @@ def criar_produto():
 @produtos_bp.route('/produtos/editar/<int:product_id>', methods=['GET', 'POST'])
 @login_required
 def editar_produto(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = db.get_or_404(Product, product_id)
     if product.owner != current_user:
         abort(403)
 
@@ -184,14 +184,14 @@ def editar_produto(product_id):
 @produtos_bp.route('/produtos/historico/<int:product_id>')
 @login_required
 def historico_produto(product_id):
-    product = Product.query.get_or_404(product_id)
+    product = db.get_or_404(Product, product_id)
     if product.owner != current_user:
         abort(403)
         
     page = request.args.get('page', 1, type=int)
-    historico = product.history.order_by(ProductHistory.changed_at.desc()).paginate(page=page, per_page=10, error_out=False)
+    historico = db.paginate(db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.desc()), page=page, per_page=10, error_out=False)
 
-    serie = product.history.order_by(ProductHistory.changed_at.asc()).limit(200).all()
+    serie = db.session.scalars(db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.asc()).limit(200)).all()
     grafico = {
         "labels": [e.changed_at.strftime('%d/%m %H:%M') for e in serie],
         "precos": [float(e.price) for e in serie],
