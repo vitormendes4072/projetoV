@@ -1,0 +1,83 @@
+<!--  app/templates/produtos/editar.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-8">
+    
+    <div class="flex items-center gap-4 mb-6">
+        <a href="{{ url_for('produtos.lista_produtos') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+        </a>
+        <h1 class="text-[#0d141c] text-2xl font-bold">{{ title }}</h1>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Nome do Produto</label>
+                    {{ form.name(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                    {% for error in form.name.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">
+                        SKU <span class="text-xs text-slate-400 font-normal">(Código único)</span>
+                    </label>
+                    {{ form.sku(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0", placeholder="Ex: TRAV-GEL-01") }}
+                    {% for error in form.sku.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Preço de referência (opcional) (R$)</label>
+                    {{ form.price(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                    {% for error in form.price.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Custo do Produto (R$)</label>
+                    {{ form.cost(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                    {% for error in form.cost.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                </div>
+
+                <!-- ✅ NOVO CAMPO: EMBALAGEM -->
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Custo de Embalagem (R$)</label>
+                    {{ form.packaging_cost(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                    {% for error in form.packaging_cost.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                    <span class="text-xs text-slate-400">Ex.: caixa, saco, etiqueta, inserto, etc. (por unidade)</span>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Estoque Atual</label>
+                    {{ form.stock_quantity(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">URL da Imagem</label>
+                    {{ form.image_url(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                </div>
+
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                {{ form.submit(class_="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-12 px-8 hover:bg-blue-600 transition-colors shadow-sm") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
