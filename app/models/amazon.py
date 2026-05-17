@@ -12,7 +12,7 @@ class AmazonConnection(db.Model):
     __table_args__ = {"schema": "public"}  # <- força schema certo
 
     id = db.Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    user_id = db.Column(db.String, nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
 
     marketplace_id = db.Column(db.String, nullable=False)
     seller_id = db.Column(db.String, nullable=True)
@@ -38,7 +38,7 @@ class AmazonOrder(db.Model):
     )
 
     id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     amazon_order_id = db.Column(db.String, nullable=False)
     marketplace_id = db.Column(db.String, nullable=False)
@@ -59,7 +59,7 @@ class AmazonOrderItem(db.Model):
     __tablename__ = "amazon_order_items"
     __table_args__ = {"schema": "public"}
     id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     amazon_order_id = db.Column(db.String, nullable=False)
     seller_sku = db.Column(db.String, nullable=True)

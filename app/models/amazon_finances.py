@@ -9,7 +9,7 @@ class AmazonFinancialEvent(db.Model):
     __table_args__ = {"schema": "public"}
 
     id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     posted_date = db.Column(db.DateTime(timezone=True), nullable=True)
     event_group_id = db.Column(db.String, nullable=True)

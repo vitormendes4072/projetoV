@@ -31,9 +31,8 @@ SP_TZ = ZoneInfo("America/Sao_Paulo")
 # ---------------------------
 # Helpers
 # ---------------------------
-def user_key() -> str:
-    # seu DB está com user_id como TEXT
-    return str(current_user.id)
+def user_key() -> int:
+    return current_user.id
 
 
 def utcnow() -> datetime:
