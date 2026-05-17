@@ -45,6 +45,7 @@ class DevelopmentConfig(Config):
     Configurações para desenvolvimento local
     """
     DEBUG = True
+    SESSION_COOKIE_SECURE = False
 
     # SQLite local por padrão (não quebra o projeto)
     SQLALCHEMY_DATABASE_URI = (
@@ -65,6 +66,10 @@ class ProductionConfig(Config):
         os.environ.get("DATABASE_URL", "")
         .replace("postgres://", "postgresql://")
     )
+
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_HTTPONLY = True
 
 
 class TestingConfig(Config):
