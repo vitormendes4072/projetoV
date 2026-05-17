@@ -114,13 +114,25 @@ def _parse_form_fields_or_flash():
     if not data_inicio_raw:
         return None, "Data de início é obrigatória.", "warning"
 
+    try:
+        data_inicio = date.fromisoformat(data_inicio_raw)
+    except ValueError:
+        return None, "Data de início inválida.", "danger"
+
+    data_fim = None
+    if data_fim_raw:
+        try:
+            data_fim = date.fromisoformat(data_fim_raw)
+        except ValueError:
+            return None, "Data de fim inválida.", "danger"
+
     return {
         "nome": nome,
         "categoria": categoria,
         "valor_mensal": valor,
         "dia_pagamento": dia_pagamento,
-        "data_inicio": data_inicio_raw,
-        "data_fim": data_fim_raw,
+        "data_inicio": data_inicio,
+        "data_fim": data_fim,
     }, None, None
 
 

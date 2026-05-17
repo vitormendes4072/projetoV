@@ -4,7 +4,7 @@ from app import db
 class CustoFixoHistory(db.Model):
     __tablename__ = "custos_fixos_history"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     item_id = db.Column(db.BigInteger, nullable=False, index=True)
 
     action = db.Column(db.String(32), nullable=False)  # create|update|toggle_paid|toggle_active|bulk|delete
