@@ -47,9 +47,9 @@ def importar_csv():
         flash('CSV inválido: colunas obrigatórias ausentes (name, sku, cost).', 'danger')
         return redirect(url_for('produtos.lista_produtos'))
 
-    skus_existentes = {
-        p.sku for p in current_user.products.with_entities(Product.sku).all()
-    }
+    skus_existentes = set(
+        db.session.scalars(db.select(Product.sku).where(Product.user_id == current_user.id)).all()
+    )
 
     importados, ignorados = 0, []
 
@@ -113,7 +113,7 @@ def importar_csv():
 @login_required
 def lista_produtos():
     page = request.args.get('page', 1, type=int)
-    products = current_user.products.order_by(Product.name).paginate(page=page, per_page=20, error_out=False)
+    products = db.paginate(db.select(Product).where(Product.user_id == current_user.id).order_by(Product.name), page=page, per_page=20, error_out=False)
     csv_form = CsvUploadForm()
     return render_template('produtos/lista.html', products=products, csv_form=csv_form)
 

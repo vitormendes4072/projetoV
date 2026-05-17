@@ -151,7 +151,7 @@ def dashboard():
 
     user_id = current_user.id
 
-    total_products = current_user.products.count()
+    total_products = db.session.scalar(db.select(db.func.count(Product.id)).where(Product.user_id == user_id))
     total_simulations = PricingHistory.query.filter_by(user_id=user_id).count()
     avg_margin = db.session.query(db.func.avg(PricingHistory.margin))\
                            .filter_by(user_id=user_id).scalar() or 0
