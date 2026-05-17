@@ -7,7 +7,7 @@ class AmazonInventorySnapshot(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True)
 
-    user_id = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     marketplace_id = db.Column(db.String, nullable=False)
 
     seller_sku = db.Column(db.String, nullable=False)
