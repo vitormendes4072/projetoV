@@ -1,0 +1,3 @@
+name,sku,price,cost,packaging_cost,stock_quantity,image_url
+Produto Exemplo A,SKU-001,99.90,40.00,2.50,10,
+Produto Exemplo B,SKU-002,149.90,60.00,3.00,5,

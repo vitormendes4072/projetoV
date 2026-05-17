@@ -1,5 +1,6 @@
 # app/produtos/forms.py
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, FloatField, IntegerField, SubmitField
 from wtforms.validators import DataRequired, Length, ValidationError, Optional, NumberRange
 from flask_login import current_user
@@ -32,3 +33,11 @@ class ProductForm(FlaskForm):
         ).first()
         if product:
             raise ValidationError('Este SKU já está cadastrado para sua conta.')
+
+
+class CsvUploadForm(FlaskForm):
+    arquivo = FileField('Arquivo CSV', validators=[
+        FileRequired(message='Selecione um arquivo CSV.'),
+        FileAllowed(['csv'], message='Apenas arquivos .csv são permitidos.'),
+    ])
+    submit = SubmitField('Importar')
