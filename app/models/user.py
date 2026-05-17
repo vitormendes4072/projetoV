@@ -28,14 +28,14 @@ class User(UserMixin, db.Model):
     products = db.relationship(
         "Product",
         backref="owner",
-        lazy="dynamic",
+        lazy="select",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
     pricing_history = db.relationship(
         "PricingHistory",
         backref="user",
-        lazy="dynamic",
+        lazy="select",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -63,6 +63,6 @@ class User(UserMixin, db.Model):
         backref="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
-        lazy="dynamic",
-        )
+        lazy="select",
+    )
 
