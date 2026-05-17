@@ -14,10 +14,17 @@
             </div>
         </div>
         
-        <a href="{{ url_for('produtos.criar_produto') }}" class="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-4 flex items-center gap-2 hover:bg-blue-600 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
-            Novo Produto
-        </a>
+        <div class="flex items-center gap-2">
+            <button onclick="document.getElementById('modal-csv').classList.remove('hidden')"
+                class="cursor-pointer rounded-lg bg-white border border-[#d0dbe7] text-[#0d141c] font-bold h-10 px-4 flex items-center gap-2 hover:bg-slate-50 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                Importar CSV
+            </button>
+            <a href="{{ url_for('produtos.criar_produto') }}" class="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-4 flex items-center gap-2 hover:bg-blue-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+                Novo Produto
+            </a>
+        </div>
     </div>
 
     <div class="rounded-xl border border-[#d0dbe7] bg-white overflow-hidden shadow-sm">
@@ -96,6 +103,38 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- Modal Importar CSV -->
+    <div id="modal-csv" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-[#0d141c]">Importar Produtos via CSV</h2>
+                <button onclick="document.getElementById('modal-csv').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <p class="text-sm text-slate-500 mb-3">Colunas obrigatórias: <code class="bg-slate-100 px-1 rounded">name, sku, cost</code>. Opcionais: <code class="bg-slate-100 px-1 rounded">price, packaging_cost, stock_quantity, image_url</code>.</p>
+            <a href="{{ url_for('static', filename='template_produtos.csv') }}" download
+               class="inline-flex items-center gap-1 text-xs text-[#0d80f2] hover:underline mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                Baixar template CSV
+            </a>
+            <form method="POST" action="{{ url_for('produtos.importar_csv') }}" enctype="multipart/form-data">
+                {{ csv_form.hidden_tag() }}
+                <div class="mb-4">
+                    {{ csv_form.arquivo(class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-bold file:bg-[#0d80f2] file:text-white hover:file:bg-blue-600") }}
+                    {% for error in csv_form.arquivo.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('modal-csv').classList.add('hidden')"
+                        class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-sm text-[#0d141c] hover:bg-slate-50">Cancelar</button>
+                    {{ csv_form.submit(class="px-4 py-2 rounded-lg bg-[#0d80f2] text-white text-sm font-bold hover:bg-blue-600") }}
+                </div>
+            </form>
         </div>
     </div>
 
