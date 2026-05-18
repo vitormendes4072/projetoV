@@ -1,7 +1,7 @@
 # app/__init__.py
 import os
 import logging
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -9,6 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_migrate import Migrate
+from flask_smorest import Api
 
 from config import config_options  # seu dicionário do config.py
 
@@ -18,6 +19,7 @@ login_manager = LoginManager()
 mail = Mail()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
+smorest = Api()
 
 
 def _init_rq(app: Flask) -> None:
@@ -125,6 +127,21 @@ def create_app(config_name: str | None = None) -> Flask:
     # ---------------------------------------
     _init_rq(app)
 
+    # Relaxa CSP nas rotas do Swagger UI (registrado antes do Talisman para
+    # que o after_request execute depois do hook do Talisman — LIFO order).
+    @app.after_request
+    def _relax_csp_for_swagger(response):
+        if request.path.startswith("/api/docs") or request.path == "/api/openapi.json":
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+                "https://fonts.googleapis.com; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "img-src 'self' data: https://cdn.jsdelivr.net"
+            )
+        return response
+
     # ---------------------------------------
     # Segurança (Talisman)
     # ---------------------------------------
@@ -141,6 +158,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.financeiro.routes import financeiro_bp
     from app.integrations.amazon import amazon
     from app.commands import register_commands
+    from app.api import blp as api_blp
 
     app.register_blueprint(auth)
     app.register_blueprint(main)
@@ -149,6 +167,10 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(produtos_bp)
     app.register_blueprint(financeiro_bp)
     app.register_blueprint(amazon)
+
+    # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
+    smorest.init_app(app)
+    smorest.register_blueprint(api_blp)
 
     # ---------------------------------------
     # Erros

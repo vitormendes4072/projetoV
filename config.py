@@ -9,12 +9,19 @@ SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "").replace("postgres://", "
 
 
 class Config:
+    """Configurações base (comuns a todos os ambientes)."""
 
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER") or os.environ.get("MAIL_USERNAME")
 
-    """
-    Configurações base (comuns a todos os ambientes)
-    """
+    # -------------------------------------------------
+    # Flask-Smorest / OpenAPI
+    # -------------------------------------------------
+    API_TITLE = "VEntregaz API"
+    API_VERSION = "v1"
+    OPENAPI_VERSION = "3.0.3"
+    OPENAPI_URL_PREFIX = "/api"
+    OPENAPI_SWAGGER_UI_PATH = "/docs"
+    OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
     # ⚠️ Em produção, esta chave DEVE existir.
     # O fallback é apenas para evitar crash em dev.
     SECRET_KEY = os.environ.get("SECRET_KEY") or "voce-esqueceu-de-configurar-a-chave"
