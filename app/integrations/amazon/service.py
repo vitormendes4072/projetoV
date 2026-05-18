@@ -183,6 +183,193 @@ def make_inventory_client(conn):
     )
 
 
+# ---------------------------
+# Sync / upsert helpers
+# ---------------------------
+
+def sync_orders_and_items(conn, user_id: int, created_after_iso: str):
+    """
+    Faz upsert de orders + reinserção de items para o user_id dado.
+    Retorna (orders_upserted, items_inserted, orders_returned_by_api).
+    Não faz db.session.commit() — responsabilidade do chamador.
+    """
+    from app import db
+    from app.models import AmazonOrder, AmazonOrderItem
+    from app.integrations.amazon.utils import parse_iso_dt, to_sp
+
+    orders = list_orders(conn, created_after_iso=created_after_iso)
+
+    upserted_orders = 0
+    inserted_items = 0
+
+    for o in orders:
+        amazon_order_id = o.get("AmazonOrderId")
+        if not amazon_order_id:
+            continue
+
+        order = AmazonOrder.query.filter_by(user_id=user_id, amazon_order_id=amazon_order_id).first()
+        if not order:
+            order = AmazonOrder(
+                user_id=user_id,
+                amazon_order_id=amazon_order_id,
+                marketplace_id=conn.marketplace_id,
+            )
+
+        order.order_status = o.get("OrderStatus")
+
+        dt = parse_iso_dt(o.get("PurchaseDate", ""))
+        order.purchase_date = to_sp(dt)
+
+        ot = o.get("OrderTotal") or {}
+        order.currency = ot.get("CurrencyCode")
+        order.order_total_amount = ot.get("Amount")
+
+        order.raw_json = o
+        db.session.add(order)
+        upserted_orders += 1
+
+        AmazonOrderItem.query.filter_by(user_id=user_id, amazon_order_id=amazon_order_id).delete()
+
+        try:
+            items = list_order_items(conn, amazon_order_id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Falha ao buscar itens do pedido %s: %s", amazon_order_id, e
+            )
+            continue
+
+        for it in items:
+            ip = it.get("ItemPrice") or {}
+            item = AmazonOrderItem(
+                user_id=user_id,
+                amazon_order_id=amazon_order_id,
+                seller_sku=it.get("SellerSKU"),
+                asin=it.get("ASIN"),
+                quantity=it.get("QuantityOrdered"),
+                item_price=ip.get("Amount"),
+                currency=ip.get("CurrencyCode"),
+                raw_json=it,
+            )
+            db.session.add(item)
+            inserted_items += 1
+
+    return upserted_orders, inserted_items, len(orders)
+
+
+def sync_financial_events(conn, user_id: int, posted_after_iso: str):
+    """
+    Faz insert de AmazonFinancialEvent com dedupe por fingerprint.
+    Não faz db.session.commit() — responsabilidade do chamador.
+    Retorna total de eventos inseridos.
+    """
+    from app import db
+    from app.models.amazon_finances import AmazonFinancialEvent
+    from app.integrations.amazon.utils import extract_amount_currency, parse_iso_dt, to_sp
+
+    events, _payload = list_financial_events(conn, posted_after_iso=posted_after_iso)
+    inserted_events = 0
+    seen = set()
+
+    for event_type, items in events.items():
+        if not isinstance(items, list):
+            continue
+
+        for ev in items:
+            if not isinstance(ev, dict):
+                ev = {"value": ev}
+
+            posted_dt = to_sp(parse_iso_dt(ev.get("PostedDate", "")))
+            amazon_order_id = ev.get("AmazonOrderId") or ev.get("OrderId")
+
+            amount, currency = extract_amount_currency(ev)
+
+            fp = (
+                event_type,
+                amazon_order_id,
+                ev.get("FinancialEventGroupId"),
+                ev.get("PostedDate"),
+                amount,
+                currency,
+                ev.get("ShipmentItemId") or ev.get("SellerSKU") or ev.get("ASIN") or ev.get("value"),
+            )
+            if fp in seen:
+                continue
+            seen.add(fp)
+
+            fe = AmazonFinancialEvent(
+                user_id=user_id,
+                posted_date=posted_dt,
+                event_group_id=ev.get("FinancialEventGroupId"),
+                amazon_order_id=amazon_order_id,
+                event_type=event_type,
+                amount=amount,
+                currency=currency,
+                raw_json=ev,
+            )
+            db.session.add(fe)
+            inserted_events += 1
+
+    return inserted_events
+
+
+def upsert_inventory_snapshots(user_id: int, marketplace_id: str, summaries: list):
+    """
+    Faz upsert de AmazonInventorySnapshot.
+    Não faz db.session.commit() — responsabilidade do chamador.
+    Retorna (inserted, updated).
+    """
+    from app import db
+    from app.models.amazon_inventory import AmazonInventorySnapshot
+
+    inserted = 0
+    updated = 0
+
+    for s in summaries:
+        seller_sku = (
+            s.get("sellerSku") or s.get("SellerSku")
+            or s.get("sellerSKU") or s.get("SellerSKU")
+        )
+        asin = s.get("asin") or s.get("ASIN")
+
+        if not seller_sku:
+            continue
+
+        total_qty = s.get("totalQuantity") or s.get("TotalQuantity") or 0
+        details = s.get("inventoryDetails") or s.get("InventoryDetails") or {}
+
+        reserved = details.get("reservedQuantity") or details.get("ReservedQuantity") or 0
+        inbound_working = details.get("inboundWorkingQuantity") or details.get("InboundWorkingQuantity") or 0
+        inbound_shipped = details.get("inboundShippedQuantity") or details.get("InboundShippedQuantity") or 0
+        inbound_receiving = details.get("inboundReceivingQuantity") or details.get("InboundReceivingQuantity") or 0
+
+        row = AmazonInventorySnapshot.query.filter_by(
+            user_id=user_id,
+            seller_sku=seller_sku
+        ).first()
+
+        if not row:
+            row = AmazonInventorySnapshot(
+                user_id=user_id,
+                marketplace_id=marketplace_id,
+                seller_sku=seller_sku,
+            )
+            inserted += 1
+        else:
+            updated += 1
+
+        row.asin = asin
+        row.fulfillable_qty = int(total_qty or 0)
+        row.reserved_qty = int(reserved or 0)
+        row.inbound_working_qty = int(inbound_working or 0)
+        row.inbound_shipped_qty = int(inbound_shipped or 0)
+        row.inbound_receiving_qty = int(inbound_receiving or 0)
+
+        db.session.add(row)
+
+    return inserted, updated
+
+
 def get_inventory_summaries(conn, marketplace_id: str):
     """
     Retorna lista de inventory summaries.

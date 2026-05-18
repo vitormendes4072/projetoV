@@ -115,7 +115,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.settings.routes import settings_bp
     from app.produtos.routes import produtos_bp
     from app.financeiro.routes import financeiro_bp
-    from app.integrations.amazon.routes import amazon
+    from app.integrations.amazon import amazon
     from app.commands import register_commands
 
     app.register_blueprint(auth)
