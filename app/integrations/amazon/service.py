@@ -257,15 +257,26 @@ def sync_orders_and_items(conn, user_id: int, created_after_iso: str):
     return upserted_orders, inserted_items, len(orders)
 
 
-def sync_financial_events(conn, user_id: int, posted_after_iso: str):
+def _compute_fingerprint(user_id: int, fp_tuple: tuple) -> str:
+    """sha256 dos campos estáveis do evento, truncado a 64 chars."""
+    import hashlib, json
+    raw = json.dumps([user_id, *[str(x) for x in fp_tuple]], sort_keys=True)
+    return hashlib.sha256(raw.encode()).hexdigest()[:64]
+
+
+def sync_financial_events(conn, user_id: int, posted_after_iso: str) -> int:
     """
-    Faz insert de AmazonFinancialEvent com dedupe por fingerprint.
+    Faz insert de AmazonFinancialEvent com dedupe garantida em dois níveis:
+      1. In-memory (seen set) — evita inserts desnecessários dentro do mesmo run.
+      2. ON CONFLICT DO NOTHING no índice único (user_id, fingerprint) — garante
+         idempotência cross-run independente de wipe prévio.
     Não faz db.session.commit() — responsabilidade do chamador.
     Retorna total de eventos inseridos.
     """
     from app import db
     from app.models.amazon_finances import AmazonFinancialEvent
     from app.integrations.amazon.utils import extract_amount_currency, parse_iso_dt, to_sp
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
 
     events, _payload = list_financial_events(conn, posted_after_iso=posted_after_iso)
     inserted_events = 0
@@ -281,10 +292,9 @@ def sync_financial_events(conn, user_id: int, posted_after_iso: str):
 
             posted_dt = to_sp(parse_iso_dt(ev.get("PostedDate", "")))
             amazon_order_id = ev.get("AmazonOrderId") or ev.get("OrderId")
-
             amount, currency = extract_amount_currency(ev)
 
-            fp = (
+            fp_tuple = (
                 event_type,
                 amazon_order_id,
                 ev.get("FinancialEventGroupId"),
@@ -293,22 +303,35 @@ def sync_financial_events(conn, user_id: int, posted_after_iso: str):
                 currency,
                 ev.get("ShipmentItemId") or ev.get("SellerSKU") or ev.get("ASIN") or ev.get("value"),
             )
-            if fp in seen:
-                continue
-            seen.add(fp)
 
-            fe = AmazonFinancialEvent(
-                user_id=user_id,
-                posted_date=posted_dt,
-                event_group_id=ev.get("FinancialEventGroupId"),
-                amazon_order_id=amazon_order_id,
-                event_type=event_type,
-                amount=amount,
-                currency=currency,
-                raw_json=ev,
+            # nível 1: dedupe in-memory (evita round-trips desnecessários)
+            if fp_tuple in seen:
+                continue
+            seen.add(fp_tuple)
+
+            fingerprint = _compute_fingerprint(user_id, fp_tuple)
+
+            # nível 2: INSERT ... ON CONFLICT DO NOTHING — idempotência cross-run
+            stmt = (
+                pg_insert(AmazonFinancialEvent)
+                .values(
+                    user_id=user_id,
+                    posted_date=posted_dt,
+                    event_group_id=ev.get("FinancialEventGroupId"),
+                    amazon_order_id=amazon_order_id,
+                    event_type=event_type,
+                    amount=amount,
+                    currency=currency,
+                    fingerprint=fingerprint,
+                    raw_json=ev,
+                )
+                .on_conflict_do_nothing(
+                    index_elements=["user_id", "fingerprint"],
+                )
             )
-            db.session.add(fe)
-            inserted_events += 1
+            result = db.session.execute(stmt)
+            if result.rowcount:
+                inserted_events += 1
 
     return inserted_events
 
