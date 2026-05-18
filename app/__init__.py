@@ -20,6 +20,21 @@ migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
 
 
+def _init_rq(app: Flask) -> None:
+    """Registra fila RQ em app.extensions['rq_queue']. Em testes usa fakeredis."""
+    from redis import Redis
+    from rq import Queue
+
+    if app.testing:
+        from fakeredis import FakeRedis
+        redis_conn = FakeRedis()
+    else:
+        redis_url = app.config.get("REDIS_URL", "redis://localhost:6379/0")
+        redis_conn = Redis.from_url(redis_url)
+
+    app.extensions["rq_queue"] = Queue("amazon-sync", connection=redis_conn)
+
+
 def _configure_security(app: Flask) -> None:
     """
     Configura Talisman/CSP com nonces.
@@ -104,6 +119,11 @@ def create_app(config_name: str | None = None) -> Flask:
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Por favor, faça login para acessar."
+
+    # ---------------------------------------
+    # Fila assíncrona (RQ)
+    # ---------------------------------------
+    _init_rq(app)
 
     # ---------------------------------------
     # Segurança (Talisman)
