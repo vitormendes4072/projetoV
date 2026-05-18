@@ -13,7 +13,7 @@ pricing = Blueprint('pricing', __name__)
 def calculator():
     form = CalculatorForm()
     results = None
-    
+
     # Mensagem de alerta para MEI
     is_mei = False
     if current_user.tax_regime == 'mei':
@@ -24,15 +24,19 @@ def calculator():
         # 1. Pega parâmetros da URL (vindo da lista de produtos)
         price_arg = request.args.get('price')
         cost_arg = request.args.get('cost')
-        
+
         if price_arg:
-            try: form.price.data = float(price_arg)
-            except ValueError: pass
-        
+            try:
+                form.price.data = float(price_arg)
+            except ValueError:
+                pass
+
         if cost_arg:
-            try: form.cost.data = float(cost_arg)
-            except ValueError: pass
-        
+            try:
+                form.cost.data = float(cost_arg)
+            except ValueError:
+                pass
+
         # 2. Aplica Regra Fiscal
         if is_mei:
             # REGRA MEI: Imposto sobre venda é ZERO (paga-se DAS fixo mensal)
@@ -41,7 +45,7 @@ def calculator():
         elif current_user.default_tax_rate is not None:
             # Outros regimes: Usa a taxa configurada
             form.tax_rate.data = current_user.default_tax_rate
-    
+
     # --- CÁLCULO (POST) ---
     if form.validate_on_submit():
         price = form.price.data
@@ -50,11 +54,11 @@ def calculator():
         referral_pct = form.referral_fee.data
         tax_pct = form.tax_rate.data
         marketing = form.marketing.data or 0
-        
+
         # Validação extra de segurança para MEI no POST
         if is_mei and tax_pct > 0:
             flash('Atenção: MEI geralmente possui alíquota zero sobre venda unitária (DAS é fixo).', 'warning')
-        
+
         results = calcular_fba(price, cost, fba_fee, referral_pct, tax_pct, marketing)
 
         if form.save.data:

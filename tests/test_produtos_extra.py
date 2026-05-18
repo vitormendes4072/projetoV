@@ -69,7 +69,7 @@ def test_editar_produto_get(client, db):
 
 
 def test_editar_produto_outro_usuario_403(client, db):
-    owner = make_user(db, email="owner@test.com")
+    make_user(db, email="owner@test.com")
     login(client, "owner@test.com", "senha123")
     client.post("/produtos/novo", data=_produto_data(), follow_redirects=True)
     produto = Product.query.filter_by(sku="EXT-001").first()
@@ -95,7 +95,7 @@ def test_historico_produto(client, db):
 
 
 def test_historico_produto_outro_usuario_403(client, db):
-    owner = make_user(db, email="histowner@test.com")
+    make_user(db, email="histowner@test.com")
     login(client, "histowner@test.com", "senha123")
     client.post("/produtos/novo", data=_produto_data(), follow_redirects=True)
     produto = Product.query.filter_by(sku="EXT-001").first()

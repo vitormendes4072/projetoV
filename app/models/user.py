@@ -57,7 +57,7 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.email}>"
-    
+
     custos_fixos = db.relationship(
         "CustoFixo",
         backref="user",

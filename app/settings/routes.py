@@ -17,18 +17,18 @@ def send_async_email(app, msg):
     with app.app_context():
         try:
             mail.send(msg)
-        except Exception as e:
+        except Exception:
             logger.exception("Falha ao enviar email de confirmação")
 
 def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps({'new_email': new_email, 'user_id': user.id}, salt='email-update')
-    
+
     msg = Message('Confirme seu novo E-mail - Marketplace Manager',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'), recipients=[new_email])
-    
+
     link = url_for('settings.confirm_email_update', token=token, _external=True)
-    
+
     msg.body = f'''Olá, {user.name}!
 Para confirmar a troca de e-mail, clique no link abaixo:
 {link}
@@ -48,22 +48,22 @@ def index():
     # 1. LÓGICA DO PERFIL (Nome/Email) - MODAL VERMELHO
     # ==========================================================
     if 'submit' in request.form and account_form.validate_on_submit():
-        
+
         # VERIFICAÇÃO DE SENHA (BACKEND)
         if not current_user.check_password(account_form.current_password.data):
             # TRUQUE DE UX: Adiciona erro ao campo para reabrir o modal
             account_form.current_password.errors.append('Senha incorreta. Tente novamente.')
-        
+
         else:
             # Se a senha estiver certa, prossegue...
             has_changes = False
-            
+
             if account_form.name.data != current_user.name:
                 current_user.name = account_form.name.data
                 db.session.commit()
                 flash('Nome atualizado!', 'success')
                 has_changes = True
-            
+
             if account_form.email.data.strip().lower() != current_user.email:
                 send_update_email(current_user, account_form.email.data.strip().lower())
                 flash(f'Link de confirmação enviado para {account_form.email.data}', 'info')
@@ -76,17 +76,17 @@ def index():
     # 2. LÓGICA DA SENHA (Troca de Senha) - MODAL ESCURO
     # ==========================================================
     if 'submit_password' in request.form and password_form.validate_on_submit():
-        
+
         # VERIFICAÇÃO DE SENHA ATUAL (BACKEND)
         if not current_user.check_password(password_form.current_password.data):
             password_form.current_password.errors.append('A senha atual informada está incorreta.')
-        
+
         else:
             current_user.set_password(password_form.new_password.data)
             db.session.commit()
             flash('Sua senha foi alterada com sucesso!', 'success')
             return redirect(url_for('settings.index'))
-    
+
     # ==========================================================
     # 3. LÓGICA: DADOS TRIBUTÁRIOS (Fiscal)
     # ==========================================================
@@ -110,9 +110,9 @@ def index():
         business_form.tax_regime.data = current_user.tax_regime
         business_form.default_tax_rate.data = current_user.default_tax_rate
 
-    return render_template('settings.html', 
-                           form=account_form, 
-                           password_form=password_form, 
+    return render_template('settings.html',
+                           form=account_form,
+                           password_form=password_form,
                            business_form=business_form)
 
 
