@@ -6,6 +6,7 @@ SaaS web application for Amazon marketplace sellers to manage products, simulate
 ![Flask](https://img.shields.io/badge/Flask-3.1.1-000000?style=flat&logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![Coverage](https://img.shields.io/badge/coverage-65%25-brightgreen?style=flat)
 
 ---
 
