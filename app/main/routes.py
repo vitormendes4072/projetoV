@@ -165,9 +165,12 @@ def dashboard():
     recent_changes = ProductHistory.query.filter_by(user_id=user_id)\
         .order_by(ProductHistory.changed_at.desc()).limit(5).all()
 
-    low_stock = current_user.products\
-        .filter(Product.stock_quantity <= 5)\
-        .order_by(Product.stock_quantity.asc()).limit(5).all()
+    low_stock = db.session.scalars(
+        db.select(Product)
+        .where(Product.user_id == user_id, Product.stock_quantity <= 5)
+        .order_by(Product.stock_quantity.asc())
+        .limit(5)
+    ).all()
 
     # Chart data: last 20 simulations ordered ASC for line chart
     chart_sims = PricingHistory.query.filter_by(user_id=user_id)\
