@@ -7,10 +7,10 @@ class PricingHistory(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
-    
+
     # Identificação (Opcional)
     title = db.Column(db.String(100), nullable=True, default="Simulação")
-    
+
     # Inputs (O que ele digitou)
     price = db.Column(db.Numeric(10, 2), nullable=False)
     cost = db.Column(db.Numeric(10, 2), nullable=False)
@@ -23,7 +23,7 @@ class PricingHistory(db.Model):
     net_profit = db.Column(db.Numeric(10, 2), nullable=False)
     margin = db.Column(db.Numeric(5, 2), nullable=False)
     roi = db.Column(db.Numeric(5, 2), nullable=False)
-    
+
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     def __repr__(self):

@@ -14,8 +14,7 @@ from app.integrations.amazon.profit_service import compute_order_profit, compute
 
 logger = logging.getLogger(__name__)
 
-SP_TZ = None  # importado via utils para manter compatibilidade com template
-from app.integrations.amazon.utils import SP_TZ  # noqa: E402
+from app.integrations.amazon.utils import SP_TZ
 
 
 @amazon.get("/orders")

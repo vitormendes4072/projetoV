@@ -8,10 +8,10 @@ from app.models.user import User
 class UpdateAccountForm(FlaskForm):
     name = StringField('Nome Completo', validators=[DataRequired(), Length(min=2, max=100)])
     email = StringField('E-mail', validators=[DataRequired(), Email()])
-    
+
     # NOVO CAMPO DE SEGURANÇA
     current_password = PasswordField('Digite sua senha atual para confirmar', validators=[DataRequired()])
-    
+
     submit = SubmitField('Salvar Alterações')
 
     def validate_email(self, email):
@@ -39,8 +39,8 @@ class BusinessSettingsForm(FlaskForm):
         ('presumido', 'Lucro Presumido'),
         ('real', 'Lucro Real')
     ])
-    
+
     # 2. Use InputRequired aqui. Ele permite o valor 0.0!
     default_tax_rate = FloatField('Alíquota Padrão de Imposto (%)', validators=[InputRequired()])
-    
+
     submit_business = SubmitField('Salvar Configuração Fiscal')

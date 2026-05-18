@@ -259,7 +259,8 @@ def sync_orders_and_items(conn, user_id: int, created_after_iso: str):
 
 def _compute_fingerprint(user_id: int, fp_tuple: tuple) -> str:
     """sha256 dos campos estáveis do evento, truncado a 64 chars."""
-    import hashlib, json
+    import hashlib
+    import json
     raw = json.dumps([user_id, *[str(x) for x in fp_tuple]], sort_keys=True)
     return hashlib.sha256(raw.encode()).hexdigest()[:64]
 

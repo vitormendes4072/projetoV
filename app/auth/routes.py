@@ -25,31 +25,31 @@ def send_async_email(app, msg):
     with app.app_context():
         try:
             mail.send(msg)
-        except Exception as e:
+        except Exception:
             logger.exception("Falha ao enviar email async")
 
 def send_reset_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    token = s.dumps(user.email, salt='password-reset') 
+    token = s.dumps(user.email, salt='password-reset')
     msg = Message('Redefinição de Senha - Marketplace Manager',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.reset_token', token=token, _external=True)
     msg.body = f'''Para redefinir sua senha, visite: {link}'''
-    
+
     ### MELHORIA: Dispara e esquece (não trava o usuário)
     # Passamos o 'current_app._get_current_object()' para garantir que a Thread tenha acesso às configs
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
 def send_confirmation_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-    token = s.dumps(user.email, salt='email-confirm') 
+    token = s.dumps(user.email, salt='email-confirm')
     msg = Message('Confirme sua Conta - Marketplace Manager',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.confirm_email', token=token, _external=True)
     msg.body = f'''Ative sua conta aqui: {link}'''
-    
+
     ### MELHORIA: Dispara e esquece
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
@@ -71,10 +71,10 @@ def register():
         user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        
+
         # O envio agora é instantâneo para o usuário
         send_confirmation_email(user)
-        
+
         flash('Conta criada! Verifique seu e-mail.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('register.html', form=form)
@@ -91,17 +91,17 @@ def login():
             if not user.confirmed:
                 flash('Confirme seu e-mail antes de logar.', 'warning')
                 return render_template('login.html', form=form)
-            
+
             login_user(user)
-            
+
             # Captura o argumento 'next'
             next_page = request.args.get('next')
-            
+
             ### MELHORIA DE SEGURANÇA: Previne Open Redirect ###
             # Se next_page existir MAS tiver um domínio (netloc), ignoramos e vamos pro menu
             if not next_page or urlsplit(next_page).netloc != '':
                 next_page = url_for('main.menu')
-            
+
             return redirect(next_page)
         else:
             flash('Login inválido.', 'danger')
@@ -124,12 +124,12 @@ def reset_request():
         user = User.query.filter_by(email=form.email.data.strip().lower()).first()
         if user:
             send_reset_email(user)
-        
+
         # Timing attack mitigation (mantido)
         elapsed_time = time.time() - start_time
         if elapsed_time < 3.0:
             time.sleep(3.0 - elapsed_time)
-            
+
         flash('Email enviado.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('reset_request.html', form=form)
@@ -141,7 +141,7 @@ def reset_token(token):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         email = s.loads(token, salt='password-reset', max_age=1800)
-    except:
+    except Exception:
         flash('Token inválido/expirado.', 'danger')
         return redirect(url_for('auth.reset_request'))
     user = User.query.filter_by(email=email).first()
@@ -163,7 +163,7 @@ def confirm_email(token):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         email = s.loads(token, salt='email-confirm', max_age=3600)
-    except:
+    except Exception:
         flash('Link inválido/expirado.', 'danger')
         return redirect(url_for('auth.login'))
     user = User.query.filter_by(email=email).first()

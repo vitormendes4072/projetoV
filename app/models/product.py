@@ -12,13 +12,13 @@ class Product(db.Model):
     name = db.Column(db.String(200), nullable=False)
     sku = db.Column(db.String(50), index=True, nullable=False)
     asin = db.Column(db.String(20), index=True, nullable=True)
-    
+
     price = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     packaging_cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     stock_quantity = db.Column(db.Integer, default=0)
     image_url = db.Column(db.String(500), nullable=True)
-    
+
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -36,17 +36,17 @@ class ProductHistory(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete="CASCADE"), nullable=False)
-    
+
     # O que mudou? Vamos salvar o estado crítico
     price = db.Column(db.Numeric(10, 2))
     cost = db.Column(db.Numeric(10, 2))
     stock_quantity = db.Column(db.Integer)
-    
+
     # Tipo de mudança: 'Criação' ou 'Edição'
     action_type = db.Column(db.String(50), nullable=False)
-    
+
     changed_at = db.Column(db.DateTime, default=datetime.now)
-    
+
     # Quem mudou? (Útil se tiver vários usuários no futuro)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     user = db.relationship('User')
