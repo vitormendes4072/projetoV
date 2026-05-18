@@ -7,9 +7,25 @@ on:
     branches: [develop, main]
 
 jobs:
-  test:
+  lint:
+    name: Lint (ruff)
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar ruff
+        run: pip install ruff==0.11.11
+
+      - name: Verificar lint
+        run: ruff check .
+
+  test:
+    name: Tests + Coverage
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +42,16 @@ jobs:
       - name: Instalar dependencias
         run: pip install -r requirements.txt
 
-      - name: Rodar testes
-        run: python -m pytest tests/ -v
+      - name: Rodar testes com cobertura
+        run: python -m pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=60
         env:
           APP_ENV: testing
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t marketplace-manager:ci .
