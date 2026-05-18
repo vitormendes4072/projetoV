@@ -22,9 +22,10 @@ limiter = Limiter(key_func=get_remote_address)  # storage será definido no crea
 
 def _configure_security(app: Flask) -> None:
     """
-    Configura Talisman/CSP.
+    Configura Talisman/CSP com nonces.
     Em debug: desliga CSP/HTTPS forçado para não atrapalhar desenvolvimento.
-    Em produção: aplica CSP.
+    Em produção: aplica CSP com nonce único por request em script-src e style-src.
+    Os templates usam {{ csp_nonce() }} nos blocos <script> e <style> inline.
     """
     csp = {
         "default-src": ["'self'"],
@@ -35,7 +36,6 @@ def _configure_security(app: Flask) -> None:
         ],
         "style-src": [
             "'self'",
-            "'unsafe-inline'",
             "https://fonts.googleapis.com",
             "https://cdn.jsdelivr.net",
             "https://cdnjs.cloudflare.com",
@@ -47,7 +47,11 @@ def _configure_security(app: Flask) -> None:
     if app.debug or app.testing:
         Talisman(app, force_https=False, content_security_policy=None)
     else:
-        Talisman(app, content_security_policy=csp)
+        Talisman(
+            app,
+            content_security_policy=csp,
+            content_security_policy_nonce_in=["script-src", "style-src"],
+        )
 
 
 def create_app(config_name: str | None = None) -> Flask:
