@@ -16,6 +16,7 @@
         body { font-family: 'Inter', "Noto Sans", sans-serif; }
     </style>
 
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     {% block styles %}{% endblock %}
 </head>
 <body class="bg-slate-50 text-[#0d141c]">
@@ -57,6 +58,9 @@
         </div>
     </main>
 
+    <script>
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

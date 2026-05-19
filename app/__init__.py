@@ -10,6 +10,7 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_migrate import Migrate
 from flask_smorest import Api
+from flask_wtf.csrf import CSRFProtect
 
 from config import config_options  # seu dicionário do config.py
 
@@ -20,6 +21,7 @@ mail = Mail()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
 smorest = Api()
+csrf = CSRFProtect()
 
 
 def _init_rq(app: Flask) -> None:
@@ -106,6 +108,7 @@ def create_app(config_name: str | None = None) -> Flask:
     mail.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
 
     # garante que todos models sejam carregados antes do migrate
     from app.models import notification_settings, notification_log  # noqa: F401
@@ -173,6 +176,7 @@ def create_app(config_name: str | None = None) -> Flask:
     # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
     smorest.init_app(app)
     smorest.register_blueprint(api_blp)
+    csrf.exempt(api_blp)  # API REST usa auth por sessão; Swagger UI não envia CSRF token
 
     # ---------------------------------------
     # Erros
