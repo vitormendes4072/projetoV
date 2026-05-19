@@ -13,7 +13,7 @@ from app.models.notification_recipient import NotificationRecipient
 
 
 def _get_or_create_settings():
-    settings = NotificationSettings.query.filter_by(user_id=current_user.id).first()
+    settings = db.session.scalar(db.select(NotificationSettings).filter_by(user_id=current_user.id))
     if not settings:
         settings = NotificationSettings(user_id=current_user.id)
         db.session.add(settings)
@@ -41,7 +41,7 @@ def api_alertas_add_recipient(args):
     Se o email já existir, reativa o destinatário (sets `enabled=true`).
     """
     email = args["email"].strip().lower()
-    row = NotificationRecipient.query.filter_by(user_id=current_user.id, email=email).first()
+    row = db.session.scalar(db.select(NotificationRecipient).filter_by(user_id=current_user.id, email=email))
     if row:
         row.enabled = True
     else:

@@ -31,7 +31,7 @@ def _get_queue():
 @amazon.post("/sync_orders")
 @login_required
 def sync_orders():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -43,7 +43,7 @@ def sync_orders():
 @amazon.post("/sync_finances")
 @login_required
 def sync_finances():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -55,7 +55,7 @@ def sync_finances():
 @amazon.post("/sync_full")
 @login_required
 def sync_full():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -96,7 +96,7 @@ def job_status(job_id):
 @login_required
 def sync_full_debug():
     """Executa sync completo de forma síncrona. Apenas para desenvolvimento."""
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -109,10 +109,13 @@ def sync_full_debug():
         orders_count, items_count, returned = sync_orders_and_items(
             conn, user_id=user_key(), created_after_iso=start_iso
         )
-        AmazonFinancialEvent.query.filter(
-            AmazonFinancialEvent.user_id == user_key(),
-            AmazonFinancialEvent.posted_date >= start,
-        ).delete(synchronize_session=False)
+        db.session.execute(
+            db.delete(AmazonFinancialEvent)
+            .where(
+                AmazonFinancialEvent.user_id == user_key(),
+                AmazonFinancialEvent.posted_date >= start,
+            )
+        )
         db.session.flush()
         events_count = sync_financial_events(conn, user_id=user_key(), posted_after_iso=start_iso)
         conn.last_sync_at = now
@@ -140,7 +143,7 @@ def sync_full_debug():
 @login_required
 def sync_orders_only():
     """Sync apenas pedidos (sem itens). Útil para popular listagem rapidamente."""
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -160,7 +163,7 @@ def sync_orders_only():
             continue
 
         from app.integrations.amazon.utils import parse_iso_dt, to_sp
-        order = AmazonOrder.query.filter_by(user_id=user_key(), amazon_order_id=amazon_order_id).first()
+        order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id))
         if not order:
             order = AmazonOrder(
                 user_id=user_key(),
@@ -190,18 +193,17 @@ def sync_orders_only():
 @amazon.post("/sync_items_batch")
 @login_required
 def sync_items_batch():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
     limit = int(request.args.get("limit", "15"))
-    orders = (
-        AmazonOrder.query
+    orders = db.session.scalars(
+        db.select(AmazonOrder)
         .filter_by(user_id=user_key())
         .order_by(AmazonOrder.purchase_date.desc().nullslast(), AmazonOrder.id.desc())
         .limit(200)
-        .all()
-    )
+    ).all()
 
     processed = 0
     inserted_items = 0
@@ -210,9 +212,9 @@ def sync_items_batch():
     for o in orders:
         if processed >= limit:
             break
-        exists = AmazonOrderItem.query.filter_by(
-            user_id=user_key(), amazon_order_id=o.amazon_order_id
-        ).first()
+        exists = db.session.scalar(
+            db.select(AmazonOrderItem).filter_by(user_id=user_key(), amazon_order_id=o.amazon_order_id)
+        )
         if exists:
             skipped += 1
             continue

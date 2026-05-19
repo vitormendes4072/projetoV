@@ -4,6 +4,7 @@ from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, FloatField, IntegerField, SubmitField
 from wtforms.validators import DataRequired, Length, ValidationError, Optional, NumberRange
 from flask_login import current_user
+from app import db
 from app.models.product import Product
 
 class ProductForm(FlaskForm):
@@ -27,10 +28,7 @@ class ProductForm(FlaskForm):
         if self.original_sku and sku.data == self.original_sku:
             return
 
-        product = Product.query.filter_by(
-            sku=sku.data,
-            user_id=current_user.id
-        ).first()
+        product = db.session.scalar(db.select(Product).filter_by(sku=sku.data, user_id=current_user.id))
         if product:
             raise ValidationError('Este SKU já está cadastrado para sua conta.')
 

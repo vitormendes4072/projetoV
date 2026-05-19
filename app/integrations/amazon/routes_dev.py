@@ -73,7 +73,7 @@ def dev_mock_products():
         if not sku:
             continue
 
-        p = Product.query.filter_by(user_id=current_user.id, sku=sku).first()
+        p = db.session.scalar(db.select(Product).filter_by(user_id=current_user.id, sku=sku))
         if not p:
             p = Product(user_id=current_user.id, sku=sku, name=it.get("name") or sku)
 

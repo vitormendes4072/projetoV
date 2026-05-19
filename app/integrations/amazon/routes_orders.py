@@ -21,20 +21,19 @@ from app.integrations.amazon.utils import SP_TZ
 @login_required
 def orders_page():
     from flask import render_template
-    orders = (
-        AmazonOrder.query
+    orders = db.session.scalars(
+        db.select(AmazonOrder)
         .filter_by(user_id=user_key())
         .order_by(AmazonOrder.purchase_date.desc().nullslast(), AmazonOrder.id.desc())
         .limit(200)
-        .all()
-    )
+    ).all()
     return render_template("amazon/orders.html", orders=orders, SP_TZ=SP_TZ)
 
 
 @amazon.get("/profit/order/<amazon_order_id>")
 @login_required
 def profit_order(amazon_order_id: str):
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
@@ -46,7 +45,7 @@ def profit_order(amazon_order_id: str):
         return jsonify(result)
 
     # Nenhum ShipmentEventList: tenta sync curto focado na data do pedido
-    order = AmazonOrder.query.filter_by(user_id=user_key(), amazon_order_id=amazon_order_id).first()
+    order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id))
 
     start = utcnow() - timedelta(days=7)
     if order and order.purchase_date:
@@ -57,10 +56,13 @@ def profit_order(amazon_order_id: str):
     start_iso = iso_z(start)
 
     try:
-        AmazonFinancialEvent.query.filter(
-            AmazonFinancialEvent.user_id == user_key(),
-            AmazonFinancialEvent.posted_date >= start,
-        ).delete(synchronize_session=False)
+        db.session.execute(
+            db.delete(AmazonFinancialEvent)
+            .where(
+                AmazonFinancialEvent.user_id == user_key(),
+                AmazonFinancialEvent.posted_date >= start,
+            )
+        )
         db.session.flush()
 
         sync_financial_events(conn, user_id=user_key(), posted_after_iso=start_iso)

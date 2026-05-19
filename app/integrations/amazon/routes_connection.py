@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @amazon.get("/status")
 @login_required
 def status():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": True, "connected": False})
 
@@ -47,7 +47,7 @@ def connect():
     if missing:
         return jsonify({"ok": False, "error": f"Faltando: {', '.join(missing)}"}), 400
 
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         conn = AmazonConnection(id=uuid.uuid4(), user_id=user_key())
 
@@ -72,7 +72,7 @@ def connect():
 @amazon.post("/test")
 @login_required
 def test_connection():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 

@@ -2,6 +2,7 @@ from flask import current_app
 from flask_login import current_user
 from flask_smorest import abort
 
+from app import db
 from app.api import blp
 from app.api.schemas import SyncQueryArgsSchema, JobQueuedSchema, JobStatusSchema
 from app.models import AmazonConnection
@@ -12,7 +13,7 @@ def _queue():
 
 
 def _get_conn():
-    conn = AmazonConnection.query.filter_by(user_id=current_user.id).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=current_user.id))
     if not conn:
         abort(400, message="Integração Amazon não configurada")
     return conn

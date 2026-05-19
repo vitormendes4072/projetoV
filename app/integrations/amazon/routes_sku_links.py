@@ -16,22 +16,16 @@ logger = logging.getLogger(__name__)
 @amazon.get("/sku_links")
 @login_required
 def sku_links_page():
-    products_rows = (
-        Product.query
-        .filter_by(user_id=current_user.id)
-        .order_by(Product.sku.asc())
-        .all()
-    )
+    products_rows = db.session.scalars(
+        db.select(Product).filter_by(user_id=current_user.id).order_by(Product.sku.asc())
+    ).all()
     products = [{"id": int(p.id), "sku": p.sku, "name": p.name or p.sku} for p in products_rows]
 
-    links = (
-        AmazonSkuLink.query
-        .filter_by(user_id=user_key())
-        .order_by(AmazonSkuLink.amazon_seller_sku.asc())
-        .all()
-    )
+    links = db.session.scalars(
+        db.select(AmazonSkuLink).filter_by(user_id=user_key()).order_by(AmazonSkuLink.amazon_seller_sku.asc())
+    ).all()
 
-    inv_rows = AmazonInventorySnapshot.query.filter_by(user_id=user_key()).all()
+    inv_rows = db.session.scalars(db.select(AmazonInventorySnapshot).filter_by(user_id=user_key())).all()
     inventory_map = {r.seller_sku: int(r.fulfillable_qty or 0) for r in inv_rows}
 
     return render_template(
@@ -99,7 +93,7 @@ def sku_links_upsert():
     if not seller_sku or not product_id:
         return jsonify({"ok": False, "error": "Informe amazon_seller_sku e product_id"}), 400
 
-    link = AmazonSkuLink.query.filter_by(user_id=user_key(), amazon_seller_sku=seller_sku).first()
+    link = db.session.scalar(db.select(AmazonSkuLink).filter_by(user_id=user_key(), amazon_seller_sku=seller_sku))
     if not link:
         link = AmazonSkuLink(user_id=user_key(), amazon_seller_sku=seller_sku)
 
@@ -108,7 +102,7 @@ def sku_links_upsert():
     link.asin = data.get("asin") or None
 
     if link.asin:
-        prod = Product.query.filter_by(id=link.product_id, user_id=current_user.id).first()
+        prod = db.session.scalar(db.select(Product).filter_by(id=link.product_id, user_id=current_user.id))
         if prod and not prod.asin:
             prod.asin = link.asin
             db.session.add(prod)
@@ -122,7 +116,7 @@ def sku_links_upsert():
 @amazon.route("/sku_links/<int:link_id>/delete", methods=["POST", "DELETE"])
 @login_required
 def sku_links_delete(link_id: int):
-    link = AmazonSkuLink.query.filter_by(id=link_id, user_id=user_key()).first()
+    link = db.session.scalar(db.select(AmazonSkuLink).filter_by(id=link_id, user_id=user_key()))
     if not link:
         return jsonify({"ok": False, "error": "Vínculo não encontrado"}), 404
 
