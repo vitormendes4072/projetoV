@@ -151,7 +151,7 @@
 
       const res = await fetch("/integrations/amazon/sku_links", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
         body: JSON.stringify({
           amazon_seller_sku: sku,
           product_id: pid,
@@ -170,7 +170,7 @@
     const delBtn = e.target.closest(".del-link");
     if (delBtn) {
       const id = delBtn.getAttribute("data-id");
-      const res = await fetch(`/integrations/amazon/sku_links/${id}/delete`, { method: "POST" });
+      const res = await fetch(`/integrations/amazon/sku_links/${id}/delete`, { method: "POST", headers: { "X-CSRFToken": csrfToken } });
       const data = await res.json();
       if (!res.ok || !data.ok) return setResult(data.error || "Falha ao remover", "error");
       setResult("VÃ­nculo removido.", "success");
@@ -183,7 +183,7 @@
   document.getElementById("btnSyncInventory")?.addEventListener("click", async () => {
     try {
       setResult("Atualizando estoque Amazon...", "info");
-      const res = await fetch("/integrations/amazon/sync_inventory", { method: "POST" });
+      const res = await fetch("/integrations/amazon/sync_inventory", { method: "POST", headers: { "X-CSRFToken": csrfToken } });
       const data = await res.json();
       if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao atualizar estoque");
       setResult(`Estoque atualizado. inserted=${data.inserted} updated=${data.updated}`, "success");

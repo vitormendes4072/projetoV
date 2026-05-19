@@ -343,7 +343,7 @@
     btnSyncItems?.addEventListener("click", async () => {
       try {
         setResult("Sincronizando itens (15 pedidos)...", "info");
-        const res = await fetch("/integrations/amazon/sync_items_batch?limit=15", { method: "POST" });
+        const res = await fetch("/integrations/amazon/sync_items_batch?limit=15", { method: "POST", headers: { "X-CSRFToken": csrfToken } });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || ("Erro " + res.status));
 
