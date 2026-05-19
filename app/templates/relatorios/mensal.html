@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}VEntregaz - Relatório Mensal{% endblock %}
+
+{% block content %}
+
+{% set month_names = ["","Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"] %}
+
+<div class="flex flex-col gap-6 py-4">
+
+  {# Header #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight tracking-tight">
+        Relatório Mensal de Margem
+      </h1>
+      <p class="text-[#49739c] text-sm mt-1">
+        Simulações de precificação do período selecionado.
+      </p>
+    </div>
+
+    {# Seletor de mês + botão PDF #}
+    <div class="flex items-center gap-3 flex-wrap">
+      <form method="GET" action="{{ url_for('relatorios.mensal') }}" class="flex items-center gap-2">
+        <input
+          type="month"
+          name="mes"
+          value="{{ current_mes }}"
+          max="{{ now().strftime('%Y-%m') if now is defined else '' }}"
+          class="h-10 rounded-lg border border-[#d0dbe7] bg-white px-3 text-sm text-[#0d141c] focus:outline-none focus:ring-2 focus:ring-[#0d80f2]"
+        >
+        <button type="submit"
+          class="h-10 px-4 rounded-lg bg-[#e7edf4] text-[#0d141c] text-sm font-semibold hover:bg-[#d0dbe7] transition-colors">
+          Carregar
+        </button>
+      </form>
+
+      {% if report.total > 0 %}
+      <a href="{{ url_for('relatorios.mensal_pdf', mes=current_mes) }}"
+        class="flex items-center gap-2 h-10 px-4 rounded-lg bg-[#0d80f2] text-white text-sm font-bold hover:bg-blue-600 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        Exportar PDF
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# KPI Cards #}
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Simulações</p>
+      <p class="text-[#0d141c] text-3xl font-bold">{{ report.total }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Margem Média</p>
+      <p class="text-3xl font-bold {% if report.avg_margin > 0 %}text-green-600{% elif report.avg_margin < 0 %}text-red-600{% else %}text-[#0d141c]{% endif %}">
+        {{ "%.1f"|format(report.avg_margin) }}%
+      </p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">ROI Médio</p>
+      <p class="text-[#0d80f2] text-3xl font-bold">{{ "%.1f"|format(report.avg_roi) }}%</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">% Lucrativas</p>
+      <p class="text-3xl font-bold {% if report.pct_profitable >= 70 %}text-green-600{% elif report.pct_profitable >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ "%.0f"|format(report.pct_profitable) }}%
+      </p>
+    </div>
+
+  </div>
+
+  {# Tabela de simulações #}
+  <div class="bg-white rounded-xl border border-[#e7edf4] shadow-sm overflow-hidden">
+
+    <div class="px-5 py-4 border-b border-[#e7edf4]">
+      <h2 class="text-[#0d141c] text-base font-semibold">
+        Simulações de {{ month_names[report.month] }}/{{ report.year }}
+      </h2>
+    </div>
+
+    {% if report.rows %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-[#e7edf4] text-[#0d141c]">
+          <tr>
+            <th class="text-left px-4 py-3 font-semibold">Data</th>
+            <th class="text-left px-4 py-3 font-semibold">Título</th>
+            <th class="text-right px-4 py-3 font-semibold">Preço (R$)</th>
+            <th class="text-right px-4 py-3 font-semibold">Custo (R$)</th>
+            <th class="text-right px-4 py-3 font-semibold">Lucro Liq. (R$)</th>
+            <th class="text-right px-4 py-3 font-semibold">Margem %</th>
+            <th class="text-right px-4 py-3 font-semibold">ROI %</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#e7edf4]">
+          {% for row in report.rows %}
+          {% set margin_val = row.margin | float %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-[#49739c] whitespace-nowrap">
+              {{ row.created_at.strftime("%d/%m/%Y") }}
+            </td>
+            <td class="px-4 py-3 text-[#0d141c] max-w-[200px] truncate">
+              {{ row.title or "Simulação" }}
+            </td>
+            <td class="px-4 py-3 text-right text-[#0d141c]">
+              {{ "%.2f"|format(row.price | float) }}
+            </td>
+            <td class="px-4 py-3 text-right text-[#0d141c]">
+              {{ "%.2f"|format(row.cost | float) }}
+            </td>
+            <td class="px-4 py-3 text-right font-medium
+              {% if row.net_profit | float > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+              {{ "%.2f"|format(row.net_profit | float) }}
+            </td>
+            <td class="px-4 py-3 text-right font-bold
+              {% if margin_val > 0 %}text-green-600{% elif margin_val < 0 %}text-red-600{% else %}text-[#49739c]{% endif %}">
+              {{ "%.1f"|format(margin_val) }}%
+            </td>
+            <td class="px-4 py-3 text-right text-[#0d80f2]">
+              {{ "%.1f"|format(row.roi | float) }}%
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-16 gap-3 text-[#49739c]">
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+      </svg>
+      <p class="text-sm font-medium">Nenhuma simulação em {{ month_names[report.month] }}/{{ report.year }}.</p>
+      <a href="{{ url_for('pricing.calculator') }}" class="text-sm text-[#0d80f2] hover:underline font-semibold">
+        Ir para o Simulador FBA →
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# Meses disponíveis #}
+  {% if months %}
+  <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+    <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-3">Outros meses com dados</p>
+    <div class="flex flex-wrap gap-2">
+      {% for y, m in months %}
+      {% set mes_str = "%d-%02d"|format(y, m) %}
+      <a href="{{ url_for('relatorios.mensal', mes=mes_str) }}"
+        class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors
+          {% if mes_str == current_mes %}
+            bg-[#0d80f2] text-white border-[#0d80f2]
+          {% else %}
+            bg-[#e7edf4] text-[#0d141c] border-[#d0dbe7] hover:border-[#0d80f2] hover:text-[#0d80f2]
+          {% endif %}
+        ">
+        {{ month_names[m] }}/{{ y }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
