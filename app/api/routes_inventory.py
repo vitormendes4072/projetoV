@@ -15,7 +15,7 @@ def api_sync_inventory():
 
     Busca os snapshots de estoque via SP-API e faz upsert na tabela local.
     """
-    conn = AmazonConnection.query.filter_by(user_id=current_user.id).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=current_user.id))
     if not conn:
         abort(400, message="Integração Amazon não configurada")
 

@@ -3,6 +3,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, SelectField, FloatField # <--- Adicione PasswordField
 from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo, InputRequired
 from flask_login import current_user
+from app import db
 from app.models.user import User
 
 class UpdateAccountForm(FlaskForm):
@@ -16,7 +17,7 @@ class UpdateAccountForm(FlaskForm):
 
     def validate_email(self, email):
         if email.data != current_user.email:
-            user = User.query.filter_by(email=email.data).first()
+            user = db.session.scalar(db.select(User).filter_by(email=email.data))
             if user:
                 raise ValidationError('Este e-mail já está em uso por outra conta.')
 

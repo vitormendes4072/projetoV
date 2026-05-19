@@ -1,6 +1,7 @@
 from flask_login import current_user
 from flask_smorest import abort
 
+from app import db
 from app.api import blp
 from app.api.schemas import ProfitResultSchema
 from app.models import AmazonConnection
@@ -16,7 +17,7 @@ def api_profit_order(amazon_order_id: str):
     Se não houver dados financeiros, retorna `mode: no_finance_events` com sugestão
     de executar `POST /amazon/sync/finances` antes.
     """
-    conn = AmazonConnection.query.filter_by(user_id=current_user.id).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=current_user.id))
     if not conn:
         abort(400, message="Integração Amazon não configurada")
 

@@ -133,7 +133,7 @@ def confirm_email_update(token):
         return redirect(url_for('settings.index'))
 
     from app.models.user import User
-    if User.query.filter_by(email=new_email).first():
+    if db.session.scalar(db.select(User).filter_by(email=new_email)):
         flash('Este e-mail já está em uso.', 'danger')
         return redirect(url_for('settings.index'))
 

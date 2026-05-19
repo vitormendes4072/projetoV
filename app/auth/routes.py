@@ -62,7 +62,7 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
-        existing_user = User.query.filter_by(email=email).first()
+        existing_user = db.session.scalar(db.select(User).filter_by(email=email))
         if existing_user:
             flash('Este email já está cadastrado.', 'danger')
             return redirect(url_for('auth.register'))
@@ -86,7 +86,7 @@ def login():
         return redirect(url_for('main.menu'))
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.strip().lower()).first()
+        user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
         if user and user.check_password(form.password.data):
             if not user.confirmed:
                 flash('Confirme seu e-mail antes de logar.', 'warning')
@@ -121,7 +121,7 @@ def reset_request():
     form = RequestResetForm()
     if form.validate_on_submit():
         start_time = time.time()
-        user = User.query.filter_by(email=form.email.data.strip().lower()).first()
+        user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
         if user:
             send_reset_email(user)
 
@@ -144,7 +144,7 @@ def reset_token(token):
     except Exception:
         flash('Token inválido/expirado.', 'danger')
         return redirect(url_for('auth.reset_request'))
-    user = User.query.filter_by(email=email).first()
+    user = db.session.scalar(db.select(User).filter_by(email=email))
     if not user:
         flash('Usuário não encontrado.', 'danger')
         return redirect(url_for('auth.reset_request'))
@@ -166,7 +166,7 @@ def confirm_email(token):
     except Exception:
         flash('Link inválido/expirado.', 'danger')
         return redirect(url_for('auth.login'))
-    user = User.query.filter_by(email=email).first()
+    user = db.session.scalar(db.select(User).filter_by(email=email))
     if not user:
         flash('Usuário inválido.', 'danger')
         return redirect(url_for('auth.login'))

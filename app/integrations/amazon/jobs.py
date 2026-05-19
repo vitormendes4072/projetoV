@@ -51,10 +51,13 @@ def job_sync_finances(user_id: int, conn_id: int, days: int = 7) -> dict:
     start = compute_sync_start(conn, days_default=days)
     start_iso = iso_z(start)
 
-    AmazonFinancialEvent.query.filter(
-        AmazonFinancialEvent.user_id == user_id,
-        AmazonFinancialEvent.posted_date >= start,
-    ).delete(synchronize_session=False)
+    db.session.execute(
+        db.delete(AmazonFinancialEvent)
+        .where(
+            AmazonFinancialEvent.user_id == user_id,
+            AmazonFinancialEvent.posted_date >= start,
+        )
+    )
     db.session.flush()
 
     events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)
@@ -86,10 +89,13 @@ def job_sync_full(user_id: int, conn_id: int, days: int = 30) -> dict:
         conn, user_id=user_id, created_after_iso=start_iso
     )
 
-    AmazonFinancialEvent.query.filter(
-        AmazonFinancialEvent.user_id == user_id,
-        AmazonFinancialEvent.posted_date >= start,
-    ).delete(synchronize_session=False)
+    db.session.execute(
+        db.delete(AmazonFinancialEvent)
+        .where(
+            AmazonFinancialEvent.user_id == user_id,
+            AmazonFinancialEvent.posted_date >= start,
+        )
+    )
     db.session.flush()
 
     events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)

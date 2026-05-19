@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @amazon.post("/sync_inventory")
 @login_required
 def sync_inventory():
-    conn = AmazonConnection.query.filter_by(user_id=user_key()).first()
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 

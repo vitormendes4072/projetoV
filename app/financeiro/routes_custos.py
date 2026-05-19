@@ -183,7 +183,7 @@ def custos_fixos():
     # ---------------------------
     sort, view, qtxt, cat, ativo, paid = _get_list_params_from_args()
 
-    q = CustoFixo.query.filter_by(user_id=current_user.id)
+    q = db.select(CustoFixo).filter_by(user_id=current_user.id)
 
     if qtxt:
         q = q.filter(CustoFixo.nome.ilike(f"%{qtxt}%"))
@@ -218,7 +218,7 @@ def custos_fixos():
             CustoFixo.nome.asc(),
         )
 
-    itens_db = q.all()
+    itens_db = db.session.scalars(q).all()
 
     # ---------------------------
     # Pagos / Status do mês atual
@@ -226,13 +226,13 @@ def custos_fixos():
     hoje = date.today()
     ano_atual, mes_atual = hoje.year, hoje.month
 
-    pagos = (
-        CustoFixoPagamento.query
+    pagos = db.session.scalars(
+        db.select(CustoFixoPagamento)
         .join(CustoFixo, CustoFixoPagamento.custo_fixo_id == CustoFixo.id)
-        .filter(CustoFixo.user_id == current_user.id)
-        .filter(CustoFixoPagamento.ano == ano_atual, CustoFixoPagamento.mes == mes_atual)
-        .all()
-    )
+        .where(CustoFixo.user_id == current_user.id,
+               CustoFixoPagamento.ano == ano_atual,
+               CustoFixoPagamento.mes == mes_atual)
+    ).all()
     pagos_map = {p.custo_fixo_id: p for p in pagos}
 
     def _status_do_item(item: CustoFixo):
@@ -364,15 +364,14 @@ def custos_fixos():
 @financeiro_bp.route("/custos-fixos/<int:item_id>/history", methods=["GET"])
 @login_required
 def custos_fixos_history(item_id: int):
-    CustoFixo.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    db.first_or_404(db.select(CustoFixo).filter_by(id=item_id, user_id=current_user.id))
 
-    rows = (
-        CustoFixoHistory.query
-        .filter(CustoFixoHistory.item_id == item_id)
+    rows = db.session.scalars(
+        db.select(CustoFixoHistory)
+        .where(CustoFixoHistory.item_id == item_id)
         .order_by(CustoFixoHistory.changed_at.desc())
         .limit(100)
-        .all()
-    )
+    ).all()
 
     return jsonify([
         {
@@ -419,12 +418,10 @@ def bulk_action_custos_fixos():
         flash("Ação inválida.", "danger")
         return _back()
 
-    itens = (
-        CustoFixo.query
-        .filter(CustoFixo.user_id == current_user.id)
-        .filter(CustoFixo.id.in_(ids))
-        .all()
-    )
+    itens = db.session.scalars(
+        db.select(CustoFixo)
+        .where(CustoFixo.user_id == current_user.id, CustoFixo.id.in_(ids))
+    ).all()
 
     if not itens:
         flash("Nenhum item encontrado para aplicar a ação.", "warning")
@@ -433,12 +430,12 @@ def bulk_action_custos_fixos():
     hoje = date.today()
     ano_atual, mes_atual = hoje.year, hoje.month
 
-    pagamentos_existentes = (
-        CustoFixoPagamento.query
-        .filter(CustoFixoPagamento.ano == ano_atual, CustoFixoPagamento.mes == mes_atual)
-        .filter(CustoFixoPagamento.custo_fixo_id.in_([i.id for i in itens]))
-        .all()
-    )
+    pagamentos_existentes = db.session.scalars(
+        db.select(CustoFixoPagamento)
+        .where(CustoFixoPagamento.ano == ano_atual,
+               CustoFixoPagamento.mes == mes_atual,
+               CustoFixoPagamento.custo_fixo_id.in_([i.id for i in itens]))
+    ).all()
     pagos_map = {p.custo_fixo_id: p for p in pagamentos_existentes}
 
     if action == "delete":
@@ -535,7 +532,7 @@ def bulk_action_custos_fixos():
 @financeiro_bp.route("/custos-fixos/<int:item_id>/update", methods=["POST"])
 @login_required
 def update_custo_fixo(item_id: int):
-    item = CustoFixo.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    item = db.first_or_404(db.select(CustoFixo).filter_by(id=item_id, user_id=current_user.id))
     sort, view, qtxt, cat, ativo, paid = _get_list_params_from_args()
 
     data, err, level = _parse_form_fields_or_flash()
@@ -564,7 +561,7 @@ def update_custo_fixo(item_id: int):
 @financeiro_bp.route("/custos-fixos/<int:item_id>/toggle", methods=["POST"])
 @login_required
 def toggle_custo_fixo(item_id: int):
-    item = CustoFixo.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    item = db.first_or_404(db.select(CustoFixo).filter_by(id=item_id, user_id=current_user.id))
     sort, view, qtxt, cat, ativo, paid = _get_list_params_from_args()
 
     before = serialize_custo_fixo(item)
@@ -583,13 +580,13 @@ def toggle_custo_fixo(item_id: int):
 @financeiro_bp.route("/custos-fixos/<int:item_id>/delete", methods=["POST"])
 @login_required
 def delete_custo_fixo(item_id: int):
-    item = CustoFixo.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    item = db.first_or_404(db.select(CustoFixo).filter_by(id=item_id, user_id=current_user.id))
     sort, view, qtxt, cat, ativo, paid = _get_list_params_from_args()
 
     before = serialize_custo_fixo(item)
     hoje = date.today()
     ano_atual, mes_atual = hoje.year, hoje.month
-    p = CustoFixoPagamento.query.filter_by(custo_fixo_id=item.id, ano=ano_atual, mes=mes_atual).first()
+    p = db.session.scalar(db.select(CustoFixoPagamento).filter_by(custo_fixo_id=item.id, ano=ano_atual, mes=mes_atual))
     if p:
         db.session.delete(p)
     db.session.delete(item)
@@ -606,7 +603,7 @@ def delete_custo_fixo(item_id: int):
 @financeiro_bp.route("/custos-fixos/<int:item_id>/pago", methods=["POST"])
 @login_required
 def toggle_pago_custo_fixo(item_id: int):
-    item = CustoFixo.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    item = db.first_or_404(db.select(CustoFixo).filter_by(id=item_id, user_id=current_user.id))
     sort, view, qtxt, cat, ativo, paid = _get_list_params_from_args()
 
     hoje = date.today()

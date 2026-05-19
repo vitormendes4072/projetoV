@@ -11,16 +11,15 @@ from app.models.pricing import PricingHistory
 
 def get_monthly_report(user_id: int, year: int, month: int) -> dict[str, Any]:
     """Agrega simulações de precificação de um mês e retorna KPIs + linhas."""
-    rows = (
-        PricingHistory.query
-        .filter_by(user_id=user_id)
-        .filter(
+    rows = db.session.scalars(
+        db.select(PricingHistory)
+        .where(
+            PricingHistory.user_id == user_id,
             extract("year", PricingHistory.created_at) == year,
             extract("month", PricingHistory.created_at) == month,
         )
         .order_by(PricingHistory.created_at.desc())
-        .all()
-    )
+    ).all()
 
     total = len(rows)
     if total == 0:
@@ -51,14 +50,13 @@ def get_monthly_report(user_id: int, year: int, month: int) -> dict[str, Any]:
 
 def available_months(user_id: int) -> list[tuple[int, int]]:
     """Retorna lista de (year, month) distintos com dados, ordem decrescente."""
-    rows = (
-        db.session.query(
+    rows = db.session.execute(
+        db.select(
             extract("year", PricingHistory.created_at).label("y"),
             extract("month", PricingHistory.created_at).label("m"),
         )
-        .filter(PricingHistory.user_id == user_id)
+        .where(PricingHistory.user_id == user_id)
         .distinct()
         .order_by(db.text("y DESC, m DESC"))
-        .all()
-    )
+    ).all()
     return [(int(r.y), int(r.m)) for r in rows]

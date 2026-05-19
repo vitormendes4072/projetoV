@@ -39,8 +39,8 @@ def test_sync_full_unauthenticated(client, db):
 
 def test_sync_orders_no_conn(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = client.post("/integrations/amazon/sync_orders")
     assert resp.status_code == 400
     data = resp.get_json()
@@ -50,8 +50,8 @@ def test_sync_orders_no_conn(client, db):
 
 def test_sync_finances_no_conn(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = client.post("/integrations/amazon/sync_finances")
     assert resp.status_code == 400
     assert resp.get_json()["ok"] is False
@@ -59,8 +59,8 @@ def test_sync_finances_no_conn(client, db):
 
 def test_sync_full_no_conn(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = client.post("/integrations/amazon/sync_full")
     assert resp.status_code == 400
     assert resp.get_json()["ok"] is False
@@ -72,8 +72,8 @@ def test_sync_full_no_conn(client, db):
 
 def test_sync_orders_enqueues_job(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = _fake_conn()
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = _fake_conn()
         resp = client.post("/integrations/amazon/sync_orders")
     assert resp.status_code == 202
     data = resp.get_json()
@@ -84,8 +84,8 @@ def test_sync_orders_enqueues_job(client, db):
 
 def test_sync_finances_enqueues_job(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = _fake_conn()
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = _fake_conn()
         resp = client.post("/integrations/amazon/sync_finances")
     assert resp.status_code == 202
     data = resp.get_json()
@@ -95,8 +95,8 @@ def test_sync_finances_enqueues_job(client, db):
 
 def test_sync_full_enqueues_job(client, db):
     auth_client(client, db)
-    with patch("app.integrations.amazon.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = _fake_conn()
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = _fake_conn()
         resp = client.post("/integrations/amazon/sync_full")
     assert resp.status_code == 202
     data = resp.get_json()

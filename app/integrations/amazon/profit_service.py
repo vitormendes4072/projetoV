@@ -1,6 +1,7 @@
 """
 Cálculos de lucro/margem por pedido Amazon, baseados em finance events.
 """
+from app import db
 from app.models import AmazonOrder, AmazonOrderItem
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.models.amazon_sku_link import AmazonSkuLink
@@ -25,10 +26,10 @@ def _amount_from_money(m) -> float:
 
 def _resolve_product(user_id: int, sku: str):
     """Resolve Product por SKU link ou SKU direto."""
-    link = AmazonSkuLink.query.filter_by(user_id=user_id, amazon_seller_sku=sku).first()
+    link = db.session.scalar(db.select(AmazonSkuLink).filter_by(user_id=user_id, amazon_seller_sku=sku))
     if link and link.product:
         return link.product
-    return Product.query.filter_by(user_id=user_id, sku=sku).first()
+    return db.session.scalar(db.select(Product).filter_by(user_id=user_id, sku=sku))
 
 
 def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float):
@@ -38,8 +39,8 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
     """
     from app.services.profit_calc import extract_net_from_shipment_events
 
-    fin_rows = AmazonFinancialEvent.query.filter_by(
-        user_id=user_id, amazon_order_id=amazon_order_id
+    fin_rows = db.session.scalars(
+        db.select(AmazonFinancialEvent).filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
     ).all()
     shipment_events = [r.raw_json for r in fin_rows if r.event_type == "ShipmentEventList"]
 
@@ -136,22 +137,18 @@ def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax
     """
     from app.services.profit_calc import extract_net_from_shipment_events
 
-    order = AmazonOrder.query.filter_by(user_id=user_id, amazon_order_id=amazon_order_id).first()
+    order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_id, amazon_order_id=amazon_order_id))
     order_status = order.order_status if order else None
     order_total = float(order.order_total_amount or 0) if order else 0.0
     order_currency = order.currency if order else None
 
-    items = (
-        AmazonOrderItem.query
-        .filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
-        .all()
-    )
+    items = db.session.scalars(
+        db.select(AmazonOrderItem).filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
+    ).all()
 
-    fin_rows = (
-        AmazonFinancialEvent.query
-        .filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
-        .all()
-    )
+    fin_rows = db.session.scalars(
+        db.select(AmazonFinancialEvent).filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
+    ).all()
     shipment_events = [r.raw_json for r in fin_rows if r.event_type == "ShipmentEventList"]
 
     by_sku_fin = {}

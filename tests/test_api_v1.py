@@ -9,13 +9,6 @@ def logged_client(client, db):
     return _auth_client(client, db)
 
 
-def _no_conn():
-    """Retorna um mock de AmazonConnection.query que não encontra conexão."""
-    mock = MagicMock()
-    mock.query.filter_by.return_value.first.return_value = None
-    return mock
-
-
 # ---------------------------------------------------------------------------
 # Documentação OpenAPI
 # ---------------------------------------------------------------------------
@@ -66,36 +59,36 @@ def test_api_requires_auth_alertas(client):
 # ---------------------------------------------------------------------------
 
 def test_sync_orders_no_connection(logged_client):
-    with patch("app.api.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.api.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = logged_client.post("/api/v1/amazon/sync/orders")
     assert resp.status_code == 400
 
 
 def test_sync_finances_no_connection(logged_client):
-    with patch("app.api.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.api.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = logged_client.post("/api/v1/amazon/sync/finances")
     assert resp.status_code == 400
 
 
 def test_sync_full_no_connection(logged_client):
-    with patch("app.api.routes_sync.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.api.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = logged_client.post("/api/v1/amazon/sync/full")
     assert resp.status_code == 400
 
 
 def test_inventory_sync_no_connection(logged_client):
-    with patch("app.api.routes_inventory.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.api.routes_inventory.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = logged_client.post("/api/v1/amazon/inventory/sync")
     assert resp.status_code == 400
 
 
 def test_profit_no_connection(logged_client):
-    with patch("app.api.routes_profit.AmazonConnection") as MockConn:
-        MockConn.query.filter_by.return_value.first.return_value = None
+    with patch("app.api.routes_profit.db") as mock_db:
+        mock_db.session.scalar.return_value = None
         resp = logged_client.get("/api/v1/amazon/profit/111-2222222-3333333")
     assert resp.status_code == 400
 
@@ -111,9 +104,9 @@ def _fake_conn(conn_id=1):
 
 
 def test_sync_orders_queued(logged_client):
-    with patch("app.api.routes_sync.AmazonConnection") as MockConn, \
+    with patch("app.api.routes_sync.db") as mock_db, \
          patch("app.api.routes_sync._queue") as mock_queue:
-        MockConn.query.filter_by.return_value.first.return_value = _fake_conn()
+        mock_db.session.scalar.return_value = _fake_conn()
         fake_job = MagicMock()
         fake_job.id = "job-abc-123"
         mock_queue.return_value.enqueue.return_value = fake_job

@@ -207,7 +207,7 @@ def sync_orders_and_items(conn, user_id: int, created_after_iso: str):
         if not amazon_order_id:
             continue
 
-        order = AmazonOrder.query.filter_by(user_id=user_id, amazon_order_id=amazon_order_id).first()
+        order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_id, amazon_order_id=amazon_order_id))
         if not order:
             order = AmazonOrder(
                 user_id=user_id,
@@ -228,7 +228,10 @@ def sync_orders_and_items(conn, user_id: int, created_after_iso: str):
         db.session.add(order)
         upserted_orders += 1
 
-        AmazonOrderItem.query.filter_by(user_id=user_id, amazon_order_id=amazon_order_id).delete()
+        db.session.execute(
+            db.delete(AmazonOrderItem)
+            .where(AmazonOrderItem.user_id == user_id, AmazonOrderItem.amazon_order_id == amazon_order_id)
+        )
 
         try:
             items = list_order_items(conn, amazon_order_id)
@@ -367,10 +370,7 @@ def upsert_inventory_snapshots(user_id: int, marketplace_id: str, summaries: lis
         inbound_shipped = details.get("inboundShippedQuantity") or details.get("InboundShippedQuantity") or 0
         inbound_receiving = details.get("inboundReceivingQuantity") or details.get("InboundReceivingQuantity") or 0
 
-        row = AmazonInventorySnapshot.query.filter_by(
-            user_id=user_id,
-            seller_sku=seller_sku
-        ).first()
+        row = db.session.scalar(db.select(AmazonInventorySnapshot).filter_by(user_id=user_id, seller_sku=seller_sku))
 
         if not row:
             row = AmazonInventorySnapshot(
