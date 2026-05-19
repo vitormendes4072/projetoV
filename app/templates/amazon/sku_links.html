@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <div class="max-w-5xl mx-auto py-6 flex flex-col gap-6">
 
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-4">
       <a href="{{ url_for('amazon.orders_page') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-        ←
+        â†
       </a>
       <div>
         <h1 class="text-[#0d141c] text-2xl font-bold">Vincular SKUs da Amazon</h1>
@@ -18,8 +18,8 @@
 
   <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-      <span class="font-bold text-slate-800 text-sm">SKUs sem vínculo</span>
-      <span id="missingCount" class="text-xs text-slate-500">—</span>
+      <span class="font-bold text-slate-800 text-sm">SKUs sem vÃ­nculo</span>
+      <span id="missingCount" class="text-xs text-slate-500">â€”</span>
     </div>
 
     <div class="p-4">
@@ -31,7 +31,7 @@
 
   <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-      <span class="font-bold text-slate-800 text-sm">Vínculos existentes</span>
+      <span class="font-bold text-slate-800 text-sm">VÃ­nculos existentes</span>
       <span class="text-xs text-slate-500">{{ links|length }}</span>
     </div>
 
@@ -41,7 +41,7 @@
           <tr>
             <th class="text-left px-3 py-2">SellerSKU (Amazon)</th>
             <th class="text-left px-3 py-2">Produto interno</th>
-            <th class="text-left px-3 py-2">Ação</th>
+            <th class="text-left px-3 py-2">AÃ§Ã£o</th>
             <th class="text-left px-3 py-2">Estoque Amazon</th>
           </tr>
         </thead>
@@ -51,9 +51,9 @@
             <td class="px-3 py-2 font-mono text-xs">{{ l.amazon_seller_sku }}</td>
             <td class="px-3 py-2">
               {% if l.product %}
-                <span class="font-bold">{{ l.product.sku }}</span> — {{ l.product.name }}
+                <span class="font-bold">{{ l.product.sku }}</span> â€” {{ l.product.name }}
               {% else %}
-                —
+                â€”
               {% endif %}
             </td>
             <td class="px-3 py-2">
@@ -69,7 +69,7 @@
               {% if qty is not none %}
                 <span class="font-bold">{{ qty }}</span>
               {% else %}
-                —
+                â€”
               {% endif %}
             </td>
 
@@ -82,8 +82,8 @@
 
 </div>
 
-<script>
-  // products agora já chega como list[dict] (serializável)
+<script nonce="{{ csp_nonce() }}">
+  // products agora jÃ¡ chega como list[dict] (serializÃ¡vel)
   const PRODUCTS = {{ products | tojson }};
 
   function setResult(msg, type="info") {
@@ -97,7 +97,7 @@
   }
 
   function productOptionsHtml() {
-    return PRODUCTS.map(p => `<option value="${p.id}">${p.sku} — ${p.name}</option>`).join("");
+    return PRODUCTS.map(p => `<option value="${p.id}">${p.sku} â€” ${p.name}</option>`).join("");
   }
 
   async function loadMissing() {
@@ -109,7 +109,7 @@
 
     const box = document.getElementById("missingList");
     if (data.missing.length === 0) {
-      box.innerHTML = `<div class="text-green-700 font-bold">Tudo vinculado ✅</div>`;
+      box.innerHTML = `<div class="text-green-700 font-bold">Tudo vinculado âœ…</div>`;
       return;
     }
 
@@ -118,7 +118,7 @@
         <div>
           <div class="font-bold text-slate-900">${m.seller_sku}</div>
           <div class="text-xs text-slate-500">
-            Ocorrências: ${m.count} ${m.asin ? `| ASIN: ${m.asin}` : ""}
+            OcorrÃªncias: ${m.count} ${m.asin ? `| ASIN: ${m.asin}` : ""}
           </div>
         </div>
 
@@ -142,7 +142,7 @@
     const linkBtn = e.target.closest(".link-btn");
     if (linkBtn) {
       const sku = linkBtn.getAttribute("data-sku");
-      const asin = linkBtn.getAttribute("data-asin") || null; // ✅ pega o asin do botão
+      const asin = linkBtn.getAttribute("data-asin") || null; // âœ… pega o asin do botÃ£o
 
       const select = linkBtn.parentElement.querySelector(".sku-product");
       const pid = select.value;
@@ -162,7 +162,7 @@
       const data = await res.json();
       if (!res.ok || !data.ok) return setResult(data.error || "Falha ao vincular", "error");
 
-      setResult("Vínculo criado com sucesso.", "success");
+      setResult("VÃ­nculo criado com sucesso.", "success");
       setTimeout(() => location.reload(), 600);
       return;
     }
@@ -173,7 +173,7 @@
       const res = await fetch(`/integrations/amazon/sku_links/${id}/delete`, { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data.ok) return setResult(data.error || "Falha ao remover", "error");
-      setResult("Vínculo removido.", "success");
+      setResult("VÃ­nculo removido.", "success");
       setTimeout(() => location.reload(), 400);
     }
   });

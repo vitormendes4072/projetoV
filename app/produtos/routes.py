@@ -187,7 +187,7 @@ def historico_produto(product_id):
     product = db.get_or_404(Product, product_id)
     if product.owner != current_user:
         abort(403)
-        
+
     page = request.args.get('page', 1, type=int)
     historico = db.paginate(db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.desc()), page=page, per_page=10, error_out=False)
 

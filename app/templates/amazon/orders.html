@@ -1,4 +1,4 @@
-<!-- app/templates/amazon/orders.html -->
+﻿<!-- app/templates/amazon/orders.html -->
 {% extends "base.html" %}
 {% block content %}
 <div class="max-w-6xl mx-auto py-6 flex flex-col gap-6">
@@ -50,8 +50,8 @@
 
   <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-      <span class="font-bold text-slate-800 text-sm">Últimos pedidos</span>
-      <span class="text-xs text-slate-500">Mostrando até 200</span>
+      <span class="font-bold text-slate-800 text-sm">Ãšltimos pedidos</span>
+      <span class="text-xs text-slate-500">Mostrando atÃ© 200</span>
     </div>
 
     {% if orders|length == 0 %}
@@ -70,7 +70,7 @@
               <th class="text-left px-4 py-3">Status</th>
               <th class="text-left px-4 py-3">Total</th>
               <th class="text-left px-4 py-3">Moeda</th>
-              <th class="text-left px-4 py-3">Ações</th>
+              <th class="text-left px-4 py-3">AÃ§Ãµes</th>
             </tr>
           </thead>
 
@@ -79,15 +79,15 @@
               "Shipped": "Enviado",
               "Pending": "Pendente",
               "Canceled": "Cancelado",
-              "Unshipped": "Não enviado",
+              "Unshipped": "NÃ£o enviado",
               "PartiallyShipped": "Parcialmente enviado",
-              "InvoiceUnconfirmed": "Fatura não confirmada",
-              "Unfulfillable": "Não processável"
+              "InvoiceUnconfirmed": "Fatura nÃ£o confirmada",
+              "Unfulfillable": "NÃ£o processÃ¡vel"
             } %}
 
             {% for o in orders %}
               {% set raw_status = o.order_status or "" %}
-              {% set status_pt = status_map.get(raw_status, raw_status or "—") %}
+              {% set status_pt = status_map.get(raw_status, raw_status or "â€”") %}
 
               <tr class="order-row hover:bg-slate-50"
                   data-order-id="{{ o.amazon_order_id }}"
@@ -95,7 +95,7 @@
                 <td class="px-4 py-3">
                   <button class="toggle-details text-slate-500 hover:text-slate-900 font-bold"
                           data-order-id="{{ o.amazon_order_id }}">
-                    ▼
+                    â–¼
                   </button>
                 </td>
 
@@ -105,7 +105,7 @@
                   {% if o.purchase_date %}
                     {{ o.purchase_date.strftime("%d/%m/%Y %H:%M") }}
                   {% else %}
-                    —
+                    â€”
                   {% endif %}
                 </td>
 
@@ -130,17 +130,17 @@
                   {{ "%.2f"|format(o.order_total_amount or 0) }}
                 </td>
 
-                <td class="px-4 py-3">{{ o.currency or "—" }}</td>
+                <td class="px-4 py-3">{{ o.currency or "â€”" }}</td>
 
                 <td class="px-4 py-3">
                   <a class="text-[#0d80f2] font-bold hover:underline"
                      href="/integrations/amazon/profit/order/{{ o.amazon_order_id }}">
-                    Ver lucro →
+                    Ver lucro â†’
                   </a>
                 </td>
               </tr>
 
-              <!-- Linha expandível -->
+              <!-- Linha expandÃ­vel -->
               <tr class="order-details hidden" id="details-{{ o.amazon_order_id }}">
                 <td colspan="7" class="px-4 pb-4">
                   <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
@@ -176,7 +176,7 @@
   }
 </style>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   function setResult(msg, type="info") {
     const el = document.getElementById("syncResult");
     if (!el) return;
@@ -194,7 +194,7 @@
     const row = document.getElementById(`details-${orderId}`);
     if (!row) return;
 
-    // se já carregou uma vez, não refaz (só alterna)
+    // se jÃ¡ carregou uma vez, nÃ£o refaz (sÃ³ alterna)
     if (row.dataset.loaded === "1") return;
 
     const box = row.querySelector("div");
@@ -229,7 +229,7 @@
     // Aviso para pedidos Pending com valores zerados
     const pendingHint = (data.order_status === "Pending" && totals.revenue === 0)
       ? `<div class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
-          Pedido <b>Pendente</b>: a Amazon pode não disponibilizar valores (preço/total) até confirmar o pagamento.
+          Pedido <b>Pendente</b>: a Amazon pode nÃ£o disponibilizar valores (preÃ§o/total) atÃ© confirmar o pagamento.
         </div>`
       : "";
 
@@ -261,7 +261,7 @@
           <div class="font-bold">R$ ${totals.revenue.toFixed(2)}</div>
         </div>
         <div class="p-3 bg-white border border-slate-200 rounded-lg">
-          <div class="text-xs text-slate-500">Líquido</div>
+          <div class="text-xs text-slate-500">LÃ­quido</div>
           <div class="font-bold">R$ ${totals.net.toFixed(2)}</div>
         </div>
         <div class="p-3 bg-white border border-slate-200 rounded-lg">
@@ -285,7 +285,7 @@
 
       <div class="flex items-center justify-between mb-2">
         <div class="text-xs text-slate-600">
-          ${note} | Imposto padrão: <b>${Number(data.imposto_rate_pct || 0).toFixed(2)}%</b>
+          ${note} | Imposto padrÃ£o: <b>${Number(data.imposto_rate_pct || 0).toFixed(2)}%</b>
           ${data.order_status ? ` | Status: <b>${data.order_status}</b>` : ""}
         </div>
         <div class="text-xs text-slate-500">
@@ -301,8 +301,8 @@
             <tr>
               <th class="text-left py-2 px-3">Item</th>
               <th class="text-left py-2 px-3">Qtd</th>
-              <th class="text-left py-2 px-3">Preço</th>
-              <th class="text-left py-2 px-3">Líquido</th>
+              <th class="text-left py-2 px-3">PreÃ§o</th>
+              <th class="text-left py-2 px-3">LÃ­quido</th>
               <th class="text-left py-2 px-3">Imposto</th>
               <th class="text-left py-2 px-3">CMV</th>
               <th class="text-left py-2 px-3">Embalagem</th>
@@ -311,7 +311,7 @@
             </tr>
           </thead>
           <tbody>
-            ${rowsHtml || `<tr><td class="p-4 text-slate-600" colspan="9">Nenhum item encontrado. Clique em “Sincronizar itens (15)”.</td></tr>`}
+            ${rowsHtml || `<tr><td class="p-4 text-slate-600" colspan="9">Nenhum item encontrado. Clique em â€œSincronizar itens (15)â€.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -322,13 +322,13 @@
 
 
   document.addEventListener("DOMContentLoaded", () => {
-    // Botões principais
+    // BotÃµes principais
     const btnSyncOrders = document.getElementById("btnSyncOrders");
     const btnSyncItems = document.getElementById("btnSyncItems");
 
     btnSyncOrders?.addEventListener("click", async () => {
       try {
-        setResult("Sincronizando pedidos (últimos 30 dias)...", "info");
+        setResult("Sincronizando pedidos (Ãºltimos 30 dias)...", "info");
         const res = await fetch("/integrations/amazon/sync_orders_only?days=30", { method: "GET" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || ("Erro " + res.status));
@@ -404,7 +404,7 @@
 
     const isHidden = detailsRow.classList.contains("hidden");
     detailsRow.classList.toggle("hidden");
-    btn.textContent = isHidden ? "▲" : "▼";
+    btn.textContent = isHidden ? "â–²" : "â–¼";
 
     if (isHidden) {
       await loadOrderDetails(orderId);

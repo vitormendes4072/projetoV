@@ -1,7 +1,7 @@
 # app/__init__.py
 import os
 import logging
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -9,6 +9,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_migrate import Migrate
+from flask_smorest import Api
 
 from config import config_options  # seu dicionário do config.py
 
@@ -18,13 +19,30 @@ login_manager = LoginManager()
 mail = Mail()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
+smorest = Api()
+
+
+def _init_rq(app: Flask) -> None:
+    """Registra fila RQ em app.extensions['rq_queue']. Em testes usa fakeredis."""
+    from redis import Redis
+    from rq import Queue
+
+    if app.testing:
+        from fakeredis import FakeRedis
+        redis_conn = FakeRedis()
+    else:
+        redis_url = app.config.get("REDIS_URL", "redis://localhost:6379/0")
+        redis_conn = Redis.from_url(redis_url)
+
+    app.extensions["rq_queue"] = Queue("amazon-sync", connection=redis_conn)
 
 
 def _configure_security(app: Flask) -> None:
     """
-    Configura Talisman/CSP.
+    Configura Talisman/CSP com nonces.
     Em debug: desliga CSP/HTTPS forçado para não atrapalhar desenvolvimento.
-    Em produção: aplica CSP.
+    Em produção: aplica CSP com nonce único por request em script-src e style-src.
+    Os templates usam {{ csp_nonce() }} nos blocos <script> e <style> inline.
     """
     csp = {
         "default-src": ["'self'"],
@@ -35,7 +53,6 @@ def _configure_security(app: Flask) -> None:
         ],
         "style-src": [
             "'self'",
-            "'unsafe-inline'",
             "https://fonts.googleapis.com",
             "https://cdn.jsdelivr.net",
             "https://cdnjs.cloudflare.com",
@@ -47,7 +64,11 @@ def _configure_security(app: Flask) -> None:
     if app.debug or app.testing:
         Talisman(app, force_https=False, content_security_policy=None)
     else:
-        Talisman(app, content_security_policy=csp)
+        Talisman(
+            app,
+            content_security_policy=csp,
+            content_security_policy_nonce_in=["script-src", "style-src"],
+        )
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -102,6 +123,26 @@ def create_app(config_name: str | None = None) -> Flask:
     login_manager.login_message = "Por favor, faça login para acessar."
 
     # ---------------------------------------
+    # Fila assíncrona (RQ)
+    # ---------------------------------------
+    _init_rq(app)
+
+    # Relaxa CSP nas rotas do Swagger UI (registrado antes do Talisman para
+    # que o after_request execute depois do hook do Talisman — LIFO order).
+    @app.after_request
+    def _relax_csp_for_swagger(response):
+        if request.path.startswith("/api/docs") or request.path == "/api/openapi.json":
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+                "https://fonts.googleapis.com; "
+                "font-src 'self' https://fonts.gstatic.com; "
+                "img-src 'self' data: https://cdn.jsdelivr.net"
+            )
+        return response
+
+    # ---------------------------------------
     # Segurança (Talisman)
     # ---------------------------------------
     _configure_security(app)
@@ -115,8 +156,10 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.settings.routes import settings_bp
     from app.produtos.routes import produtos_bp
     from app.financeiro.routes import financeiro_bp
-    from app.integrations.amazon.routes import amazon
+    from app.integrations.amazon import amazon
     from app.commands import register_commands
+    from app.api import blp as api_blp
+    from app.relatorios.routes import relatorios_bp
 
     app.register_blueprint(auth)
     app.register_blueprint(main)
@@ -125,10 +168,19 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(produtos_bp)
     app.register_blueprint(financeiro_bp)
     app.register_blueprint(amazon)
+    app.register_blueprint(relatorios_bp)
+
+    # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
+    smorest.init_app(app)
+    smorest.register_blueprint(api_blp)
 
     # ---------------------------------------
     # Erros
     # ---------------------------------------
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template("errors/404.html"), 404
+
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return render_template("429.html", error=e), 429

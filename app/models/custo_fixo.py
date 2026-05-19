@@ -34,7 +34,7 @@ class CustoFixo(db.Model):
         backref="custo_fixo",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )   
+    )
 
 
 

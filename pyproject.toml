@@ -1,0 +1,12 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",   # line too long — line-length = 120 já é generoso
+    "F401",   # imported but unused — alguns __init__.py re-exportam intencionalmente
+    "E402",   # module import not at top — padrão legítimo em Flask (import circular)
+]
