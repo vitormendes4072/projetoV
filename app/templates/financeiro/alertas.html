@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto p-6">
@@ -6,7 +6,7 @@
     <div>
       <h1 class="text-2xl font-bold">Alertas por e-mail</h1>
       <p class="mt-1 text-slate-600">
-        Receba avisos quando um custo fixo estiver próximo do vencimento e/ou no dia do vencimento.
+        Receba avisos quando um custo fixo estiver prÃ³ximo do vencimento e/ou no dia do vencimento.
       </p>
     </div>
 
@@ -15,7 +15,7 @@
     </a>
   </div>
 
-  <!-- Card: Configuração -->
+  <!-- Card: ConfiguraÃ§Ã£o -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <form method="post" class="space-y-5">
       <input
@@ -52,11 +52,11 @@
               Antes do vencimento e no dia do vencimento
             </option>
             <option value="none" {{ "selected" if settings.alert_mode == "none" else "" }}>
-              Não enviar alertas
+              NÃ£o enviar alertas
             </option>
           </select>
           <p class="mt-1 text-xs text-slate-500">
-            Se escolher “Não enviar”, o sistema não manda e-mail mesmo com “Ativo”.
+            Se escolher â€œNÃ£o enviarâ€, o sistema nÃ£o manda e-mail mesmo com â€œAtivoâ€.
           </p>
         </div>
 
@@ -71,7 +71,7 @@
             value="{{ settings.days_before }}"
             class="mt-1 w-full border rounded-lg px-3 py-2"
           >
-          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em “Antes e no dia”).</p>
+          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em â€œAntes e no diaâ€).</p>
         </div>
       </div>
 
@@ -83,13 +83,13 @@
     </form>
   </div>
 
-  <!-- Card: Destinatários -->
+  <!-- Card: DestinatÃ¡rios -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <div class="text-lg font-semibold">Destinatários</div>
+        <div class="text-lg font-semibold">DestinatÃ¡rios</div>
         <p class="mt-1 text-sm text-slate-600">
-          Esses e-mails receberão os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
+          Esses e-mails receberÃ£o os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
         </p>
       </div>
     </div>
@@ -136,22 +136,22 @@
         {% endfor %}
       {% else %}
         <div class="text-sm text-slate-500">
-          Nenhum destinatário extra cadastrado. (Por padrão, envia para <b>{{ current_user.email }}</b>.)
+          Nenhum destinatÃ¡rio extra cadastrado. (Por padrÃ£o, envia para <b>{{ current_user.email }}</b>.)
         </div>
       {% endif %}
     </div>
   </div>
 
   <div class="mt-4 text-sm text-slate-500">
-    <p><b>Regras:</b> só alertamos itens ativos, vigentes no mês, com dia de pagamento e que ainda não foram marcados como pagos.</p>
+    <p><b>Regras:</b> sÃ³ alertamos itens ativos, vigentes no mÃªs, com dia de pagamento e que ainda nÃ£o foram marcados como pagos.</p>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce() }}">
   // =========================
-  // 1) Toggle enabled (auto-save) + UX do formulário
+  // 1) Toggle enabled (auto-save) + UX do formulÃ¡rio
   // =========================
   (function () {
     const toggle = document.getElementById("enabledToggle");
@@ -169,17 +169,17 @@
       wrap.classList.toggle("opacity-60", !isOn);
       wrap.classList.toggle("pointer-events-none", !isOn);
 
-      // select não tem readonly
+      // select nÃ£o tem readonly
       mode.disabled = !isOn;
 
-      // days: readonly mantém no POST, disabled não.
+      // days: readonly mantÃ©m no POST, disabled nÃ£o.
       const allowDays = isOn && mode.value === "before_and_due";
       days.readOnly = !allowDays;
 
       days.classList.toggle("bg-slate-100", !allowDays);
       days.classList.toggle("opacity-60", !allowDays);
 
-      // se OFF, não faz sentido salvar “modo/dias”
+      // se OFF, nÃ£o faz sentido salvar â€œmodo/diasâ€
       saveBtn.disabled = !isOn;
       saveBtn.classList.toggle("opacity-60", !isOn);
       saveBtn.classList.toggle("cursor-not-allowed", !isOn);
@@ -202,7 +202,7 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
 
         enabledField.value = value ? "on" : "off";
-        status.textContent = "Salvo ✅";
+        status.textContent = "Salvo âœ…";
         setTimeout(() => (status.textContent = ""), 1200);
       } catch (e) {
         toggle.checked = !toggle.checked;
@@ -224,9 +224,9 @@
   })();
 </script>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   // =========================
-  // 2) Destinatários (add / toggle / remove)
+  // 2) DestinatÃ¡rios (add / toggle / remove)
   // =========================
   (function () {
     const addBtn = document.getElementById("addRecipientBtn");
@@ -281,7 +281,7 @@
         const data = await res.json();
         if (!res.ok || !data.ok) throw new Error(data.error || "Erro ao adicionar.");
 
-        // Se já existe, só marca ativo; se não existe, cria
+        // Se jÃ¡ existe, sÃ³ marca ativo; se nÃ£o existe, cria
         const existing = list.querySelector(`[data-id="${data.id}"]`);
         if (existing) {
           const chk = existing.querySelector(".recipientToggle");
@@ -289,7 +289,7 @@
           const statusLine = existing.querySelector(".text-xs");
           if (statusLine) statusLine.textContent = "Ativo";
         } else {
-          // se list estava com texto "Nenhum destinatário...", substitui pelo primeiro item
+          // se list estava com texto "Nenhum destinatÃ¡rio...", substitui pelo primeiro item
           if (list.children.length === 1 && list.firstElementChild && list.firstElementChild.classList.contains("text-slate-500")) {
             list.innerHTML = "";
           }
@@ -324,7 +324,7 @@
           // se ficou vazio, mostra fallback
           if (list.children.length === 0) {
             list.innerHTML = `<div class="text-sm text-slate-500">
-              Nenhum destinatário extra cadastrado. (Por padrão, envia para <b>{{ current_user.email }}</b>.)
+              Nenhum destinatÃ¡rio extra cadastrado. (Por padrÃ£o, envia para <b>{{ current_user.email }}</b>.)
             </div>`;
           }
         } catch (e) {

@@ -67,15 +67,14 @@ def _normalize_email(s: str) -> str:
 # ----------------------------
 
 def _has_been_sent(user_id: int, custo_fixo_id: int, due_date: date, alert_type: str) -> bool:
-    return (
-        NotificationLog.query.filter_by(
+    return db.session.scalar(
+        db.select(NotificationLog).filter_by(
             user_id=user_id,
             custo_fixo_id=custo_fixo_id,
             due_date=due_date,
             alert_type=alert_type,
-        ).first()
-        is not None
-    )
+        )
+    ) is not None
 
 
 def _mark_sent_nocommit(
@@ -109,12 +108,11 @@ def _get_recipient_emails_for_user(user: User) -> list[str]:
     Se estiver vazia, retorna [user.email] como fallback.
     Deduplica e normaliza.
     """
-    recipients = (
-        NotificationRecipient.query
+    recipients = db.session.scalars(
+        db.select(NotificationRecipient)
         .filter_by(user_id=user.id, enabled=True)
         .order_by(NotificationRecipient.created_at.asc())
-        .all()
-    )
+    ).all()
 
     emails: list[str] = []
     seen = set()
@@ -152,7 +150,7 @@ def send_custos_fixos_alerts_for_day(run_day: date | None = None, dry_run: bool 
     run_day = run_day or date.today()
     ano, mes = run_day.year, run_day.month
 
-    users = User.query.all()
+    users = db.session.scalars(db.select(User)).all()
 
     summary: dict = {
         "date": run_day.isoformat(),
@@ -181,7 +179,7 @@ def send_custos_fixos_alerts_for_day(run_day: date | None = None, dry_run: bool 
             summary["skipped_missing_email"] += 1
             continue
 
-        settings = NotificationSettings.query.filter_by(user_id=user.id).first()
+        settings = db.session.scalar(db.select(NotificationSettings).filter_by(user_id=user.id))
         if not settings:
             settings = NotificationSettings(user_id=user.id)
             db.session.add(settings)
@@ -198,16 +196,16 @@ def send_custos_fixos_alerts_for_day(run_day: date | None = None, dry_run: bool 
         days_before = int(settings.days_before or 3)
         days_before = max(1, min(10, days_before))
 
-        itens = CustoFixo.query.filter_by(user_id=user.id).all()
+        itens = db.session.scalars(db.select(CustoFixo).filter_by(user_id=user.id)).all()
 
         # pagos do mês corrente (controle mensal)
-        pagos = (
-            CustoFixoPagamento.query
+        pagos = db.session.scalars(
+            db.select(CustoFixoPagamento)
             .join(CustoFixo, CustoFixoPagamento.custo_fixo_id == CustoFixo.id)
-            .filter(CustoFixo.user_id == user.id)
-            .filter(CustoFixoPagamento.ano == ano, CustoFixoPagamento.mes == mes)
-            .all()
-        )
+            .where(CustoFixo.user_id == user.id,
+                   CustoFixoPagamento.ano == ano,
+                   CustoFixoPagamento.mes == mes)
+        ).all()
         pagos_ids = {p.custo_fixo_id for p in pagos}
 
         due_alerts: list[tuple[CustoFixo, date]] = []

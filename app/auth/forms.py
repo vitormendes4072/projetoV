@@ -12,7 +12,7 @@ class RegistrationForm(FlaskForm):
     ])
     # CORREÇÃO: Removida a linha duplicada que existia aqui embaixo
     confirm_password = PasswordField('Confirmar Senha', validators=[
-        DataRequired(), 
+        DataRequired(),
         EqualTo('password', message='As senhas devem ser iguais.')
     ])
     submit = SubmitField('Cadastrar')

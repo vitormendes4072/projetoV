@@ -3,7 +3,7 @@ from app import db
 class NotificationSettings(db.Model):
     __tablename__ = "notification_settings"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(db.BigInteger().with_variant(db.Integer, "sqlite"), primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
 
     # none | due_only | before_and_due

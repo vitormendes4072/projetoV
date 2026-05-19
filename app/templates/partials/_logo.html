@@ -1,0 +1,12 @@
+{% if current_user.is_authenticated %}
+<a href="{{ url_for('main.menu') }}" class="flex items-center gap-3 text-[#0d141c] no-underline">
+{% else %}
+<span class="flex items-center gap-3 text-[#0d141c]">
+{% endif %}
+    <img src="{{ url_for('static', filename='logo.svg') }}" alt="VEntregaz" class="h-6 w-6">
+    <span class="text-lg font-bold leading-tight tracking-[-0.015em]">VEntregaz</span>
+{% if current_user.is_authenticated %}
+</a>
+{% else %}
+</span>
+{% endif %}
