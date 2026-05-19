@@ -55,12 +55,16 @@ def make_finances_client(conn):
     )
 
 
+_RETRYABLE_NETWORK = (ConnectionError, TimeoutError, OSError)
+
+
 def _with_retry(fn, *, max_retries=8, base_sleep=0.8, ctx=""):
     """
-    Retry exponencial:
-    - throttling (SellingApiRequestThrottledException)
-    - falhas transitórias
-    - e também quando a lib retorna None (timeout interno/sem resposta)
+    Retry com backoff apenas para erros transitórios da SP-API:
+    - SellingApiRequestThrottledException: backoff exponencial (rate limit)
+    - ConnectionError / TimeoutError / OSError: backoff linear (rede)
+    - Resposta None da lib: backoff exponencial (timeout interno)
+    Qualquer outro erro é re-lançado imediatamente — não é transitório.
     """
     last_exc = None
 
@@ -68,7 +72,6 @@ def _with_retry(fn, *, max_retries=8, base_sleep=0.8, ctx=""):
         try:
             res = fn()
 
-            # ✅ a lib às vezes retorna None. trate como retry.
             if res is None:
                 time.sleep(base_sleep * (2 ** i))
                 continue
@@ -79,10 +82,9 @@ def _with_retry(fn, *, max_retries=8, base_sleep=0.8, ctx=""):
             last_exc = e
             time.sleep(base_sleep * (2 ** i))
 
-        except Exception as e:
+        except _RETRYABLE_NETWORK as e:
             last_exc = e
             time.sleep(base_sleep * (i + 1))
-            continue
 
     if last_exc:
         raise last_exc
@@ -419,7 +421,7 @@ def get_inventory_summaries(conn, marketplace_id: str):
 
     try:
         res = _with_retry(call, ctx="inventories.get_inventory_summary_marketplace")
-    except Exception:
+    except AttributeError:
         res = _with_retry(call_alt, ctx="inventories.get_inventory_summaries")
 
     payload = _safe_payload(res, "inventories payload")
