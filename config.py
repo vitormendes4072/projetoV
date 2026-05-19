@@ -22,9 +22,7 @@ class Config:
     OPENAPI_URL_PREFIX = "/api"
     OPENAPI_SWAGGER_UI_PATH = "/docs"
     OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
-    # ⚠️ Em produção, esta chave DEVE existir.
-    # O fallback é apenas para evitar crash em dev.
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "voce-esqueceu-de-configurar-a-chave"
+    SECRET_KEY = os.environ.get("SECRET_KEY")
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
@@ -53,6 +51,7 @@ class DevelopmentConfig(Config):
     """
     DEBUG = True
     SESSION_COOKIE_SECURE = False
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-only-nao-usar-em-producao"
 
     # SQLite local por padrão (não quebra o projeto)
     SQLALCHEMY_DATABASE_URI = (
