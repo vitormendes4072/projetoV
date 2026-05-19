@@ -177,6 +177,10 @@ def create_app(config_name: str | None = None) -> Flask:
     # ---------------------------------------
     # Erros
     # ---------------------------------------
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template("errors/404.html"), 404
+
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return render_template("429.html", error=e), 429
