@@ -48,5 +48,5 @@ class ProductHistory(db.Model):
     changed_at = db.Column(db.DateTime, default=datetime.now)
 
     # Quem mudou? (Útil se tiver vários usuários no futuro)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="SET NULL"), nullable=True)
     user = db.relationship('User')
