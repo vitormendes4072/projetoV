@@ -33,12 +33,13 @@ def test_sync_full_unauthenticated(client, db):
 
 # ---------------------------------------------------------------------------
 # Sem conexão Amazon configurada → 400
-# DB vazio: nenhuma AmazonConnection → scalar() retorna None naturalmente
 # ---------------------------------------------------------------------------
 
 def test_sync_orders_no_conn(client, db):
     auth_client(client, db)
-    resp = client.post("/integrations/amazon/sync_orders")
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
+        resp = client.post("/integrations/amazon/sync_orders")
     assert resp.status_code == 400
     data = resp.get_json()
     assert data["ok"] is False
@@ -47,22 +48,25 @@ def test_sync_orders_no_conn(client, db):
 
 def test_sync_finances_no_conn(client, db):
     auth_client(client, db)
-    resp = client.post("/integrations/amazon/sync_finances")
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
+        resp = client.post("/integrations/amazon/sync_finances")
     assert resp.status_code == 400
     assert resp.get_json()["ok"] is False
 
 
 def test_sync_full_no_conn(client, db):
     auth_client(client, db)
-    resp = client.post("/integrations/amazon/sync_full")
+    with patch("app.integrations.amazon.routes_sync.db") as mock_db:
+        mock_db.session.scalar.return_value = None
+        resp = client.post("/integrations/amazon/sync_full")
     assert resp.status_code == 400
     assert resp.get_json()["ok"] is False
 
 
 # ---------------------------------------------------------------------------
 # Com conexão → 202 + job_id enfileirado
-# Mock mantido: controla o objeto de conexão retornado para testar
-# o enfileiramento do job sem precisar de credenciais SP-API reais.
+# Mock mantido: controla o objeto retornado sem precisar de credenciais SP-API reais.
 # ---------------------------------------------------------------------------
 
 def test_sync_orders_enqueues_job(client, db):

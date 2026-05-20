@@ -30,9 +30,10 @@ def test_order_details_unauthenticated(client, db):
 # ---------------------------------------------------------------------------
 
 def test_orders_page_renders_empty(client, db):
-    # DB vazio → AmazonOrder.all() retorna [] naturalmente
     auth_client(client, db)
-    resp = client.get("/integrations/amazon/orders")
+    with patch("app.integrations.amazon.routes_orders.db") as mock_db:
+        mock_db.session.scalars.return_value.all.return_value = []
+        resp = client.get("/integrations/amazon/orders")
     assert resp.status_code == 200
 
 
@@ -54,9 +55,10 @@ def test_orders_page_passes_orders_to_template(client, db):
 # ---------------------------------------------------------------------------
 
 def test_profit_order_no_conn(client, db):
-    # Nenhuma AmazonConnection no DB → scalar() retorna None → 400
     auth_client(client, db)
-    resp = client.get("/integrations/amazon/profit/order/111-ORDER")
+    with patch("app.integrations.amazon.routes_orders.db") as mock_db:
+        mock_db.session.scalar.return_value = None
+        resp = client.get("/integrations/amazon/profit/order/111-ORDER")
     assert resp.status_code == 400
     data = resp.get_json()
     assert data["ok"] is False
