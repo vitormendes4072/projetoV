@@ -149,6 +149,20 @@ def reset_token(token):
         return redirect(url_for('auth.login'))
     return render_template('reset_token.html', form=form)
 
+@auth.route("/demo-login")
+@limiter.limit("10 per minute")
+def demo_login():
+    from app.commands import DEMO_EMAIL
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    user = db.session.scalar(db.select(User).filter_by(email=DEMO_EMAIL))
+    if not user:
+        flash("Conta demo não disponível no momento.", "warning")
+        return redirect(url_for("auth.login"))
+    login_user(user)
+    return redirect(url_for("main.dashboard"))
+
+
 @auth.route("/confirm/<token>")
 def confirm_email(token):
     if current_user.is_authenticated:
