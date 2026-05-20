@@ -73,7 +73,7 @@ def _configure_security(app: Flask) -> None:
         )
 
 
-def create_app(config_name: str | None = None) -> Flask:
+def create_app(config_name: str | None = None, test_config: dict | None = None) -> Flask:
     """
     App factory.
     - Usa APP_ENV se definido, senão 'development' (ou 'default' se preferir manter).
@@ -87,6 +87,11 @@ def create_app(config_name: str | None = None) -> Flask:
         raise RuntimeError(f"Ambiente '{env_name}' inválido. Opções: {list(config_options.keys())}")
 
     app.config.from_object(config_options[env_name])
+
+    # test_config allows conftest.py to inject the real PostgreSQL URI BEFORE
+    # db.init_app() creates the engine — Flask-SQLAlchemy creates it eagerly.
+    if test_config:
+        app.config.update(test_config)
 
     # Validações obrigatórias em produção (aqui o env já é conhecido)
     if env_name == "production":

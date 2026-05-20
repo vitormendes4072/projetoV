@@ -1,69 +1,98 @@
 import os
-import sys
 
 import pytest
+from sqlalchemy import event
 from sqlalchemy.orm import Session as SASession, scoped_session
-from testcontainers.postgres import PostgresContainer
 
 from app import create_app, db as _db
 from app.models.user import User
+from app.models.product import Product, ProductHistory
+from app.models.pricing import PricingHistory
+from app.models.custo_fixo import CustoFixo
+from app.models.custo_fixo_history import CustoFixoHistory
+from app.models.custo_fixo_pagamento import CustoFixoPagamento
+from app.models.notification_settings import NotificationSettings
+from app.models.notification_recipient import NotificationRecipient
 
-# Docker Desktop on Windows exposes the daemon via TCP instead of a named pipe
-# when running with the WSL2 backend. Set DOCKER_HOST before testcontainers
-# tries to connect, unless the caller already set it (e.g., in CI).
-if sys.platform == "win32" and "DOCKER_HOST" not in os.environ:
-    os.environ["DOCKER_HOST"] = "tcp://localhost:2375"
+# TEST_DATABASE_URL is set by CI (GitHub Actions postgres service).
+# DATABASE_URL from .env points to production — never used in tests.
+# When neither is set, SQLite is used for local iteration without a DB.
+_TEST_DB_URL = os.environ.get("TEST_DATABASE_URL")
+_USING_PG = bool(_TEST_DB_URL and "postgresql" in _TEST_DB_URL)
 
-_PG_IMAGE = "postgres:16-alpine"
+# Tables that work on SQLite (no schema="public"). Only used in the SQLite path.
+_SQLITE_TABLES = [
+    User.__table__,
+    Product.__table__,
+    ProductHistory.__table__,
+    PricingHistory.__table__,
+    CustoFixo.__table__,
+    CustoFixoHistory.__table__,
+    CustoFixoPagamento.__table__,
+    NotificationSettings.__table__,
+    NotificationRecipient.__table__,
+]
 
 
 @pytest.fixture(scope="session")
-def pg_container():
-    with PostgresContainer(_PG_IMAGE) as pg:
-        yield pg
+def app():
+    # Pass PostgreSQL URI via test_config so create_app applies it BEFORE
+    # db.init_app() — Flask-SQLAlchemy 3.x creates the engine eagerly in init_app.
+    test_cfg = None
+    if _USING_PG:
+        test_cfg = {
+            "SQLALCHEMY_DATABASE_URI": _TEST_DB_URL,
+            "SQLALCHEMY_ENGINE_OPTIONS": {},
+        }
 
+    application = create_app("testing", test_config=test_cfg)
 
-@pytest.fixture(scope="session")
-def app(pg_container):
-    db_url = pg_container.get_connection_url()
-    application = create_app("testing")
-    # Override SQLite defaults from TestingConfig with the real PG container URL.
-    # Flask-SQLAlchemy creates the engine lazily (first db.engine access), so
-    # updating config here — before any DB operation — is safe.
-    application.config["SQLALCHEMY_DATABASE_URI"] = db_url
-    application.config.pop("SQLALCHEMY_ENGINE_OPTIONS", None)
     with application.app_context():
-        _db.create_all()
+        if _USING_PG:
+            # Full schema including schema="public" Amazon tables
+            _db.create_all()
+        else:
+            # SQLite: FK enforcement + only compatible tables
+            @event.listens_for(_db.engine, "connect")
+            def _sqlite_fk(conn, _):
+                conn.execute("PRAGMA foreign_keys=ON")
+
+            _db.metadata.create_all(_db.engine, tables=_SQLITE_TABLES)
+
         yield application
-        _db.drop_all()
+
+        if _USING_PG:
+            _db.drop_all()
+        else:
+            _db.metadata.drop_all(_db.engine, tables=_SQLITE_TABLES)
 
 
 @pytest.fixture(scope="function")
 def db(app):
-    """Isolates each test in a transaction that is rolled back on teardown.
-
-    Uses SQLAlchemy join_transaction_mode="create_savepoint" so that
-    session.commit() calls within the test create SAVEPOINT/RELEASE pairs
-    instead of real commits. The outer BEGIN is rolled back at the end,
-    leaving the DB pristine for the next test — no drop/create overhead.
-    """
+    """PostgreSQL path: BEGIN → test runs (commits become savepoints) → ROLLBACK.
+    SQLite path: drop + recreate tables between tests."""
     with app.app_context():
-        connection = _db.engine.connect()
-        transaction = connection.begin()
+        if _USING_PG:
+            connection = _db.engine.connect()
+            transaction = connection.begin()
+            original_session = _db.session
 
-        original_session = _db.session
+            def _session_factory():
+                return SASession(bind=connection, join_transaction_mode="create_savepoint")
 
-        def _session_factory():
-            return SASession(bind=connection, join_transaction_mode="create_savepoint")
+            _db.session = scoped_session(_session_factory)
 
-        _db.session = scoped_session(_session_factory)
+            yield _db
 
-        yield _db
-
-        _db.session.remove()
-        _db.session = original_session
-        transaction.rollback()
-        connection.close()
+            _db.session.remove()
+            _db.session = original_session
+            transaction.rollback()
+            connection.close()
+        else:
+            yield _db
+            _db.session.remove()
+            _db.metadata.drop_all(_db.engine, tables=_SQLITE_TABLES)
+            _db.metadata.create_all(_db.engine, tables=_SQLITE_TABLES)
 
 
 @pytest.fixture
