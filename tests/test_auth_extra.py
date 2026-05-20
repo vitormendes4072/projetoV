@@ -2,7 +2,6 @@
 Testes adicionais para app/auth/routes.py —
 cobre reset_password e confirm_email não exercidos pelos testes originais.
 """
-from unittest.mock import patch
 from itsdangerous import URLSafeTimedSerializer
 from tests.conftest import make_user, login, auth_client
 
@@ -28,18 +27,16 @@ def test_reset_request_authenticated_redirects(client, db):
 
 def test_reset_request_post_existing_email(client, db):
     make_user(db, email="reset@test.com")
-    with patch("app.auth.routes.time.sleep"):  # evita sleep de 3 s
-        resp = client.post("/reset_password",
-                           data={"email": "reset@test.com"},
-                           follow_redirects=True)
+    resp = client.post("/reset_password",
+                       data={"email": "reset@test.com"},
+                       follow_redirects=True)
     assert resp.status_code == 200
 
 
 def test_reset_request_post_unknown_email(client, db):
-    with patch("app.auth.routes.time.sleep"):
-        resp = client.post("/reset_password",
-                           data={"email": "nobody@test.com"},
-                           follow_redirects=True)
+    resp = client.post("/reset_password",
+                       data={"email": "nobody@test.com"},
+                       follow_redirects=True)
     assert resp.status_code == 200
 
 

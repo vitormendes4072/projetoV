@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
-import time
 from threading import Thread
 from urllib.parse import urlsplit
 
@@ -115,21 +114,15 @@ def logout():
     return redirect(url_for('auth.login'))
 
 @auth.route("/reset_password", methods=['GET', 'POST'])
+@limiter.limit("5 per hour", methods=["POST"])
 def reset_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.menu'))
     form = RequestResetForm()
     if form.validate_on_submit():
-        start_time = time.time()
         user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
         if user:
             send_reset_email(user)
-
-        # Timing attack mitigation (mantido)
-        elapsed_time = time.time() - start_time
-        if elapsed_time < 3.0:
-            time.sleep(3.0 - elapsed_time)
-
         flash('Email enviado.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('reset_request.html', form=form)
