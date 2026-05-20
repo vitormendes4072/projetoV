@@ -7,6 +7,7 @@ Flask-Mail==0.10.0
 Flask-Migrate==4.1.0
 Flask-Talisman==1.1.0
 Flask-Limiter==4.1.0
+Flask-Caching==2.3.0
 SQLAlchemy==2.0.41
 psycopg2-binary==2.9.11
 cryptography==46.0.3
