@@ -19,6 +19,11 @@
     </div>
 
     <div class="flex gap-2">
+      <a href="{{ url_for('amazon.exportar_orders_csv') }}"
+        class="rounded-lg border border-[#d0dbe7] bg-white text-slate-800 font-bold h-10 px-5 flex items-center gap-2 hover:bg-slate-50 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5 0-4.5 4.5M12 3v13.5m0 0 4.5-4.5" /></svg>
+        Exportar CSV
+      </a>
       <button id="btnSyncOrders"
         class="rounded-lg bg-slate-800 text-white font-bold h-10 px-5 hover:bg-slate-900 transition-colors">
         Sincronizar pedidos
