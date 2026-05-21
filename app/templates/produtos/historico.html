@@ -113,66 +113,8 @@
 {% if grafico.labels|length > 1 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script nonce="{{ csp_nonce() }}">
-    const dados = {{ grafico | tojson }};
-
-    new Chart(document.getElementById('graficoPreco'), {
-        type: 'line',
-        data: {
-            labels: dados.labels,
-            datasets: [
-                {
-                    label: 'Preço (R$)',
-                    data: dados.precos,
-                    borderColor: '#0d80f2',
-                    backgroundColor: 'rgba(13,128,242,0.08)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 4,
-                },
-                {
-                    label: 'Custo (R$)',
-                    data: dados.custos,
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245,158,11,0.08)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 4,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { label: ctx => 'R$ ' + ctx.parsed.y.toFixed(2) } }
-            },
-            scales: { y: { ticks: { callback: val => 'R$ ' + val.toFixed(2) } } }
-        }
-    });
-
-    new Chart(document.getElementById('graficoEstoque'), {
-        type: 'line',
-        data: {
-            labels: dados.labels,
-            datasets: [{
-                label: 'Estoque (un.)',
-                data: dados.estoques,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16,185,129,0.08)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' un.' } }
-            },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
+  const GRAFICO = {{ grafico | tojson }};
 </script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/produtos/historico.js') }}"></script>
 {% endif %}
 {% endblock %}
