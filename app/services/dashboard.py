@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 
 import sqlalchemy as sa
@@ -7,31 +8,42 @@ from app import cache, db
 from app.models.pricing import PricingHistory
 from app.models.product import Product, ProductHistory
 
+_PERIOD_DAYS = {"7d": 7, "30d": 30, "90d": 90}
+
 
 @cache.memoize(timeout=60)
-def get_dashboard_kpis(user_id: int) -> dict:
+def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
     """
     Retorna todos os KPIs e dados do dashboard para um usuário.
-    Resultado cacheado por 60s — ORM objects são serializados para
-    SimpleNamespace antes do cache (pickle-safe, dot-access compatível
-    com o template).
+    Resultado cacheado por 60s por (user_id, period) — ORM objects são
+    serializados para SimpleNamespace antes do cache (pickle-safe).
     """
+    date_from = None
+    if period in _PERIOD_DAYS:
+        date_from = datetime.now() - timedelta(days=_PERIOD_DAYS[period])
+
+    def _ph_where(*extra):
+        clauses = [PricingHistory.user_id == user_id]
+        if date_from:
+            clauses.append(PricingHistory.created_at >= date_from)
+        return clauses + list(extra)
+
     total_products = db.session.scalar(
         db.select(db.func.count(Product.id)).where(Product.user_id == user_id)
     )
     total_simulations = db.session.scalar(
-        db.select(db.func.count(PricingHistory.id)).where(PricingHistory.user_id == user_id)
+        db.select(db.func.count(PricingHistory.id)).where(*_ph_where())
     )
     avg_margin = db.session.scalar(
-        db.select(db.func.avg(PricingHistory.margin)).where(PricingHistory.user_id == user_id)
+        db.select(db.func.avg(PricingHistory.margin)).where(*_ph_where())
     ) or 0
     avg_roi = db.session.scalar(
-        db.select(db.func.avg(PricingHistory.roi)).where(PricingHistory.user_id == user_id)
+        db.select(db.func.avg(PricingHistory.roi)).where(*_ph_where())
     ) or 0
 
     recent_sims_raw = db.session.scalars(
         db.select(PricingHistory)
-        .where(PricingHistory.user_id == user_id)
+        .where(*_ph_where())
         .order_by(PricingHistory.created_at.desc())
         .limit(5)
     ).all()
@@ -75,9 +87,9 @@ def get_dashboard_kpis(user_id: int) -> dict:
 
     chart_sims = db.session.scalars(
         db.select(PricingHistory)
-        .where(PricingHistory.user_id == user_id)
+        .where(*_ph_where())
         .order_by(PricingHistory.created_at.asc())
-        .limit(20)
+        .limit(50)
     ).all()
     chart_labels = [s.created_at.strftime("%d/%b") for s in chart_sims]
     chart_margins = [float(s.margin) for s in chart_sims]
@@ -88,7 +100,7 @@ def get_dashboard_kpis(user_id: int) -> dict:
             db.func.sum(sa.case((sa.and_(PricingHistory.margin >= 0, PricingHistory.margin < 10), 1), else_=0)).label("low"),
             db.func.sum(sa.case((sa.and_(PricingHistory.margin >= 10, PricingHistory.margin < 20), 1), else_=0)).label("medium"),
             db.func.sum(sa.case((PricingHistory.margin >= 20, 1), else_=0)).label("good"),
-        ).where(PricingHistory.user_id == user_id)
+        ).where(*_ph_where())
     ).one()
     margin_dist = [
         int(dist_q.negative or 0),

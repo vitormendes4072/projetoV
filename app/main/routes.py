@@ -1,5 +1,5 @@
 # app/main/routes.py
-from flask import Blueprint, render_template, url_for, redirect
+from flask import Blueprint, render_template, url_for, redirect, request
 from flask_login import login_required, current_user
 from werkzeug.routing import BuildError
 
@@ -142,9 +142,14 @@ def menu():
     return render_template("menu.html", tools=tools)
 
 
+_VALID_PERIODS = {"7d", "30d", "90d", "all"}
+
 @main.route("/dashboard")
 @login_required
 def dashboard():
     from app.services.dashboard import get_dashboard_kpis
-    kpis = get_dashboard_kpis(current_user.id)
-    return render_template("dashboard.html", **kpis)
+    period = request.args.get("period", "30d")
+    if period not in _VALID_PERIODS:
+        period = "30d"
+    kpis = get_dashboard_kpis(current_user.id, period)
+    return render_template("dashboard.html", period=period, **kpis)
