@@ -2,9 +2,6 @@ from app import db
 from datetime import datetime, timezone
 import sqlalchemy as sa
 
-def utcnow():
-    return datetime.now(timezone.utc)
-
 class AmazonFinancialEvent(db.Model):
     __tablename__ = "amazon_financial_events"
     __table_args__ = (
@@ -33,4 +30,4 @@ class AmazonFinancialEvent(db.Model):
     fingerprint = db.Column(db.String(64), nullable=True)
 
     raw_json = db.Column(db.JSON, nullable=False, default=dict)
-    created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

@@ -1,5 +1,5 @@
 # app/models/custo_fixo.py
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from app import db
 
 
@@ -44,8 +44,8 @@ class CustoFixo(db.Model):
 
     ativo = db.Column(db.Boolean, nullable=False, default=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
     def vigente_em(self, ano: int, mes: int) -> bool:
         """True se este custo vale para a competência (ano/mes)."""

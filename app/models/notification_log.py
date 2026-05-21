@@ -1,5 +1,5 @@
 # app/models/notification_log.py
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -35,7 +35,7 @@ class NotificationLog(db.Model):
     sent_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         index=True,
     )
 
