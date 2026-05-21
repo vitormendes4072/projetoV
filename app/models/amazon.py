@@ -82,9 +82,9 @@ class AmazonOrderItem(db.Model):
     __tablename__ = "amazon_order_items"
     __table_args__ = {"schema": "public"}
     id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    amazon_order_id = db.Column(db.String, nullable=False)
+    amazon_order_id = db.Column(db.String, nullable=False, index=True)
     seller_sku = db.Column(db.String, nullable=True)
     asin = db.Column(db.String, nullable=True)
     quantity = db.Column(db.Integer, nullable=True)
