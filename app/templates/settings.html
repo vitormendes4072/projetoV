@@ -571,12 +571,81 @@
         }
     }
 
+    /**
+     * Polling de um job RQ até conclusão ou timeout.
+     * Atualiza setAmzResult a cada tick e resolve/rejeita ao final.
+     *
+     * @param {string} jobId   - ID retornado pelo endpoint que enfileirou o job
+     * @param {number} maxWaitMs - timeout total em ms (default: 5 min)
+     * @param {number} intervalMs - intervalo entre polls em ms (default: 2 s)
+     * @returns {Promise<object>} - result do job quando finished
+     */
+    async function pollJob(jobId, maxWaitMs = 300_000, intervalMs = 2_000) {
+        const deadline = Date.now() + maxWaitMs;
+        let tick = 0;
+
+        while (Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, intervalMs));
+            tick++;
+
+            const res = await fetch(
+                `/integrations/amazon/jobs/${encodeURIComponent(jobId)}`,
+                { headers: { "X-CSRFToken": csrfToken } }
+            );
+            const data = await res.json();
+
+            if (!res.ok || !data.ok) {
+                throw new Error(data.error || `Erro ao verificar job (HTTP ${res.status})`);
+            }
+
+            const status = data.status;
+
+            if (status === "queued" || status === "scheduled") {
+                setAmzResult(`Na fila… aguardando worker (${tick * intervalMs / 1000}s)`, "info");
+
+            } else if (status === "started") {
+                setAmzResult(`Sincronizando com a Amazon… (${tick * intervalMs / 1000}s)`, "info");
+
+            } else if (status === "finished") {
+                return data.result || {};
+
+            } else if (status === "failed") {
+                throw new Error(data.error || "O job falhou sem mensagem de erro.");
+
+            } else {
+                setAmzResult(`Status desconhecido: ${status}`, "info");
+            }
+        }
+
+        throw new Error(
+            "Timeout: o sync está demorando mais que 5 minutos. " +
+            "Verifique se o worker RQ está em execução."
+        );
+    }
+
     async function onAmazonSync() {
         try {
-            setAmzResult("Sincronizando (30 dias)...", "info");
-            const data = await amzFetchJSON("/integrations/amazon/sync_full?days=30", { method: "POST" });
-            setAmzResult(`Sync OK. Pedidos: ${data.orders} | Itens: ${data.items} | Eventos financeiros: ${data.financial_events}`, "success");
+            setAmzResult("Enfileirando sync completo (30 dias)…", "info");
+
+            const queued = await amzFetchJSON("/integrations/amazon/sync_full?days=30", { method: "POST" });
+
+            if (!queued.job_id) {
+                throw new Error(queued.error || "Resposta inesperada: sem job_id");
+            }
+
+            setAmzResult(`Job enfileirado (${queued.job_id.slice(0, 8)}…). Aguardando worker…`, "info");
+
+            const result = await pollJob(queued.job_id);
+
+            setAmzResult(
+                `Sync concluído. ` +
+                `Pedidos: ${result.orders ?? "?"} | ` +
+                `Itens: ${result.items ?? "?"} | ` +
+                `Eventos financeiros: ${result.financial_events ?? "?"}`,
+                "success"
+            );
             await loadAmazonStatus();
+
         } catch (e) {
             setAmzResult(`Falha na sync: ${e.message}`, "error");
         }
