@@ -1,7 +1,9 @@
+import csv
+import io
 import logging
 from datetime import timedelta
 
-from flask import jsonify
+from flask import jsonify, make_response
 from flask_login import login_required, current_user
 
 from app import db
@@ -28,6 +30,34 @@ def orders_page():
         .limit(200)
     ).all()
     return render_template("amazon/orders.html", orders=orders, SP_TZ=SP_TZ)
+
+
+@amazon.get("/orders/exportar-csv")
+@login_required
+def exportar_orders_csv():
+    orders = db.session.scalars(
+        db.select(AmazonOrder)
+        .filter_by(user_id=user_key())
+        .order_by(AmazonOrder.purchase_date.desc().nullslast())
+    ).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['order_id', 'status', 'data_compra', 'total', 'moeda', 'qtd_itens'])
+    for o in orders:
+        writer.writerow([
+            o.amazon_order_id,
+            o.order_status or '',
+            o.purchase_date.strftime('%Y-%m-%d') if o.purchase_date else '',
+            o.order_total_amount or '',
+            o.currency or '',
+            o.num_items_shipped or '',
+        ])
+
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = 'attachment; filename="pedidos_amazon.csv"'
+    return resp
 
 
 @amazon.get("/profit/order/<amazon_order_id>")

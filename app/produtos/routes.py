@@ -2,7 +2,7 @@
 import csv
 import io
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, make_response
 from flask_login import login_required, current_user
 from app import db
 from app.models.product import Product, ProductHistory
@@ -26,6 +26,30 @@ def registrar_historico(produto, user, acao):
 
 COLUNAS_OBRIGATORIAS = {'name', 'sku', 'cost'}
 LIMITE_LINHAS = 1000
+
+
+@produtos_bp.route('/produtos/exportar-csv')
+@login_required
+def exportar_csv():
+    products = db.session.scalars(
+        db.select(Product).where(Product.user_id == current_user.id).order_by(Product.name)
+    ).all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
+    for p in products:
+        writer.writerow([
+            p.name, p.sku, p.asin or '',
+            p.cost, p.price, p.packaging_cost,
+            p.stock_quantity,
+            p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
+        ])
+
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = 'attachment; filename="produtos.csv"'
+    return resp
 
 
 @produtos_bp.route('/produtos/importar-csv', methods=['POST'])
