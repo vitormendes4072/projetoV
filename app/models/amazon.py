@@ -4,6 +4,9 @@ from sqlalchemy import Uuid
 from datetime import datetime, timezone
 import uuid
 
+from app.utils.crypto import encrypt, decrypt
+
+
 def utcnow():
     return datetime.now(timezone.utc)
 
@@ -18,15 +21,39 @@ class AmazonConnection(db.Model):
     seller_id = db.Column(db.String, nullable=True)
 
     lwa_client_id = db.Column(db.String, nullable=False)
-    lwa_client_secret = db.Column(db.String, nullable=False)
-    lwa_refresh_token = db.Column(db.String, nullable=False)
+    lwa_client_secret_enc = db.Column(db.Text, nullable=True)
+    lwa_refresh_token_enc = db.Column(db.Text, nullable=True)
 
     aws_access_key_id = db.Column(db.String, nullable=False)
-    aws_secret_access_key = db.Column(db.String, nullable=False)
+    aws_secret_access_key_enc = db.Column(db.Text, nullable=True)
     aws_region = db.Column(db.String, nullable=False, default="us-east-1")
     role_arn = db.Column(db.String, nullable=True)
 
     last_sync_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    @property
+    def lwa_client_secret(self) -> str | None:
+        return decrypt(self.lwa_client_secret_enc)
+
+    @lwa_client_secret.setter
+    def lwa_client_secret(self, value: str | None) -> None:
+        self.lwa_client_secret_enc = encrypt(value)
+
+    @property
+    def lwa_refresh_token(self) -> str | None:
+        return decrypt(self.lwa_refresh_token_enc)
+
+    @lwa_refresh_token.setter
+    def lwa_refresh_token(self, value: str | None) -> None:
+        self.lwa_refresh_token_enc = encrypt(value)
+
+    @property
+    def aws_secret_access_key(self) -> str | None:
+        return decrypt(self.aws_secret_access_key_enc)
+
+    @aws_secret_access_key.setter
+    def aws_secret_access_key(self, value: str | None) -> None:
+        self.aws_secret_access_key_enc = encrypt(value)
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

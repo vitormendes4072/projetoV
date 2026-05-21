@@ -2,7 +2,6 @@
 from .user import User
 from .product import Product
 from .pricing import PricingHistory
-from .amazon_credentials import AmazonCredentials
 from .custo_fixo import CustoFixo
 from .custo_fixo_pagamento import CustoFixoPagamento
 from .custo_fixo_history import CustoFixoHistory

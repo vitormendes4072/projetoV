@@ -40,15 +40,6 @@ class User(UserMixin, db.Model):
         passive_deletes=True,
     )
 
-    # Relacionamento 1:1 com credenciais Amazon
-    amazon_credentials = db.relationship(
-        "AmazonCredentials",
-        uselist=False,
-        backref="user",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
