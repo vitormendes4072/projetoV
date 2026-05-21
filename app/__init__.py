@@ -187,6 +187,12 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     csrf.exempt(api_blp)  # API REST usa auth por sessão; Swagger UI não envia CSRF token
 
     # ---------------------------------------
+    # Monitoring (livez / readyz / metrics)
+    # ---------------------------------------
+    from app.monitoring import init_monitoring
+    init_monitoring(app)
+
+    # ---------------------------------------
     # Erros
     # ---------------------------------------
     @app.errorhandler(404)

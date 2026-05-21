@@ -6,6 +6,7 @@ from app import db
 from app.api import blp
 from app.api.schemas import SyncQueryArgsSchema, JobQueuedSchema, JobStatusSchema
 from app.models import AmazonConnection
+from app.monitoring import amazon_sync_total
 
 
 def _queue():
@@ -30,6 +31,7 @@ def api_sync_orders(args):
     from app.integrations.amazon.jobs import job_sync_orders
     conn = _get_conn()
     job = _queue().enqueue(job_sync_orders, current_user.id, conn.id, args["days"], job_timeout=300)
+    amazon_sync_total.labels(type="orders").inc()
     return {"ok": True, "job_id": job.id, "status": "queued"}, 202
 
 
@@ -44,6 +46,7 @@ def api_sync_finances(args):
     from app.integrations.amazon.jobs import job_sync_finances
     conn = _get_conn()
     job = _queue().enqueue(job_sync_finances, current_user.id, conn.id, args.get("days", 7), job_timeout=300)
+    amazon_sync_total.labels(type="finances").inc()
     return {"ok": True, "job_id": job.id, "status": "queued"}, 202
 
 
@@ -58,6 +61,7 @@ def api_sync_full(args):
     from app.integrations.amazon.jobs import job_sync_full
     conn = _get_conn()
     job = _queue().enqueue(job_sync_full, current_user.id, conn.id, args["days"], job_timeout=600)
+    amazon_sync_total.labels(type="full").inc()
     return {"ok": True, "job_id": job.id, "status": "queued"}, 202
 
 
