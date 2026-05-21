@@ -1,6 +1,5 @@
 """
 Testes para app/integrations/amazon/routes_orders.py.
-Tabelas Amazon usam schema="public" — queries interceptadas com mock.
 """
 from unittest.mock import MagicMock, patch
 
@@ -30,10 +29,24 @@ def test_order_details_unauthenticated(client, db):
 # GET /orders — página de listagem
 # ---------------------------------------------------------------------------
 
+def _make_pagination(items):
+    """Cria um mock de Flask-SQLAlchemy Pagination compatível com o template."""
+    p = MagicMock()
+    p.items   = items
+    p.total   = len(items)
+    p.page    = 1
+    p.pages   = 1
+    p.has_prev = False
+    p.has_next = False
+    p.iter_pages.return_value = [1]
+    return p
+
+
 def test_orders_page_renders_empty(client, db):
     auth_client(client, db)
     with patch("app.integrations.amazon.routes_orders.db") as mock_db:
-        mock_db.session.scalars.return_value.all.return_value = []
+        mock_db.paginate.return_value = _make_pagination([])
+        mock_db.select.return_value   = MagicMock()
         resp = client.get("/integrations/amazon/orders")
     assert resp.status_code == 200
 
@@ -42,13 +55,17 @@ def test_orders_page_passes_orders_to_template(client, db):
     auth_client(client, db)
     fake_order = MagicMock()
     fake_order.amazon_order_id = "111-2222222-3333333"
-    fake_order.order_status = "Shipped"
-    fake_order.purchase_date = None
+    fake_order.order_status    = "Shipped"
+    fake_order.purchase_date   = None
+    fake_order.order_total_amount = 0
+    fake_order.currency        = "BRL"
 
     with patch("app.integrations.amazon.routes_orders.db") as mock_db:
-        mock_db.session.scalars.return_value.all.return_value = [fake_order]
+        mock_db.paginate.return_value = _make_pagination([fake_order])
+        mock_db.select.return_value   = MagicMock()
         resp = client.get("/integrations/amazon/orders")
     assert resp.status_code == 200
+    assert b"111-2222222-3333333" in resp.data
 
 
 # ---------------------------------------------------------------------------

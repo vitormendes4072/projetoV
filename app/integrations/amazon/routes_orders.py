@@ -1,7 +1,9 @@
+import csv
+import io
 import logging
 from datetime import timedelta
 
-from flask import jsonify
+from flask import jsonify, make_response
 from flask_login import login_required, current_user
 
 from app import db
@@ -20,14 +22,60 @@ from app.integrations.amazon.utils import SP_TZ
 @amazon.get("/orders")
 @login_required
 def orders_page():
-    from flask import render_template
-    orders = db.session.scalars(
+    from flask import render_template, request
+
+    page   = request.args.get("page", 1, type=int)
+    q      = request.args.get("q", "").strip()
+    status = request.args.get("status", "").strip()
+
+    stmt = (
         db.select(AmazonOrder)
         .filter_by(user_id=user_key())
         .order_by(AmazonOrder.purchase_date.desc().nullslast(), AmazonOrder.id.desc())
-        .limit(200)
+    )
+
+    if status:
+        stmt = stmt.filter(AmazonOrder.order_status == status)
+    if q:
+        stmt = stmt.filter(AmazonOrder.amazon_order_id.ilike(f"%{q}%"))
+
+    pagination = db.paginate(stmt, page=page, per_page=50, error_out=False)
+
+    return render_template(
+        "amazon/orders.html",
+        pagination=pagination,
+        q=q,
+        status=status,
+        SP_TZ=SP_TZ,
+    )
+
+
+@amazon.get("/orders/exportar-csv")
+@login_required
+def exportar_orders_csv():
+    orders = db.session.scalars(
+        db.select(AmazonOrder)
+        .filter_by(user_id=user_key())
+        .order_by(AmazonOrder.purchase_date.desc().nullslast())
     ).all()
-    return render_template("amazon/orders.html", orders=orders, SP_TZ=SP_TZ)
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['order_id', 'status', 'data_compra', 'total', 'moeda', 'qtd_itens'])
+    for o in orders:
+        writer.writerow([
+            o.amazon_order_id,
+            o.order_status or '',
+            o.purchase_date.strftime('%Y-%m-%d') if o.purchase_date else '',
+            o.order_total_amount or '',
+            o.currency or '',
+            o.num_items_shipped or '',
+        ])
+
+    resp = make_response(buf.getvalue())
+    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
+    resp.headers['Content-Disposition'] = 'attachment; filename="pedidos_amazon.csv"'
+    return resp
 
 
 @amazon.get("/profit/order/<amazon_order_id>")

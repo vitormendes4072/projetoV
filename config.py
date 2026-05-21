@@ -35,6 +35,11 @@ class Config:
     RATELIMIT_DEFAULT = "200 per day;50 per hour"
 
     # -------------------------------------------------
+    # Flask-Caching
+    # -------------------------------------------------
+    CACHE_DEFAULT_TIMEOUT = 60
+
+    # -------------------------------------------------
     # Email (Flask-Mail)
     # -------------------------------------------------
     MAIL_SERVER = os.environ.get("MAIL_SERVER")
@@ -60,6 +65,8 @@ class DevelopmentConfig(Config):
         or "sqlite:///dev.db"
     )
 
+    CACHE_TYPE = "SimpleCache"
+
 
 class ProductionConfig(Config):
     """
@@ -77,9 +84,13 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_HTTPONLY = True
 
+    CACHE_TYPE = "RedisCache"
+    CACHE_REDIS_URL = os.environ.get("REDIS_URL")
+
 
 class TestingConfig(Config):
     TESTING = True
+    CACHE_TYPE = "NullCache"
     # URI compartilhada: múltiplas conexões veem o mesmo banco em memória
     SQLALCHEMY_DATABASE_URI = "sqlite:///file:testdb?mode=memory&cache=shared&uri=true"
     SQLALCHEMY_ENGINE_OPTIONS = {"connect_args": {"check_same_thread": False}}

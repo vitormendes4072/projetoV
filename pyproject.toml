@@ -1,3 +1,20 @@
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+# Não segue imports — checa apenas os arquivos listados em `files`
+follow_imports = "skip"
+# Verifica apenas a camada de serviços
+files = [
+    "app/services/profit_calc.py",
+    "app/services/pricing.py",
+    "app/services/dashboard.py",
+    "app/relatorios/service.py",
+    "app/integrations/amazon/profit_service.py",
+]
+disallow_untyped_defs = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
 [tool.ruff]
 line-length = 120
 target-version = "py311"

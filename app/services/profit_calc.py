@@ -1,6 +1,10 @@
-from decimal import Decimal
+from __future__ import annotations
 
-def _d(x) -> Decimal:
+from decimal import Decimal
+from typing import Any
+
+
+def _d(x: Any) -> Decimal:
     try:
         return Decimal(str(x))
     except Exception:

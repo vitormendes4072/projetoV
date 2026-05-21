@@ -13,7 +13,11 @@ def test_register_ok(client, db):
     assert User.query.filter_by(email="novo@test.com").first() is not None
 
 
-def test_register_duplicate_email(client, db):
+def test_register_duplicate_email_returns_generic_message(client, db):
+    """Registro com e-mail duplicado não deve revelar que o e-mail existe (user enumeration).
+    A resposta deve ser idêntica à de um registro novo: redireciona para /login com
+    mensagem genérica e não cria um segundo usuário.
+    """
     make_user(db, email="dup@test.com")
     r = client.post("/register", data={
         "name": "Outro",
@@ -22,7 +26,13 @@ def test_register_duplicate_email(client, db):
         "confirm_password": "senha123",
     }, follow_redirects=True)
     assert r.status_code == 200
+    # Não cria conta duplicada
     assert User.query.filter_by(email="dup@test.com").count() == 1
+    # Não expõe que o e-mail já existe
+    assert b"cadastrado" not in r.data
+    assert b"j\xc3\xa1 est" not in r.data  # "já est..." em UTF-8
+    # Resposta genérica idêntica ao registro bem-sucedido
+    assert b"Verifique seu e-mail" in r.data
 
 
 def test_login_ok(client, db):

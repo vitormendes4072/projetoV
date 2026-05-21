@@ -23,6 +23,30 @@ jobs:
       - name: Verificar lint
         run: ruff check .
 
+  mypy:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Verificar tipos (service layer)
+        run: mypy
+        env:
+          APP_ENV: testing
+
   test:
     name: Tests + Coverage
     runs-on: ubuntu-latest
@@ -43,9 +67,16 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Rodar testes com cobertura
-        run: python -m pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=60
+        run: python -m pytest tests/ --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=60
         env:
           APP_ENV: testing
+
+      - name: Upload coverage para Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
   docker:
     name: Docker build

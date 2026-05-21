@@ -4,13 +4,23 @@
 <div class="flex flex-col gap-6 py-4">
 
     <!-- Cabeçalho -->
-    <div class="flex items-center gap-4">
-        <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-        </a>
-        <div>
-            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Dashboard</h1>
-            <p class="text-[#49739c] text-sm">Visão geral da sua operação.</p>
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-4">
+            <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+            </a>
+            <div>
+                <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Dashboard</h1>
+                <p class="text-[#49739c] text-sm">Visão geral da sua operação.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+            {% for label, value in [("7 dias", "7d"), ("30 dias", "30d"), ("90 dias", "90d"), ("Tudo", "all")] %}
+            <a href="?period={{ value }}"
+               class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors {% if period == value %}bg-white text-[#0d141c] shadow-sm{% else %}text-[#49739c] hover:text-[#0d141c]{% endif %}">
+                {{ label }}
+            </a>
+            {% endfor %}
         </div>
     </div>
 

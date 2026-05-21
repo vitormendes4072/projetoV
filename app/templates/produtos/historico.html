@@ -1,22 +1,34 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-8">
+<div class="max-w-5xl mx-auto py-8">
 
     <div class="flex items-center gap-4 mb-6">
         <a href="{{ url_for('produtos.lista_produtos') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
         </a>
         <div>
-            <h1 class="text-[#0d141c] text-2xl font-bold">HistÃ³rico de AlteraÃ§Ãµes</h1>
+            <h1 class="text-[#0d141c] text-2xl font-bold">Histórico de Alterações</h1>
             <p class="text-slate-500 text-sm">Produto: <span class="font-bold text-[#0d141c]">{{ product.name }}</span> ({{ product.sku }})</p>
+        </div>
+        <div class="ml-auto">
+            <a href="{{ url_for('produtos.editar_produto', product_id=product.id) }}"
+               class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 border border-[#d0dbe7] text-[#49739c] text-sm hover:bg-slate-200 transition-colors">
+                Ajustar Estoque
+            </a>
         </div>
     </div>
 
     {% if grafico.labels|length > 1 %}
-    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mb-6">
-        <h2 class="text-base font-bold text-[#0d141c] mb-4">EvoluÃ§Ã£o de PreÃ§o e Custo</h2>
-        <canvas id="graficoPreco" height="100"></canvas>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
+            <h2 class="text-base font-bold text-[#0d141c] mb-4">Evolução de Preço e Custo</h2>
+            <canvas id="graficoPreco" height="140"></canvas>
+        </div>
+        <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
+            <h2 class="text-base font-bold text-[#0d141c] mb-4">Variação de Estoque</h2>
+            <canvas id="graficoEstoque" height="140"></canvas>
+        </div>
     </div>
     {% endif %}
 
@@ -24,44 +36,54 @@
         <table class="w-full text-left text-sm text-[#0d141c]">
             <thead class="bg-slate-50 border-b border-[#d0dbe7]">
                 <tr>
-                    <th class="px-6 py-4 font-bold">Data / Hora</th>
-                    <th class="px-6 py-4 font-bold">AÃ§Ã£o</th>
-                    <th class="px-6 py-4 font-bold text-right">PreÃ§o</th>
-                    <th class="px-6 py-4 font-bold text-right">Custo</th>
-                    <th class="px-6 py-4 font-bold text-right">Estoque</th>
-                    <th class="px-6 py-4 font-bold">UsuÃ¡rio</th>
+                    <th class="px-4 py-4 font-bold">Data / Hora</th>
+                    <th class="px-4 py-4 font-bold">Ação</th>
+                    <th class="px-4 py-4 font-bold text-right">Preço</th>
+                    <th class="px-4 py-4 font-bold text-right">Custo</th>
+                    <th class="px-4 py-4 font-bold text-right">Estoque</th>
+                    <th class="px-4 py-4 font-bold text-right">Variação</th>
+                    <th class="px-4 py-4 font-bold">Usuário</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#d0dbe7]">
                 {% for entry in historico.items %}
+                {% set delta = deltas.get(entry.id) %}
                 <tr class="hover:bg-slate-50">
-                    <td class="px-6 py-4 text-slate-500">
-                        {{ entry.changed_at.strftime('%d/%m/%Y Ã s %H:%M:%S') }}
+                    <td class="px-4 py-4 text-slate-500 whitespace-nowrap">
+                        {{ entry.changed_at.strftime('%d/%m/%Y %H:%M') }}
                     </td>
-                    <td class="px-6 py-4">
+                    <td class="px-4 py-4">
                         <span class="px-2 py-1 rounded text-xs font-bold
-                            {% if 'CriaÃ§Ã£o' in entry.action_type %} bg-green-100 text-green-700
+                            {% if 'Criação' in entry.action_type or 'Inicial' in entry.action_type %} bg-green-100 text-green-700
+                            {% elif 'Ajuste' in entry.action_type %} bg-purple-100 text-purple-700
                             {% else %} bg-blue-50 text-blue-700 {% endif %}">
                             {{ entry.action_type }}
                         </span>
                     </td>
-                    <td class="px-6 py-4 text-right font-mono">
-                        R$ {{ "%.2f"|format(entry.price) }}
+                    <td class="px-4 py-4 text-right font-mono">R$ {{ "%.2f"|format(entry.price) }}</td>
+                    <td class="px-4 py-4 text-right font-mono text-slate-500">R$ {{ "%.2f"|format(entry.cost) }}</td>
+                    <td class="px-4 py-4 text-right font-mono font-bold">{{ entry.stock_quantity }}</td>
+                    <td class="px-4 py-4 text-right font-mono">
+                        {% if delta is not none %}
+                            {% if delta > 0 %}
+                            <span class="text-green-600 font-bold">+{{ delta }} ▲</span>
+                            {% elif delta < 0 %}
+                            <span class="text-red-500 font-bold">{{ delta }} ▼</span>
+                            {% else %}
+                            <span class="text-slate-400">—</span>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-slate-300 text-xs">inicial</span>
+                        {% endif %}
                     </td>
-                    <td class="px-6 py-4 text-right font-mono text-slate-500">
-                        R$ {{ "%.2f"|format(entry.cost) }}
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        {{ entry.stock_quantity }}
-                    </td>
-                    <td class="px-6 py-4 text-xs text-slate-500">
-                        {{ entry.user.name }}
+                    <td class="px-4 py-4 text-xs text-slate-500">
+                        {% if entry.user %}{{ entry.user.name }}{% else %}—{% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="p-8 text-center text-slate-500">
-                        Nenhum histÃ³rico registrado para este produto.
+                    <td colspan="7" class="p-8 text-center text-slate-500">
+                        Nenhum histórico registrado para este produto.
                     </td>
                 </tr>
                 {% endfor %}
@@ -78,11 +100,11 @@
             {% if p %}
             <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=p) }}" class="px-3 py-1 rounded border text-sm {% if p == historico.page %} bg-[#0d80f2] text-white border-[#0d80f2] {% else %} border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 {% endif %}">{{ p }}</a>
             {% else %}
-            <span class="px-2 text-slate-400">â€¦</span>
+            <span class="px-2 text-slate-400">…</span>
             {% endif %}
         {% endfor %}
         {% if historico.has_next %}
-        <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=historico.next_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">PrÃ³xima</a>
+        <a href="{{ url_for('produtos.historico_produto', product_id=product.id, page=historico.next_num) }}" class="px-3 py-1 rounded border border-[#d0dbe7] bg-white text-[#0d141c] hover:bg-slate-50 text-sm">Próxima</a>
         {% endif %}
     </div>
     {% endif %}
@@ -92,13 +114,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script nonce="{{ csp_nonce() }}">
     const dados = {{ grafico | tojson }};
+
     new Chart(document.getElementById('graficoPreco'), {
         type: 'line',
         data: {
             labels: dados.labels,
             datasets: [
                 {
-                    label: 'PreÃ§o (R$)',
+                    label: 'Preço (R$)',
                     data: dados.precos,
                     borderColor: '#0d80f2',
                     backgroundColor: 'rgba(13,128,242,0.08)',
@@ -121,19 +144,33 @@
             responsive: true,
             plugins: {
                 legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => 'R$ ' + ctx.parsed.y.toFixed(2)
-                    }
-                }
+                tooltip: { callbacks: { label: ctx => 'R$ ' + ctx.parsed.y.toFixed(2) } }
             },
-            scales: {
-                y: {
-                    ticks: {
-                        callback: val => 'R$ ' + val.toFixed(2)
-                    }
-                }
-            }
+            scales: { y: { ticks: { callback: val => 'R$ ' + val.toFixed(2) } } }
+        }
+    });
+
+    new Chart(document.getElementById('graficoEstoque'), {
+        type: 'line',
+        data: {
+            labels: dados.labels,
+            datasets: [{
+                label: 'Estoque (un.)',
+                data: dados.estoques,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16,185,129,0.08)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' un.' } }
+            },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
         }
     });
 </script>

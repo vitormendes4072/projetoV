@@ -1,0 +1,181 @@
+<!-- app/templates/amazon/inventory.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto py-6 flex flex-col gap-6">
+
+  <!-- Cabeçalho -->
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <a href="{{ url_for('main.menu') }}"
+         class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-[#0d141c] text-2xl font-bold">Inventário Amazon (FBA)</h1>
+        <p class="text-[#49739c] text-sm">Snapshot do estoque FBA sincronizado via SP-API.</p>
+      </div>
+    </div>
+
+    <button id="btnSyncInventory"
+      class="rounded-lg bg-slate-800 text-white font-bold h-10 px-5 hover:bg-slate-900 transition-colors">
+      Sincronizar inventário
+    </button>
+  </div>
+
+  <div id="syncResult" class="hidden rounded-lg border p-3"></div>
+
+  <!-- Busca -->
+  <form method="GET" action="{{ url_for('amazon.inventory_page') }}" class="flex gap-2">
+    <input type="text" name="q" value="{{ q }}"
+      class="w-full sm:w-72 rounded-lg border border-[#d0dbe7] bg-white h-10 px-3 focus:border-[#0d80f2] focus:ring-0"
+      placeholder="Buscar por SKU ou ASIN…" />
+    <button type="submit"
+      class="rounded-lg border border-[#d0dbe7] bg-white h-10 px-4 text-sm font-bold hover:bg-slate-50 transition-colors">
+      Buscar
+    </button>
+    {% if q %}
+      <a href="{{ url_for('amazon.inventory_page') }}"
+         class="rounded-lg border border-[#d0dbe7] bg-white h-10 px-3 flex items-center text-slate-500 hover:bg-slate-50 transition-colors"
+         title="Limpar busca">✕</a>
+    {% endif %}
+  </form>
+
+  <!-- Tabela -->
+  <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+      <span class="font-bold text-slate-800 text-sm">SKUs no inventário FBA</span>
+      <span class="text-xs text-slate-500">
+        {{ pagination.total }} item{{ 's' if pagination.total != 1 }} —
+        página {{ pagination.page }} de {{ pagination.pages or 1 }}
+      </span>
+    </div>
+
+    {% if pagination.total == 0 %}
+      <div class="p-8 text-center text-slate-600">
+        {% if q %}
+          Nenhum item encontrado para "<strong>{{ q }}</strong>".
+          <a href="{{ url_for('amazon.inventory_page') }}" class="text-[#0d80f2] hover:underline">Limpar busca</a>
+        {% else %}
+          Nenhum dado de inventário ainda.<br>
+          Clique em <strong>Sincronizar inventário</strong> para importar do FBA.
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="text-left px-4 py-3">Seller SKU</th>
+              <th class="text-left px-4 py-3">ASIN</th>
+              <th class="text-right px-4 py-3">Disponível</th>
+              <th class="text-right px-4 py-3">Reservado</th>
+              <th class="text-right px-4 py-3">Entrada (working)</th>
+              <th class="text-right px-4 py-3">Entrada (enviado)</th>
+              <th class="text-right px-4 py-3">Entrada (recebendo)</th>
+              <th class="text-left px-4 py-3">Atualizado em</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for snap in pagination.items %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3 font-mono text-xs font-bold">{{ snap.seller_sku }}</td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ snap.asin or "—" }}</td>
+                <td class="px-4 py-3 text-right">
+                  <span class="font-bold
+                    {% if (snap.fulfillable_qty or 0) == 0 %}text-red-600
+                    {% elif (snap.fulfillable_qty or 0) < 10 %}text-amber-600
+                    {% else %}text-green-700{% endif %}">
+                    {{ snap.fulfillable_qty or 0 }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ snap.reserved_qty or 0 }}</td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_working_qty or 0 }}</td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_shipped_qty or 0 }}</td>
+                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_receiving_qty or 0 }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500">
+                  {% if snap.updated_at %}
+                    {{ snap.updated_at.strftime("%d/%m/%Y %H:%M") }}
+                  {% else %}—{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      {% if pagination.pages > 1 %}
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between gap-4">
+          <span class="text-xs text-slate-500">
+            Exibindo {{ ((pagination.page - 1) * 50) + 1 }}–{{ [pagination.page * 50, pagination.total] | min }}
+            de {{ pagination.total }}
+          </span>
+
+          <div class="flex gap-1">
+            {% if pagination.has_prev %}
+              <a href="{{ url_for('amazon.inventory_page', page=pagination.prev_num, q=q) }}"
+                 class="px-3 py-1.5 rounded border border-[#d0dbe7] bg-white text-sm hover:bg-slate-50">‹</a>
+            {% else %}
+              <span class="px-3 py-1.5 rounded border border-slate-100 text-slate-300 text-sm cursor-not-allowed">‹</span>
+            {% endif %}
+
+            {% for num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+              {% if num %}
+                <a href="{{ url_for('amazon.inventory_page', page=num, q=q) }}"
+                   class="px-3 py-1.5 rounded border text-sm
+                     {% if num == pagination.page %}bg-slate-800 border-slate-800 text-white font-bold
+                     {% else %}border-[#d0dbe7] bg-white hover:bg-slate-50{% endif %}">
+                  {{ num }}
+                </a>
+              {% else %}
+                <span class="px-2 py-1.5 text-slate-400 text-sm">…</span>
+              {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+              <a href="{{ url_for('amazon.inventory_page', page=pagination.next_num, q=q) }}"
+                 class="px-3 py-1.5 rounded border border-[#d0dbe7] bg-white text-sm hover:bg-slate-50">›</a>
+            {% else %}
+              <span class="px-3 py-1.5 rounded border border-slate-100 text-slate-300 text-sm cursor-not-allowed">›</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+  function setResult(msg, type = "info") {
+    const el = document.getElementById("syncResult");
+    if (!el) return;
+    el.classList.remove("hidden");
+    const base = "rounded-lg border p-3";
+    if (type === "success") el.className = base + " border-green-200 bg-green-50 text-green-800";
+    else if (type === "error") el.className = base + " border-red-200 bg-red-50 text-red-800";
+    else el.className = base + " border-slate-200 bg-slate-50 text-slate-700";
+    el.textContent = msg;
+  }
+
+  document.getElementById("btnSyncInventory")?.addEventListener("click", async () => {
+    try {
+      setResult("Sincronizando inventário FBA…", "info");
+      const res  = await fetch("/integrations/amazon/sync_inventory", {
+        method: "POST",
+        headers: { "X-CSRFToken": csrfToken },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("Erro " + res.status));
+      setResult(
+        `Sync OK — ${data.inserted} novo(s), ${data.updated} atualizado(s). Total: ${data.total}`,
+        "success"
+      );
+      setTimeout(() => location.reload(), 900);
+    } catch (e) {
+      setResult("Falha no sync: " + e.message, "error");
+    }
+  });
+</script>
+{% endblock %}

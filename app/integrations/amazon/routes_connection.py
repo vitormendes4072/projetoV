@@ -33,7 +33,6 @@ def status():
 @login_required
 def connect():
     data = request.get_json(force=True) or {}
-    logger.debug("Amazon connect payload: %s", data)
 
     required = [
         "marketplace_id",

@@ -26,6 +26,12 @@ services:
     build: .
     ports:
       - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/livez"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     environment: &app_env
       FLASK_ENV: development
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/marketplace

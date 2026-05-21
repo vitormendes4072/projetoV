@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 from app.models.custo_fixo_history import CustoFixoHistory
 
@@ -49,6 +49,6 @@ def log_change(*, item_id: int, action: str, user_id=None, before=None, after=No
         snapshot=payload_snapshot,
         note=note,
         changed_by=user_id,
-        changed_at=datetime.utcnow(),
+        changed_at=datetime.now(timezone.utc),
     )
     db.session.add(row)

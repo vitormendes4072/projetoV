@@ -1,15 +1,40 @@
 import logging
 
-from flask import jsonify
+from flask import jsonify, render_template, request
 from flask_login import login_required
 
 from app import db
 from app.models import AmazonConnection
+from app.models.amazon_inventory import AmazonInventorySnapshot
 from app.integrations.amazon import amazon
 from app.integrations.amazon.utils import user_key
 from app.integrations.amazon.service import get_inventory_summaries, upsert_inventory_snapshots
 
 logger = logging.getLogger(__name__)
+
+
+@amazon.get("/inventory")
+@login_required
+def inventory_page():
+    page = request.args.get("page", 1, type=int)
+    q    = request.args.get("q", "").strip()
+
+    stmt = (
+        db.select(AmazonInventorySnapshot)
+        .filter_by(user_id=user_key())
+        .order_by(AmazonInventorySnapshot.updated_at.desc())
+    )
+
+    if q:
+        stmt = stmt.filter(
+            db.or_(
+                AmazonInventorySnapshot.seller_sku.ilike(f"%{q}%"),
+                AmazonInventorySnapshot.asin.ilike(f"%{q}%"),
+            )
+        )
+
+    pagination = db.paginate(stmt, page=page, per_page=50, error_out=False)
+    return render_template("amazon/inventory.html", pagination=pagination, q=q)
 
 
 @amazon.post("/sync_inventory")

@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_mail import Message
 from itsdangerous import URLSafeTimedSerializer
-import time
 from threading import Thread
 from urllib.parse import urlsplit
 
@@ -50,7 +49,24 @@ def send_confirmation_email(user):
     link = url_for('auth.confirm_email', token=token, _external=True)
     msg.body = f'''Ative sua conta aqui: {link}'''
 
-    ### MELHORIA: Dispara e esquece
+    Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
+
+
+def send_account_exists_email(user):
+    """Enviado quando alguém tenta registrar um e-mail já cadastrado.
+    Não revela a existência da conta na UI — a resposta HTTP é sempre idêntica.
+    """
+    reset_link  = url_for('auth.reset_request', _external=True)
+    msg = Message('Tentativa de cadastro - Marketplace Manager',
+                  sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                  recipients=[user.email])
+    msg.body = (
+        f"Recebemos uma solicitação de cadastro com este e-mail, "
+        f"mas ele já possui uma conta no Marketplace Manager.\n\n"
+        f"Se foi você, faça login normalmente. "
+        f"Esqueceu a senha? Redefina aqui: {reset_link}\n\n"
+        f"Se não foi você, ignore este e-mail."
+    )
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
 # --- ROTAS DE AUTENTICAÇÃO ---
@@ -64,17 +80,15 @@ def register():
         email = form.email.data.strip().lower()
         existing_user = db.session.scalar(db.select(User).filter_by(email=email))
         if existing_user:
-            flash('Este email já está cadastrado.', 'danger')
-            return redirect(url_for('auth.register'))
+            send_account_exists_email(existing_user)
+        else:
+            user = User(email=email, name=form.name.data)
+            user.set_password(form.password.data)
+            db.session.add(user)
+            db.session.commit()
+            send_confirmation_email(user)
 
-        user = User(email=email, name=form.name.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-
-        # O envio agora é instantâneo para o usuário
-        send_confirmation_email(user)
-
+        # Mensagem genérica independente de o e-mail já existir ou não.
         flash('Conta criada! Verifique seu e-mail.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('register.html', form=form)
@@ -115,21 +129,15 @@ def logout():
     return redirect(url_for('auth.login'))
 
 @auth.route("/reset_password", methods=['GET', 'POST'])
+@limiter.limit("5 per hour", methods=["POST"])
 def reset_request():
     if current_user.is_authenticated:
         return redirect(url_for('main.menu'))
     form = RequestResetForm()
     if form.validate_on_submit():
-        start_time = time.time()
         user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
         if user:
             send_reset_email(user)
-
-        # Timing attack mitigation (mantido)
-        elapsed_time = time.time() - start_time
-        if elapsed_time < 3.0:
-            time.sleep(3.0 - elapsed_time)
-
         flash('Email enviado.', 'info')
         return redirect(url_for('auth.login'))
     return render_template('reset_request.html', form=form)
@@ -155,6 +163,20 @@ def reset_token(token):
         flash('Senha atualizada.', 'success')
         return redirect(url_for('auth.login'))
     return render_template('reset_token.html', form=form)
+
+@auth.route("/demo-login")
+@limiter.limit("10 per minute")
+def demo_login():
+    from app.commands import DEMO_EMAIL
+    if current_user.is_authenticated:
+        return redirect(url_for("main.dashboard"))
+    user = db.session.scalar(db.select(User).filter_by(email=DEMO_EMAIL))
+    if not user:
+        flash("Conta demo não disponível no momento.", "warning")
+        return redirect(url_for("auth.login"))
+    login_user(user)
+    return redirect(url_for("main.dashboard"))
+
 
 @auth.route("/confirm/<token>")
 def confirm_email(token):

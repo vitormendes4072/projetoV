@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketplace Manager — Gestão inteligente para vendedores Amazon</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-[#0d141c]">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-[#e7edf4] sticky top-0 z-50">
+    <div class="max-w-[960px] mx-auto px-6 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 flex-shrink-0">
+          <path d="M8.57829 8.57829C5.52816 11.6284 3.451 15.5145 2.60947 19.7452C1.76794 23.9758 2.19984 28.361 3.85056 32.3462C5.50128 36.3314 8.29667 39.7376 11.8832 42.134C15.4698 44.5305 19.6865 45.8096 24 45.8096C28.3135 45.8096 32.5302 44.5305 36.1168 42.134C39.7033 39.7375 42.4987 36.3314 44.1494 32.3462C45.8002 28.361 46.2321 23.9758 45.3905 19.7452C44.549 15.5145 42.4718 11.6284 39.4217 8.57829L24 24L8.57829 8.57829Z" fill="#0d80f2"/>
+        </svg>
+        <span class="font-bold text-[#0d141c] text-base">Marketplace Manager</span>
+      </a>
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('auth.login') }}"
+           class="h-9 px-4 rounded-lg border border-[#d0dbe7] bg-white text-sm font-bold text-[#0d141c] hover:bg-slate-50 transition-colors flex items-center">
+          Entrar
+        </a>
+        <a href="{{ url_for('auth.register') }}"
+           class="h-9 px-4 rounded-lg bg-slate-800 text-white text-sm font-bold hover:bg-slate-900 transition-colors flex items-center">
+          Criar conta
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-[960px] mx-auto px-6 py-20 text-center">
+    <div class="inline-flex items-center gap-2 rounded-full border border-[#d0dbe7] bg-white px-4 py-1.5 text-xs font-semibold text-[#49739c] mb-6">
+      <span class="size-2 rounded-full bg-green-500 inline-block"></span>
+      Integrado com a SP-API da Amazon
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#0d141c] leading-tight mb-4">
+      Gestão inteligente para<br class="hidden sm:block" />
+      <span class="text-[#0d80f2]">vendedores Amazon</span>
+    </h1>
+    <p class="text-lg text-[#49739c] max-w-xl mx-auto mb-8">
+      Acompanhe pedidos, calcule lucratividade real, controle estoque FBA e tome decisões com dados — tudo em um só lugar.
+    </p>
+    <div class="flex items-center justify-center gap-3 flex-wrap">
+      <a href="{{ url_for('auth.register') }}"
+         class="h-11 px-6 rounded-lg bg-[#0d80f2] text-white font-bold hover:bg-blue-600 transition-colors flex items-center text-sm">
+        Começar gratuitamente →
+      </a>
+      <a href="{{ url_for('auth.demo_login') }}"
+         class="h-11 px-6 rounded-lg border border-[#d0dbe7] bg-white font-bold text-[#0d141c] hover:bg-slate-50 transition-colors flex items-center text-sm">
+        Ver demo
+      </a>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="max-w-[960px] mx-auto px-6 pt-4 pb-20">
+    <h2 class="text-2xl font-bold text-center text-[#0d141c] mb-3">Tudo que você precisa para vender mais</h2>
+    <p class="text-center text-[#49739c] mb-14 text-sm">Da sincronização automática à análise de margem — sem planilhas.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- Dashboard -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-blue-100 text-[#0d80f2] flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Dashboard de KPIs</h3>
+        <p class="text-sm text-[#49739c]">Receita, lucro, margem e ROI do mês — em tempo real, com cache para resposta instantânea.</p>
+      </div>
+
+      <!-- Pedidos -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Pedidos com lucratividade</h3>
+        <p class="text-sm text-[#49739c]">Visualize todos os pedidos com margem calculada por item — direto dos eventos financeiros da SP-API.</p>
+      </div>
+
+      <!-- Inventário FBA -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-yellow-100 text-yellow-600 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Estoque FBA em tempo real</h3>
+        <p class="text-sm text-[#49739c]">Snapshot do inventário FBA: disponível, reservado e em entrada — com alertas visuais de estoque baixo.</p>
+      </div>
+
+      <!-- Produtos -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Cadastro de produtos</h3>
+        <p class="text-sm text-[#49739c]">Cadastre SKUs com custo, ASIN e histórico de preços. O sistema usa para calcular margem automaticamente.</p>
+      </div>
+
+      <!-- Relatórios -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-blue-100 text-[#0d80f2] flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Relatórios mensais</h3>
+        <p class="text-sm text-[#49739c]">Histórico mês a mês de receita, lucro, margem média e ROI — para acompanhar a evolução do negócio.</p>
+      </div>
+
+      <!-- Segurança -->
+      <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm p-6 hover:shadow-md hover:border-[#0d80f2] transition-all">
+        <div class="size-12 rounded-lg bg-green-100 text-green-600 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+        </div>
+        <h3 class="font-bold text-[#0d141c] mb-2">Credenciais protegidas</h3>
+        <p class="text-sm text-[#49739c]">Chaves da SP-API armazenadas com criptografia Fernet. Rate limiting e proteção contra enumeração de usuários.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Tech stack / Portfolio callout -->
+  <section class="border-t border-[#e7edf4] bg-white">
+    <div class="max-w-[960px] mx-auto px-6 py-12 text-center">
+      <p class="text-xs font-semibold uppercase tracking-widest text-[#49739c] mb-4">Stack técnica</p>
+      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-4 text-sm font-medium text-[#49739c]">
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">Python · Flask</span>
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">PostgreSQL · SQLAlchemy</span>
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">Redis · RQ</span>
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">Amazon SP-API</span>
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">Tailwind CSS</span>
+        <span class="px-3 py-1.5 rounded-lg bg-slate-100">Supabase</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section class="max-w-[960px] mx-auto px-6 py-20 text-center">
+    <h2 class="text-2xl font-bold text-[#0d141c] mb-4">Pronto para ter controle real do seu negócio?</h2>
+    <p class="text-[#49739c] mb-10 text-sm">Crie uma conta gratuita ou explore com a conta demo — sem cartão de crédito.</p>
+    <div class="flex items-center justify-center gap-3 flex-wrap">
+      <a href="{{ url_for('auth.register') }}"
+         class="h-11 px-6 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors flex items-center text-sm">
+        Criar conta gratuita
+      </a>
+      <a href="{{ url_for('auth.demo_login') }}"
+         class="h-11 px-6 rounded-lg border border-[#d0dbe7] bg-white font-bold text-[#0d141c] hover:bg-slate-50 transition-colors flex items-center text-sm">
+        Acessar demo →
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-[#e7edf4] bg-white">
+    <div class="max-w-[960px] mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#49739c]">
+      <span>© 2025 Marketplace Manager. Projeto SaaS independente.</span>
+      <div class="flex items-center gap-4">
+        <a href="{{ url_for('auth.login') }}" class="hover:text-[#0d141c] transition-colors">Entrar</a>
+        <a href="{{ url_for('auth.register') }}" class="hover:text-[#0d141c] transition-colors">Criar conta</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

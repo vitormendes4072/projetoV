@@ -1,6 +1,12 @@
 """
 Cálculos de lucro/margem por pedido Amazon, baseados em finance events.
 """
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy.orm import joinedload
+
 from app import db
 from app.models import AmazonOrder, AmazonOrderItem
 from app.models.amazon_finances import AmazonFinancialEvent
@@ -8,14 +14,14 @@ from app.models.amazon_sku_link import AmazonSkuLink
 from app.models.product import Product
 
 
-def _r2(x) -> float:
+def _r2(x: Any) -> float:
     try:
         return round(float(x), 2)
     except Exception:
         return 0.0
 
 
-def _amount_from_money(m) -> float:
+def _amount_from_money(m: Any) -> float:
     try:
         if isinstance(m, dict):
             return float(m.get("Amount") or m.get("CurrencyAmount") or 0)
@@ -24,15 +30,46 @@ def _amount_from_money(m) -> float:
     return 0.0
 
 
-def _resolve_product(user_id: int, sku: str):
-    """Resolve Product por SKU link ou SKU direto."""
-    link = db.session.scalar(db.select(AmazonSkuLink).filter_by(user_id=user_id, amazon_seller_sku=sku))
-    if link and link.product:
-        return link.product
-    return db.session.scalar(db.select(Product).filter_by(user_id=user_id, sku=sku))
+def _resolve_products_bulk(user_id: int, skus: list[str]) -> dict[str, Any]:
+    """Resolve Product para múltiplos SKUs em 2 queries fixas (sem N+1).
+
+    Query 1: sku_links JOIN products (joinedload).
+    Query 2: products por sku direto, apenas para skus sem link.
+    """
+    if not skus:
+        return {}
+
+    links = db.session.scalars(
+        db.select(AmazonSkuLink)
+        .options(joinedload(AmazonSkuLink.product))
+        .filter(
+            AmazonSkuLink.user_id == user_id,
+            AmazonSkuLink.amazon_seller_sku.in_(skus),
+        )
+    ).all()
+
+    result = {}
+    linked_skus = set()
+    for link in links:
+        if link.product:
+            result[link.amazon_seller_sku] = link.product
+            linked_skus.add(link.amazon_seller_sku)
+
+    unlinked = [s for s in skus if s not in linked_skus]
+    if unlinked:
+        prods = db.session.scalars(
+            db.select(Product).filter(
+                Product.user_id == user_id,
+                Product.sku.in_(unlinked),
+            )
+        ).all()
+        for p in prods:
+            result[p.sku] = p
+
+    return result
 
 
-def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float):
+def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any] | None:
     """
     Calcula lucro líquido de um pedido a partir dos ShipmentEventList.
     Retorna dict pronto para jsonify, ou None se não houver finance events.
@@ -61,6 +98,9 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
         float(v.get("revenue", 0)) for v in net_info["by_sku"].values()
     )
 
+    skus = list(net_info["by_sku"].keys())
+    products = _resolve_products_bulk(user_id, skus)
+
     cmv_total = 0.0
     embalagem_total = 0.0
     by_sku = {}
@@ -71,7 +111,7 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
         sku_net = _r2(v["net"])
         sku_qty = float(v.get("qty", 0))
 
-        prod = _resolve_product(user_id, sku)
+        prod = products.get(sku)
         unit_cost = float(prod.cost) if prod else 0.0
         unit_pack = float(getattr(prod, "packaging_cost", 0.0)) if prod else 0.0
 
@@ -130,7 +170,7 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
     }
 
 
-def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax_rate: float):
+def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any]:
     """
     Detalha lucro por item de um pedido.
     Retorna dict pronto para jsonify.
@@ -165,6 +205,9 @@ def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax
     imposto_rate_pct = float(default_tax_rate or 0.0)
     imposto_rate = imposto_rate_pct / 100.0
 
+    skus = [it.seller_sku or "" for it in items]
+    products = _resolve_products_bulk(user_id, skus)
+
     result_items = []
     for it in items:
         sku = it.seller_sku or ""
@@ -177,7 +220,7 @@ def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax
         if price == 0 and order_total > 0 and len(items) > 0:
             price = round(order_total / len(items), 2)
 
-        prod = _resolve_product(user_id, sku)
+        prod = products.get(sku)
         unit_cost = float(prod.cost) if prod else 0.0
         unit_pack = float(getattr(prod, "packaging_cost", 0.0)) if prod else 0.0
 

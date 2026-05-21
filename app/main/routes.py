@@ -1,8 +1,7 @@
 # app/main/routes.py
-from flask import Blueprint, render_template, url_for, redirect
+from flask import Blueprint, render_template, url_for, redirect, request
 from flask_login import login_required, current_user
 from werkzeug.routing import BuildError
-from app import db
 
 main = Blueprint("main", __name__)
 
@@ -23,8 +22,7 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for("main.menu"))
 
-    # Landing Page futura (SaaS). Por enquanto, manda para login.
-    return redirect(url_for("auth.login"))
+    return render_template("landing.html")
 
 
 @main.route("/menu")
@@ -143,59 +141,14 @@ def menu():
     return render_template("menu.html", tools=tools)
 
 
+_VALID_PERIODS = {"7d", "30d", "90d", "all"}
+
 @main.route("/dashboard")
 @login_required
 def dashboard():
-    from app.models.pricing import PricingHistory
-    from app.models.product import Product, ProductHistory
-    import sqlalchemy as sa
-
-    user_id = current_user.id
-
-    total_products = db.session.scalar(db.select(db.func.count(Product.id)).where(Product.user_id == user_id))
-    total_simulations = PricingHistory.query.filter_by(user_id=user_id).count()
-    avg_margin = db.session.query(db.func.avg(PricingHistory.margin))\
-                           .filter_by(user_id=user_id).scalar() or 0
-    avg_roi = db.session.query(db.func.avg(PricingHistory.roi))\
-                        .filter_by(user_id=user_id).scalar() or 0
-
-    recent_simulations = PricingHistory.query.filter_by(user_id=user_id)\
-        .order_by(PricingHistory.created_at.desc()).limit(5).all()
-
-    recent_changes = ProductHistory.query.filter_by(user_id=user_id)\
-        .order_by(ProductHistory.changed_at.desc()).limit(5).all()
-
-    low_stock = db.session.scalars(
-        db.select(Product)
-        .where(Product.user_id == user_id, Product.stock_quantity <= 5)
-        .order_by(Product.stock_quantity.asc())
-        .limit(5)
-    ).all()
-
-    # Chart data: last 20 simulations ordered ASC for line chart
-    chart_sims = PricingHistory.query.filter_by(user_id=user_id)\
-        .order_by(PricingHistory.created_at.asc()).limit(20).all()
-    chart_labels = [s.created_at.strftime("%d/%b") for s in chart_sims]
-    chart_margins = [float(s.margin) for s in chart_sims]
-
-    # Margin distribution: 4 buckets
-    dist_q = db.session.query(
-        db.func.sum(sa.case((PricingHistory.margin < 0, 1), else_=0)).label("negative"),
-        db.func.sum(sa.case((sa.and_(PricingHistory.margin >= 0, PricingHistory.margin < 10), 1), else_=0)).label("low"),
-        db.func.sum(sa.case((sa.and_(PricingHistory.margin >= 10, PricingHistory.margin < 20), 1), else_=0)).label("medium"),
-        db.func.sum(sa.case((PricingHistory.margin >= 20, 1), else_=0)).label("good"),
-    ).filter(PricingHistory.user_id == user_id).one()
-    margin_dist = [int(dist_q.negative or 0), int(dist_q.low or 0), int(dist_q.medium or 0), int(dist_q.good or 0)]
-
-    return render_template('dashboard.html',
-        total_products=total_products,
-        total_simulations=total_simulations,
-        avg_margin=avg_margin,
-        avg_roi=avg_roi,
-        recent_simulations=recent_simulations,
-        recent_changes=recent_changes,
-        low_stock=low_stock,
-        chart_labels=chart_labels,
-        chart_margins=chart_margins,
-        margin_dist=margin_dist,
-    )
+    from app.services.dashboard import get_dashboard_kpis
+    period = request.args.get("period", "30d")
+    if period not in _VALID_PERIODS:
+        period = "30d"
+    kpis = get_dashboard_kpis(current_user.id, period)
+    return render_template("dashboard.html", period=period, **kpis)

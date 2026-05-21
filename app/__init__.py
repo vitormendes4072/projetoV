@@ -10,6 +10,8 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from flask_migrate import Migrate
 from flask_smorest import Api
+from flask_wtf.csrf import CSRFProtect
+from flask_caching import Cache
 
 from config import config_options  # seu dicionário do config.py
 
@@ -20,6 +22,8 @@ mail = Mail()
 migrate = Migrate()
 limiter = Limiter(key_func=get_remote_address)  # storage será definido no create_app
 smorest = Api()
+csrf = CSRFProtect()
+cache = Cache()
 
 
 def _init_rq(app: Flask) -> None:
@@ -71,7 +75,7 @@ def _configure_security(app: Flask) -> None:
         )
 
 
-def create_app(config_name: str | None = None) -> Flask:
+def create_app(config_name: str | None = None, test_config: dict | None = None) -> Flask:
     """
     App factory.
     - Usa APP_ENV se definido, senão 'development' (ou 'default' se preferir manter).
@@ -85,6 +89,11 @@ def create_app(config_name: str | None = None) -> Flask:
         raise RuntimeError(f"Ambiente '{env_name}' inválido. Opções: {list(config_options.keys())}")
 
     app.config.from_object(config_options[env_name])
+
+    # test_config allows conftest.py to inject the real PostgreSQL URI BEFORE
+    # db.init_app() creates the engine — Flask-SQLAlchemy creates it eagerly.
+    if test_config:
+        app.config.update(test_config)
 
     # Validações obrigatórias em produção (aqui o env já é conhecido)
     if env_name == "production":
@@ -106,6 +115,8 @@ def create_app(config_name: str | None = None) -> Flask:
     mail.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf.init_app(app)
+    cache.init_app(app)
 
     # garante que todos models sejam carregados antes do migrate
     from app.models import notification_settings, notification_log  # noqa: F401
@@ -173,6 +184,13 @@ def create_app(config_name: str | None = None) -> Flask:
     # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
     smorest.init_app(app)
     smorest.register_blueprint(api_blp)
+    csrf.exempt(api_blp)  # API REST usa auth por sessão; Swagger UI não envia CSRF token
+
+    # ---------------------------------------
+    # Monitoring (livez / readyz / metrics)
+    # ---------------------------------------
+    from app.monitoring import init_monitoring
+    init_monitoring(app)
 
     # ---------------------------------------
     # Erros

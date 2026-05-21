@@ -1,7 +1,5 @@
 """
 Testes para app/integrations/amazon/routes_sync.py.
-As tabelas Amazon usam schema="public" (incompatível com SQLite), por isso
-as queries são interceptadas com unittest.mock.patch.
 """
 from unittest.mock import MagicMock, patch
 
@@ -68,6 +66,7 @@ def test_sync_full_no_conn(client, db):
 
 # ---------------------------------------------------------------------------
 # Com conexão → 202 + job_id enfileirado
+# Mock mantido: controla o objeto retornado sem precisar de credenciais SP-API reais.
 # ---------------------------------------------------------------------------
 
 def test_sync_orders_enqueues_job(client, db):

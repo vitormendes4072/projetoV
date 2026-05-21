@@ -1,7 +1,7 @@
 # app/financeiro/alerts_custos_fixos.py
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import calendar
 from decimal import Decimal
 
@@ -97,7 +97,7 @@ def _mark_sent_nocommit(
         alert_type=alert_type,
         ano=ano,
         mes=mes,
-        sent_at=datetime.utcnow(),
+        sent_at=datetime.now(timezone.utc),
     )
     db.session.add(row)
 
