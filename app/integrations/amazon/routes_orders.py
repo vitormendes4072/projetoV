@@ -1,29 +1,25 @@
 import csv
 import io
 import logging
-from datetime import timedelta
+from datetime import timedelta, timezone
 
-from flask import jsonify, make_response
+from flask import jsonify, make_response, render_template, request
 from flask_login import login_required, current_user
 
 from app import db
 from app.models import AmazonConnection, AmazonOrder
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.integrations.amazon import amazon
-from app.integrations.amazon.utils import user_key, utcnow, iso_z
+from app.integrations.amazon.utils import user_key, utcnow, iso_z, SP_TZ
 from app.integrations.amazon.service import sync_financial_events
 from app.integrations.amazon.profit_service import compute_order_profit, compute_order_item_breakdown
 
 logger = logging.getLogger(__name__)
 
-from app.integrations.amazon.utils import SP_TZ
-
 
 @amazon.get("/orders")
 @login_required
 def orders_page():
-    from flask import render_template, request
-
     page   = request.args.get("page", 1, type=int)
     q      = request.args.get("q", "").strip()
     status = request.args.get("status", "").strip()
@@ -97,7 +93,6 @@ def profit_order(amazon_order_id: str):
 
     start = utcnow() - timedelta(days=7)
     if order and order.purchase_date:
-        from datetime import timezone
         purchase_utc = order.purchase_date.astimezone(timezone.utc)
         start = purchase_utc - timedelta(days=5)
 
