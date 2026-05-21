@@ -2,7 +2,7 @@ import logging
 import uuid
 from datetime import timedelta
 
-from flask import request, jsonify
+from flask import request, jsonify, g
 from flask_login import login_required
 
 from app import db
@@ -32,6 +32,9 @@ def status():
 @amazon.post("/connect")
 @login_required
 def connect():
+    if g.is_demo:
+        return jsonify({"ok": False, "error": "Conta demo — credenciais Amazon não podem ser alteradas."}), 403
+
     data = request.get_json(force=True) or {}
 
     required = [

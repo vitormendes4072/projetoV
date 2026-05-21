@@ -167,9 +167,10 @@ def reset_token(token):
 @auth.route("/demo-login")
 @limiter.limit("10 per minute")
 def demo_login():
-    from app.commands import DEMO_EMAIL
+    from app.commands import DEMO_EMAIL, _do_seed_demo
     if current_user.is_authenticated:
         return redirect(url_for("main.dashboard"))
+    _do_seed_demo()
     user = db.session.scalar(db.select(User).filter_by(email=DEMO_EMAIL))
     if not user:
         flash("Conta demo não disponível no momento.", "warning")

@@ -1,6 +1,6 @@
 # app/settings/routes.py
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g
 from flask_login import login_required, current_user
 from flask_mail import Message
 from threading import Thread
@@ -43,6 +43,13 @@ def index():
     account_form = UpdateAccountForm()
     password_form = ChangePasswordForm()
     business_form = BusinessSettingsForm()
+
+    # Conta demo: bloqueia mudanças de perfil e senha
+    if request.method == "POST" and g.is_demo and (
+        "submit" in request.form or "submit_password" in request.form
+    ):
+        flash("Conta demo — alterações de perfil e senha não são permitidas.", "warning")
+        return redirect(url_for("settings.index"))
 
     # ==========================================================
     # 1. LÓGICA DO PERFIL (Nome/Email) - MODAL VERMELHO

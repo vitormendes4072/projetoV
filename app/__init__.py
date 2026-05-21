@@ -1,7 +1,7 @@
 # app/__init__.py
 import os
 import logging
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -202,6 +202,19 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return render_template("429.html", error=e), 429
+
+    # ---------------------------------------
+    # Demo flag — disponível em g.is_demo para templates e rotas
+    # ---------------------------------------
+    from app.commands import DEMO_EMAIL as _DEMO_EMAIL
+
+    @app.before_request
+    def _set_demo_flag() -> None:
+        from flask_login import current_user
+        g.is_demo = (
+            current_user.is_authenticated
+            and current_user.email == _DEMO_EMAIL
+        )
 
     # ---------------------------------------
     # CLI Commands

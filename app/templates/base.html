@@ -36,6 +36,12 @@
     </header>
     {% endif %}
 
+    {% if g.is_demo %}
+    <div class="bg-amber-50 border-b border-amber-200 text-amber-800 text-center text-sm py-2 px-4">
+        Conta demo — os dados são resetados a cada novo acesso. Alterações de senha, perfil e credenciais Amazon estão desabilitadas.
+    </div>
+    {% endif %}
+
     <div class="max-w-[960px] mx-auto px-4 mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
