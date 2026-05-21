@@ -165,7 +165,7 @@ def criar_produto():
         flash('Produto criado com sucesso!', 'success')
         return redirect(url_for('produtos.lista_produtos'))
 
-    return render_template('produtos/editar.html', form=form, title="Novo Produto")
+    return render_template('produtos/editar.html', form=form, title="Novo Produto", product=None)
 
 
 @produtos_bp.route('/produtos/editar/<int:product_id>', methods=['GET', 'POST'])
@@ -182,7 +182,7 @@ def editar_produto(product_id):
         product.sku = form.sku.data
         product.price = form.price.data or 0.0
         product.cost = form.cost.data
-        product.packaging_cost = form.packaging_cost.data or 0.0  # ✅ OK
+        product.packaging_cost = form.packaging_cost.data or 0.0
         product.stock_quantity = form.stock_quantity.data
         product.image_url = form.image_url.data
 
@@ -197,11 +197,34 @@ def editar_produto(product_id):
         form.sku.data = product.sku
         form.price.data = product.price
         form.cost.data = product.cost
-        form.packaging_cost.data = product.packaging_cost  # ✅ FALTAVA ISSO
+        form.packaging_cost.data = product.packaging_cost
         form.stock_quantity.data = product.stock_quantity
         form.image_url.data = product.image_url
 
-    return render_template('produtos/editar.html', form=form, title="Editar Produto")
+    return render_template('produtos/editar.html', form=form, title="Editar Produto", product=product)
+
+
+@produtos_bp.route('/produtos/<int:product_id>/ajustar-estoque', methods=['POST'])
+@login_required
+def ajustar_estoque(product_id):
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        abort(403)
+    try:
+        delta = int(request.form.get('delta', 0))
+    except (ValueError, TypeError):
+        flash('Valor de ajuste inválido.', 'danger')
+        return redirect(url_for('produtos.editar_produto', product_id=product_id))
+    if delta == 0:
+        flash('Informe uma variação diferente de zero.', 'warning')
+        return redirect(url_for('produtos.editar_produto', product_id=product_id))
+    motivo = request.form.get('motivo', '').strip() or 'Ajuste Manual'
+    product.stock_quantity = (product.stock_quantity or 0) + delta
+    registrar_historico(product, current_user, f'Ajuste de Estoque: {motivo}')
+    db.session.commit()
+    sinal = '+' if delta >= 0 else ''
+    flash(f'Estoque ajustado em {sinal}{delta} un. Novo total: {product.stock_quantity}.', 'success')
+    return redirect(url_for('produtos.editar_produto', product_id=product_id))
 
 
 # --- NOVA ROTA: VISUALIZAR HISTÓRICO ---
@@ -213,13 +236,27 @@ def historico_produto(product_id):
         abort(403)
 
     page = request.args.get('page', 1, type=int)
-    historico = db.paginate(db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.desc()), page=page, per_page=10, error_out=False)
+    historico = db.paginate(
+        db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.desc()),
+        page=page, per_page=10, error_out=False,
+    )
 
-    serie = db.session.scalars(db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.asc()).limit(200)).all()
+    serie = db.session.scalars(
+        db.select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.changed_at.asc()).limit(200)
+    ).all()
+
+    # compute stock delta per entry (vs chronologically previous entry)
+    deltas: dict[int, int | None] = {}
+    prev_stock = None
+    for entry in serie:
+        deltas[entry.id] = None if prev_stock is None else entry.stock_quantity - prev_stock
+        prev_stock = entry.stock_quantity
+
     grafico = {
         "labels": [e.changed_at.strftime('%d/%m %H:%M') for e in serie],
         "precos": [float(e.price) for e in serie],
         "custos": [float(e.cost) for e in serie],
+        "estoques": [e.stock_quantity for e in serie],
     }
 
-    return render_template('produtos/historico.html', product=product, historico=historico, grafico=grafico)
+    return render_template('produtos/historico.html', product=product, historico=historico, grafico=grafico, deltas=deltas)
