@@ -1,6 +1,10 @@
 """
 Cálculos de lucro/margem por pedido Amazon, baseados em finance events.
 """
+from __future__ import annotations
+
+from typing import Any
+
 from sqlalchemy.orm import joinedload
 
 from app import db
@@ -10,14 +14,14 @@ from app.models.amazon_sku_link import AmazonSkuLink
 from app.models.product import Product
 
 
-def _r2(x) -> float:
+def _r2(x: Any) -> float:
     try:
         return round(float(x), 2)
     except Exception:
         return 0.0
 
 
-def _amount_from_money(m) -> float:
+def _amount_from_money(m: Any) -> float:
     try:
         if isinstance(m, dict):
             return float(m.get("Amount") or m.get("CurrencyAmount") or 0)
@@ -26,7 +30,7 @@ def _amount_from_money(m) -> float:
     return 0.0
 
 
-def _resolve_products_bulk(user_id: int, skus: list) -> dict:
+def _resolve_products_bulk(user_id: int, skus: list[str]) -> dict[str, Any]:
     """Resolve Product para múltiplos SKUs em 2 queries fixas (sem N+1).
 
     Query 1: sku_links JOIN products (joinedload).
@@ -65,7 +69,7 @@ def _resolve_products_bulk(user_id: int, skus: list) -> dict:
     return result
 
 
-def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float):
+def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any] | None:
     """
     Calcula lucro líquido de um pedido a partir dos ShipmentEventList.
     Retorna dict pronto para jsonify, ou None se não houver finance events.
@@ -166,7 +170,7 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
     }
 
 
-def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax_rate: float):
+def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any]:
     """
     Detalha lucro por item de um pedido.
     Retorna dict pronto para jsonify.

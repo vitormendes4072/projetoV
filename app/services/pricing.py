@@ -1,4 +1,14 @@
-def calcular_fba(price, cost, fba_fee, referral_pct, tax_pct, marketing=0) -> dict:
+from __future__ import annotations
+
+
+def calcular_fba(
+    price: float,
+    cost: float,
+    fba_fee: float,
+    referral_pct: float,
+    tax_pct: float,
+    marketing: float = 0,
+) -> dict[str, float | dict[str, float]]:
     referral_cost = price * (referral_pct / 100)
     tax_cost      = price * (tax_pct / 100)
     total_fees    = referral_cost + fba_fee + tax_cost + marketing

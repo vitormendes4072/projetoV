@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.orm import joinedload
@@ -22,8 +25,8 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
     if period in _PERIOD_DAYS:
         date_from = datetime.now() - timedelta(days=_PERIOD_DAYS[period])
 
-    def _ph_where(*extra):
-        clauses = [PricingHistory.user_id == user_id]
+    def _ph_where(*extra: Any) -> list[Any]:
+        clauses: list[Any] = [PricingHistory.user_id == user_id]
         if date_from:
             clauses.append(PricingHistory.created_at >= date_from)
         return clauses + list(extra)
