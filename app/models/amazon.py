@@ -65,9 +65,9 @@ class AmazonOrder(db.Model):
     )
 
     id = db.Column(db.BigInteger, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    amazon_order_id = db.Column(db.String, nullable=False)
+    amazon_order_id = db.Column(db.String, nullable=False, index=True)
     marketplace_id = db.Column(db.String, nullable=False)
 
     purchase_date = db.Column(db.DateTime(timezone=True), nullable=True)
