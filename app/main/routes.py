@@ -22,8 +22,7 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for("main.menu"))
 
-    # Landing Page futura (SaaS). Por enquanto, manda para login.
-    return redirect(url_for("auth.login"))
+    return render_template("landing.html")
 
 
 @main.route("/menu")
