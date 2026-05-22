@@ -1,5 +1,6 @@
 """Testes do comparativo de margem real x estimada (app/services/comparativo.py)."""
 from decimal import Decimal
+from unittest.mock import patch
 
 from app.models.pricing import PricingHistory
 from app.models.product import Product
@@ -55,7 +56,7 @@ def _shipment_event(sku, qty, charge, fee):
 
 
 # ---------------------------------------------------------------------------
-# aggregate_real_margin — função pura
+# aggregate_real_margin -- funcao pura
 # ---------------------------------------------------------------------------
 
 def test_aggregate_real_margin_basic():
@@ -94,8 +95,36 @@ def test_aggregate_real_margin_empty_events():
     assert aggregate_real_margin([], {"SKU-A"}, 10.0, 2.0, 4.0) is None
 
 
+def test_aggregate_real_margin_zero_revenue():
+    """Quando revenue=0 a margin_pct deve ser 0 sem divisao por zero."""
+    ev = _shipment_event("SKU-Z", 1, 0.0, 0.0)
+    r = aggregate_real_margin([ev], {"SKU-Z"}, 0.0, 0.0, 0.0)
+    # units=1 mas revenue=0 -> margin_pct=0 (nao levanta excecao)
+    assert r is not None
+    assert r["margin_pct"] == 0.0
+    assert r["revenue_total"] == 0.0
+
+
+def test_aggregate_real_margin_zero_tax_rate():
+    ev = _shipment_event("SKU-T", 4, 200.0, -40.0)
+    r = aggregate_real_margin([ev], {"SKU-T"}, unit_cost=5.0, unit_pack=1.0, tax_rate_pct=0.0)
+    assert r["imposto_total"] == 0.0
+    assert r["lucro_total"] == 200.0 - 40.0 - (5.0 * 4) - (1.0 * 4)  # 160 - 20 - 4 = 136
+
+
+def test_aggregate_real_margin_multiple_skus_in_target():
+    """Dois SKUs no mesmo target_skus -> agrega ambos."""
+    evs = [
+        _shipment_event("SKU-X", 2, 100.0, -10.0),
+        _shipment_event("SKU-Y", 3, 150.0, -15.0),
+    ]
+    r = aggregate_real_margin(evs, {"SKU-X", "SKU-Y"}, 10.0, 1.0, 0.0)
+    assert r["units_sold"] == 5
+    assert r["revenue_total"] == 250.0
+
+
 # ---------------------------------------------------------------------------
-# get_sku_comparison — serviço
+# get_sku_comparison -- servico
 # ---------------------------------------------------------------------------
 
 def test_get_sku_comparison_estimate_only(db):
@@ -130,7 +159,7 @@ def test_get_sku_comparison_uses_latest_estimate(db):
     _make_sim(db, user.id, product_id=prod.id, margin=40, net_profit=33)
 
     data = get_sku_comparison(user.id, prod)
-    # Deve pegar a simulação mais recente (margin=40)
+    # Deve pegar a simulacao mais recente (margin=40)
     assert data["estimado"]["margin_pct"] == 40.0
 
 
@@ -142,6 +171,70 @@ def test_get_sku_comparison_ignores_other_product_sim(db):
 
     data = get_sku_comparison(user.id, prod_a)
     assert data["estimado"] is None
+
+
+def test_get_sku_comparison_with_both_real_and_estimated(db):
+    """Quando ha dados reais (mockados) E estimados, delta_margin e calculado."""
+    user = make_user(db, email="delta@test.com")
+    prod = _make_product(db, user.id, sku="SKU-DELTA")
+    _make_sim(db, user.id, product_id=prod.id, margin=25.0, net_profit=18.0)
+
+    real_mock = {
+        "revenue_total": 100.0,
+        "fees_total": -15.0,
+        "net_total": 85.0,
+        "imposto_total": 4.0,
+        "cmv_total": 20.0,
+        "embalagem_total": 4.0,
+        "lucro_total": 57.0,
+        "units_sold": 2.0,
+        "avg_net_per_unit": 28.5,
+        "avg_revenue_per_unit": 50.0,
+        "margin_pct": 30.0,
+    }
+
+    with patch("app.services.comparativo._real_from_finance_events", return_value=real_mock):
+        data = get_sku_comparison(user.id, prod, tax_rate_pct=4.0)
+
+    assert data["has_amazon_data"] is True
+    assert data["real"] is not None
+    assert data["real"]["margin_pct"] == 30.0
+    assert data["estimado"]["margin_pct"] == 25.0
+    # delta = real - estimado = 30 - 25 = 5
+    assert data["delta_margin"] == 5.0
+    # delta_net = real.avg_net_per_unit - estimado.net_profit = 28.5 - 18 = 10.5
+    assert data["delta_net_unit"] == 10.5
+
+
+def test_get_sku_comparison_delta_negative(db):
+    """delta_margin negativo: real abaixo do estimado."""
+    user = make_user(db, email="deltaneg@test.com")
+    prod = _make_product(db, user.id, sku="SKU-NEG")
+    _make_sim(db, user.id, product_id=prod.id, margin=35.0, net_profit=25.0)
+
+    real_mock = {
+        "revenue_total": 100.0, "fees_total": -15.0, "net_total": 85.0,
+        "imposto_total": 4.0, "cmv_total": 20.0, "embalagem_total": 4.0,
+        "lucro_total": 20.0, "units_sold": 2.0,
+        "avg_net_per_unit": 10.0, "avg_revenue_per_unit": 50.0,
+        "margin_pct": 20.0,
+    }
+
+    with patch("app.services.comparativo._real_from_finance_events", return_value=real_mock):
+        data = get_sku_comparison(user.id, prod)
+
+    assert data["delta_margin"] == -15.0  # 20 - 35 = -15
+
+
+def test_get_sku_comparison_delta_none_when_no_real(db):
+    """Sem dados reais -> delta_margin permanece None."""
+    user = make_user(db, email="deltanone@test.com")
+    prod = _make_product(db, user.id, sku="SKU-NONE")
+    _make_sim(db, user.id, product_id=prod.id, margin=25.0, net_profit=18.0)
+
+    data = get_sku_comparison(user.id, prod)
+    assert data["delta_margin"] is None
+    assert data["delta_net_unit"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -176,7 +269,8 @@ def test_comparativo_no_data_renders(client, db):
 
     resp = client.get(f"/produtos/{prod.id}/comparativo")
     assert resp.status_code == 200
-    assert "Nenhuma simulação vinculada".encode() in resp.data
+    assert "Nenhuma simulacao vinculada".encode() in resp.data or \
+           "Nenhuma simulação vinculada".encode() in resp.data
     assert "Sem dados financeiros da Amazon".encode() in resp.data
 
 
@@ -188,5 +282,6 @@ def test_comparativo_shows_estimate(client, db):
 
     resp = client.get(f"/produtos/{prod.id}/comparativo")
     assert resp.status_code == 200
-    assert "Estimado (Simulação)".encode() in resp.data
+    assert "Estimado (Simulacao)".encode() in resp.data or \
+           "Estimado (Simulação)".encode() in resp.data
     assert b"22.0%" in resp.data

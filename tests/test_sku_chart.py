@@ -1,9 +1,13 @@
-"""Testes do scatter plot de margem × volume por SKU."""
+"""Testes do scatter plot de margem x volume por SKU."""
 from decimal import Decimal
 
 from app.models.pricing import PricingHistory
 from app.models.product import Product
-from app.services.sku_chart import get_sku_scatter_estimado, get_sku_scatter_real
+from app.services.sku_chart import (
+    _r2,
+    get_sku_scatter_estimado,
+    get_sku_scatter_real,
+)
 from tests.conftest import login, make_user
 
 
@@ -33,13 +37,41 @@ def _make_sim(db, user_id, product_id=None, margin=20, net_profit=15):
 
 
 # ---------------------------------------------------------------------------
-# get_sku_scatter_real — sem Amazon (SQLite) deve retornar []
+# _r2 -- helper puro
+# ---------------------------------------------------------------------------
+
+def test_r2_rounds_to_two_decimals():
+    assert _r2(1.2345) == 1.23
+
+
+def test_r2_integer():
+    assert _r2(5) == 5.0
+
+
+def test_r2_string_number():
+    assert _r2("3.14159") == 3.14
+
+
+def test_r2_non_numeric_returns_zero():
+    assert _r2("abc") == 0.0
+
+
+def test_r2_none_returns_zero():
+    assert _r2(None) == 0.0
+
+
+def test_r2_decimal():
+    assert _r2(Decimal("12.345")) == 12.35
+
+
+# ---------------------------------------------------------------------------
+# get_sku_scatter_real -- sem Amazon (SQLite) deve retornar []
 # ---------------------------------------------------------------------------
 
 def test_sku_scatter_real_returns_empty_without_amazon(db):
     user = make_user(db, email="real1@test.com")
     result = get_sku_scatter_real(user.id)
-    # SQLite: tabela com schema="public" não existe → retorna []
+    # SQLite: tabela com schema="public" nao existe -> retorna []
     assert result == []
 
 
@@ -49,8 +81,20 @@ def test_sku_scatter_real_returns_empty_for_unknown_period(db):
     assert result == []
 
 
+def test_sku_scatter_real_returns_empty_for_30d(db):
+    user = make_user(db, email="real3@test.com")
+    result = get_sku_scatter_real(user.id, period="30d")
+    assert result == []
+
+
+def test_sku_scatter_real_returns_empty_for_90d(db):
+    user = make_user(db, email="real4@test.com")
+    result = get_sku_scatter_real(user.id, period="90d")
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
-# get_sku_scatter_estimado — totalmente SQLite-friendly
+# get_sku_scatter_estimado -- totalmente SQLite-friendly
 # ---------------------------------------------------------------------------
 
 def test_sku_scatter_estimado_empty_without_linked_sims(db):
@@ -104,8 +148,23 @@ def test_sku_scatter_estimado_ignores_other_user(db):
     prod = _make_product(db, user_b.id, sku="SKU-B")
     _make_sim(db, user_b.id, product_id=prod.id, margin=99)
 
-    # user_a não deve ver dados de user_b
+    # user_a nao deve ver dados de user_b
     assert get_sku_scatter_estimado(user_a.id) == []
+
+
+
+def test_sku_scatter_estimado_negative_margin(db):
+    """Margens negativas sao incluidas e ordenadas corretamente."""
+    user = make_user(db, email="negmarg@test.com")
+    prod_pos = _make_product(db, user.id, sku="SKU-POS", name="Positivo")
+    prod_neg = _make_product(db, user.id, sku="SKU-NEG", name="Negativo")
+    _make_sim(db, user.id, product_id=prod_pos.id, margin=15, net_profit=10)
+    _make_sim(db, user.id, product_id=prod_neg.id, margin=-5, net_profit=-3)
+
+    points = get_sku_scatter_estimado(user.id)
+    assert len(points) == 2
+    assert points[0]["sku"] == "SKU-POS"
+    assert points[1]["avg_margin_pct"] == -5.0
 
 
 # ---------------------------------------------------------------------------
@@ -138,10 +197,10 @@ def test_sku_route_with_estimado_data(client, db):
     assert b"scatterEstimado" in resp.data
 
 
-def test_sku_route_period_filter(client, db):
+def test_sku_route_period_filter_invalid(client, db):
     make_user(db, email="rt3@test.com")
     login(client, "rt3@test.com", "senha123")
-    # Período inválido é sanitizado → "all"
+    # Periodo invalido e sanitizado -> "all"
     resp = client.get("/relatorios/sku?period=999d")
     assert resp.status_code == 200
 
