@@ -61,7 +61,6 @@ def test_dashboard_onboarding_checklist_shows(client, db):
 
 def test_dashboard_onboarding_step1_done_when_has_products(client, db):
     """Usuário com produto vê passo 1 concluído."""
-    from app.models.product import Product
     user = _auth_client_and_get_user(client, db)
     p = Product(user_id=user.id, name="Prod X", sku="SKU-001", price=10, cost=5, stock_quantity=1)
     db.session.add(p)
