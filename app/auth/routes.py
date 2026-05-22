@@ -74,7 +74,7 @@ def send_account_exists_email(user):
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu'))
+        return redirect(url_for('main.dashboard'))
     form = RegistrationForm()
     if form.validate_on_submit():
         email = form.email.data.strip().lower()
@@ -97,7 +97,7 @@ def register():
 @limiter.limit("5 per minute", methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu'))
+        return redirect(url_for('main.dashboard'))
     form = LoginForm()
     if form.validate_on_submit():
         user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
@@ -112,9 +112,9 @@ def login():
             next_page = request.args.get('next')
 
             ### MELHORIA DE SEGURANÇA: Previne Open Redirect ###
-            # Se next_page existir MAS tiver um domínio (netloc), ignoramos e vamos pro menu
+            # Se next_page existir MAS tiver um domínio (netloc), ignoramos e vamos pro dashboard
             if not next_page or urlsplit(next_page).netloc != '':
-                next_page = url_for('main.menu')
+                next_page = url_for('main.dashboard')
 
             return redirect(next_page)
         else:
@@ -132,7 +132,7 @@ def logout():
 @limiter.limit("5 per hour", methods=["POST"])
 def reset_request():
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu'))
+        return redirect(url_for('main.dashboard'))
     form = RequestResetForm()
     if form.validate_on_submit():
         user = db.session.scalar(db.select(User).filter_by(email=form.email.data.strip().lower()))
@@ -145,7 +145,7 @@ def reset_request():
 @auth.route("/reset_password/<token>", methods=['GET', 'POST'])
 def reset_token(token):
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu'))
+        return redirect(url_for('main.dashboard'))
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         email = s.loads(token, salt='password-reset', max_age=1800)
@@ -182,7 +182,7 @@ def demo_login():
 @auth.route("/confirm/<token>")
 def confirm_email(token):
     if current_user.is_authenticated:
-        return redirect(url_for('main.menu'))
+        return redirect(url_for('main.dashboard'))
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         email = s.loads(token, salt='email-confirm', max_age=3600)
