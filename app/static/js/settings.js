@@ -204,7 +204,31 @@ function getAmazonPayload() {
     };
 }
 
+// ---- spinner helper -------------------------------------------------------
+const _SPINNER_SVG =
+    '<svg class="inline-block animate-spin mr-1.5" style="width:14px;height:14px;vertical-align:-2px" ' +
+    'xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+    '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+    '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>' +
+    '</svg>';
+
+function btnLoad(btn, label) {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.dataset.origText = btn.dataset.origText || btn.textContent.trim();
+    btn.innerHTML = _SPINNER_SVG + label;
+}
+
+function btnReset(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = btn.dataset.origText || btn.textContent;
+}
+// ---------------------------------------------------------------------------
+
 async function onAmazonSave() {
+    const btn = document.getElementById("btn_amz_save");
+    btnLoad(btn, "Salvando…");
     try {
         setAmzResult("Salvando credenciais...", "info");
         const payload = getAmazonPayload();
@@ -216,20 +240,26 @@ async function onAmazonSave() {
         await loadAmazonStatus();
     } catch (e) {
         setAmzResult(`Falha ao salvar: ${e.message}`, "error");
+    } finally {
+        btnReset(btn);
     }
 }
 
 async function onAmazonTest() {
+    const btn = document.getElementById("btn_amz_test");
+    btnLoad(btn, "Testando…");
     try {
         setAmzResult("Testando conexão (últimos 2 dias)...", "info");
         const data = await amzFetchJSON("/integrations/amazon/test", { method: "POST" });
         setAmzResult(`Conexão OK. Pedidos encontrados: ${data.orders_found}`, "success");
     } catch (e) {
         setAmzResult(`Falha no teste: ${e.message}`, "error");
+    } finally {
+        btnReset(btn);
     }
 }
 
-async function pollJob(jobId, maxWaitMs = 300_000, intervalMs = 2_000) {
+async function pollJob(jobId, syncBtn, maxWaitMs = 300_000, intervalMs = 2_000) {
     const deadline = Date.now() + maxWaitMs;
     let tick = 0;
 
@@ -248,12 +278,15 @@ async function pollJob(jobId, maxWaitMs = 300_000, intervalMs = 2_000) {
         }
 
         const status = data.status;
+        const elapsed = `${tick * intervalMs / 1000}s`;
 
         if (status === "queued" || status === "scheduled") {
-            setAmzResult(`Na fila… aguardando worker (${tick * intervalMs / 1000}s)`, "info");
+            setAmzResult(`Na fila… aguardando worker (${elapsed})`, "info");
+            btnLoad(syncBtn, `Na fila… ${elapsed}`);
 
         } else if (status === "started") {
-            setAmzResult(`Sincronizando com a Amazon… (${tick * intervalMs / 1000}s)`, "info");
+            setAmzResult(`Sincronizando com a Amazon… (${elapsed})`, "info");
+            btnLoad(syncBtn, `Sincronizando… ${elapsed}`);
 
         } else if (status === "finished") {
             return data.result || {};
@@ -273,6 +306,8 @@ async function pollJob(jobId, maxWaitMs = 300_000, intervalMs = 2_000) {
 }
 
 async function onAmazonSync() {
+    const btn = document.getElementById("btn_amz_sync");
+    btnLoad(btn, "Enfileirando…");
     try {
         setAmzResult("Enfileirando sync completo (30 dias)…", "info");
 
@@ -283,8 +318,9 @@ async function onAmazonSync() {
         }
 
         setAmzResult(`Job enfileirado (${queued.job_id.slice(0, 8)}…). Aguardando worker…`, "info");
+        btnLoad(btn, "Na fila…");
 
-        const result = await pollJob(queued.job_id);
+        const result = await pollJob(queued.job_id, btn);
 
         setAmzResult(
             `Sync concluído. ` +
@@ -297,6 +333,8 @@ async function onAmazonSync() {
 
     } catch (e) {
         setAmzResult(`Falha na sync: ${e.message}`, "error");
+    } finally {
+        btnReset(btn);
     }
 }
 
