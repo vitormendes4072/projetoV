@@ -8,6 +8,15 @@ class PricingHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
 
+    # Produto vinculado (opcional) — permite cruzar margem estimada x real
+    product_id = db.Column(
+        db.Integer,
+        db.ForeignKey('products.id', ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    product = db.relationship('Product', lazy='select')
+
     # Identificação (Opcional)
     title = db.Column(db.String(100), nullable=True, default="Simulação")
 
