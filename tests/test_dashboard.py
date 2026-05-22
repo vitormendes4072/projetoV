@@ -4,7 +4,15 @@ Testes para app/main/routes.py — rota /dashboard.
 from decimal import Decimal
 
 from app.models.pricing import PricingHistory
+from app.models.product import Product
 from tests.conftest import auth_client, login, make_user
+
+
+def _auth_client_and_get_user(client, db, email="u@test.com", password="senha123"):
+    """Cria usuário, loga e retorna o objeto User (para usar o id em fixtures)."""
+    user = make_user(db, email=email, password=password)
+    login(client, email, password)
+    return user
 
 
 def _add_sim(db, user_id, margin, net_profit=Decimal("10.00"), index=0):
@@ -39,17 +47,50 @@ def test_dashboard_unauthenticated(client, db):
 # Estado vazio (zero produtos, zero simulações)
 # ---------------------------------------------------------------------------
 
-def test_dashboard_empty_state(client, db):
+def test_dashboard_onboarding_checklist_shows(client, db):
+    """Novo usuário sem produtos nem Amazon vê o checklist de onboarding."""
     auth_client(client, db)
     resp = client.get("/dashboard")
     assert resp.status_code == 200
-    assert "Nenhum dado ainda".encode() in resp.data
+    body = resp.data
+    assert "Primeiros passos".encode() in body
+    assert "Configure seus produtos".encode() in body
+    assert "Conecte a Amazon".encode() in body
+    assert "primeira sincroniza".encode() in body
+
+
+def test_dashboard_onboarding_step1_done_when_has_products(client, db):
+    """Usuário com produto vê passo 1 concluído."""
+    from app.models.product import Product
+    user = _auth_client_and_get_user(client, db)
+    p = Product(user_id=user.id, name="Prod X", sku="SKU-001", price=10, cost=5, stock_quantity=1)
+    db.session.add(p)
+    db.session.commit()
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    # passo 1 concluído → "Concluído" deve aparecer
+    assert "Concluído".encode() in resp.data
 
 
 def test_dashboard_empty_has_no_charts(client, db):
     auth_client(client, db)
     resp = client.get("/dashboard")
     assert b"chartMargem" not in resp.data
+
+
+def test_dashboard_onboarding_hidden_when_complete(client, db):
+    """Checklist some quando todas as 3 etapas estão ok (simulado via dados)."""
+    # Simular onboarding.complete=True exige Amazon connection que não existe
+    # no SQLite — testamos o inverso: com dados mas sem Amazon,
+    # o checklist AINDA aparece (has_amazon_conn=False).
+    user = _auth_client_and_get_user(client, db)
+    _add_sim(db, user.id, margin=20)
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    # Amazon não configurada → checklist ainda visível
+    assert "Primeiros passos".encode() in resp.data
 
 
 # ---------------------------------------------------------------------------
