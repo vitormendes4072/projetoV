@@ -278,7 +278,8 @@
                 </div>
 
                 <div class="pt-6 mt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-end">
-                    <!-- BOTÃƒO DEV -->
+                    {% if config.DEBUG %}
+                    <!-- Botões DEV — só renderizados quando app.debug=True -->
                     <button type="button" id="btn_amz_mock"
                             class="rounded-lg border border-orange-200 bg-orange-50 text-orange-700 font-bold h-10 px-6 hover:bg-orange-100 transition-colors">
                         Inserir Mock Finance (DEV)
@@ -288,6 +289,7 @@
                         class="rounded-lg border border-orange-200 bg-orange-50 text-orange-700 font-bold h-10 px-6 hover:bg-orange-100 transition-colors">
                         Criar Produtos Mock (DEV)
                     </button>
+                    {% endif %}
 
 
                     <button type="button" id="btn_amz_save"
