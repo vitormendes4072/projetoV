@@ -33,16 +33,17 @@
     {% endif %}
 
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
-        <table class="w-full text-left text-sm text-[#0d141c]">
+        <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-[#0d141c] min-w-[640px]">
             <thead class="bg-slate-50 border-b border-[#d0dbe7]">
                 <tr>
                     <th class="px-4 py-4 font-bold">Data / Hora</th>
                     <th class="px-4 py-4 font-bold">Ação</th>
                     <th class="px-4 py-4 font-bold text-right">Preço</th>
-                    <th class="px-4 py-4 font-bold text-right">Custo</th>
+                    <th class="px-4 py-4 font-bold text-right hidden sm:table-cell">Custo</th>
                     <th class="px-4 py-4 font-bold text-right">Estoque</th>
                     <th class="px-4 py-4 font-bold text-right">Variação</th>
-                    <th class="px-4 py-4 font-bold">Usuário</th>
+                    <th class="px-4 py-4 font-bold hidden md:table-cell">Usuário</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#d0dbe7]">
@@ -61,7 +62,7 @@
                         </span>
                     </td>
                     <td class="px-4 py-4 text-right font-mono">R$ {{ "%.2f"|format(entry.price) }}</td>
-                    <td class="px-4 py-4 text-right font-mono text-slate-500">R$ {{ "%.2f"|format(entry.cost) }}</td>
+                    <td class="px-4 py-4 text-right font-mono text-slate-500 hidden sm:table-cell">R$ {{ "%.2f"|format(entry.cost) }}</td>
                     <td class="px-4 py-4 text-right font-mono font-bold">{{ entry.stock_quantity }}</td>
                     <td class="px-4 py-4 text-right font-mono">
                         {% if delta is not none %}
@@ -76,7 +77,7 @@
                         <span class="text-slate-300 text-xs">inicial</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-4 text-xs text-slate-500">
+                    <td class="px-4 py-4 text-xs text-slate-500 hidden md:table-cell">
                         {% if entry.user %}{{ entry.user.name }}{% else %}—{% endif %}
                     </td>
                 </tr>
@@ -89,6 +90,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 
     {% if historico.pages > 1 %}

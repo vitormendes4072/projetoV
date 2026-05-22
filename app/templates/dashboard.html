@@ -247,7 +247,8 @@
                 <a href="{{ url_for('pricing.calculator') }}" class="text-xs text-[#0d80f2] hover:underline font-medium">Nova simulação</a>
             </div>
             {% if recent_simulations %}
-            <table class="w-full text-sm text-left">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left min-w-[360px]">
                 <thead class="bg-slate-50 text-[#49739c] text-xs uppercase">
                     <tr>
                         <th class="px-6 py-3 font-bold">Cenário</th>
@@ -272,6 +273,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}
             <div class="px-6 py-8 text-center text-[#49739c] text-sm">
                 Nenhuma simulação salva ainda.
@@ -287,7 +289,8 @@
                 <a href="{{ url_for('produtos.lista_produtos') }}" class="text-xs text-[#0d80f2] hover:underline font-medium">Ver todos</a>
             </div>
             {% if recent_changes %}
-            <table class="w-full text-sm text-left">
+            <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left min-w-[360px]">
                 <thead class="bg-slate-50 text-[#49739c] text-xs uppercase">
                     <tr>
                         <th class="px-6 py-3 font-bold">Produto</th>
@@ -321,6 +324,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
             {% else %}
             <div class="px-6 py-8 text-center text-[#49739c] text-sm">
                 Nenhuma atividade ainda.
