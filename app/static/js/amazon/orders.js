@@ -128,11 +128,32 @@ async function loadOrderDetails(orderId) {
   row.dataset.loaded = "1";
 }
 
+const SPINNER_SVG =
+  '<svg class="inline-block animate-spin mr-1.5" style="width:14px;height:14px;vertical-align:-2px" ' +
+  'xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+  '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+  '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>';
+
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  if (loading) {
+    btn.disabled = true;
+    btn.dataset.originalText = btn.textContent.trim();
+    btn.innerHTML = SPINNER_SVG + btn.dataset.originalText;
+    btn.classList.add("opacity-60", "cursor-not-allowed");
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.originalText || btn.textContent;
+    btn.classList.remove("opacity-60", "cursor-not-allowed");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const btnSyncOrders = document.getElementById("btnSyncOrders");
   const btnSyncItems  = document.getElementById("btnSyncItems");
 
   btnSyncOrders?.addEventListener("click", async () => {
+    setBtnLoading(btnSyncOrders, true);
     try {
       setResult("Sincronizando pedidos (últimos 30 dias)…", "info");
       const res  = await fetch("/integrations/amazon/sync_orders_only?days=30");
@@ -142,10 +163,12 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => location.reload(), 800);
     } catch (e) {
       setResult("Falha no sync: " + e.message, "error");
+      setBtnLoading(btnSyncOrders, false);
     }
   });
 
   btnSyncItems?.addEventListener("click", async () => {
+    setBtnLoading(btnSyncItems, true);
     try {
       setResult("Sincronizando itens (15 pedidos)…", "info");
       const res  = await fetch("/integrations/amazon/sync_items_batch?limit=15", {
@@ -157,6 +180,8 @@ document.addEventListener("DOMContentLoaded", () => {
       setResult(`Itens OK. Pedidos: ${data.processed_orders} | Itens: ${data.inserted_items}`, "success");
     } catch (e) {
       setResult("Falha ao sincronizar itens: " + e.message, "error");
+    } finally {
+      setBtnLoading(btnSyncItems, false);
     }
   });
 });
