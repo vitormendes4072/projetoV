@@ -363,4 +363,77 @@ document.addEventListener("DOMContentLoaded", function () {
     if (btnMockProducts) btnMockProducts.addEventListener("click", onAmazonMockProducts);
 
     loadAmazonStatus();
+
+    // ================= API KEY =================
+    const apiKeyField  = document.getElementById("apiKeyField");
+    const btnToggleKey = document.getElementById("btnToggleKey");
+    const btnRegenKey  = document.getElementById("btnRegenKey");
+    const btnCopyKey   = document.getElementById("btnCopyKey");
+    const apiKeyMsg    = document.getElementById("apiKeyMsg");
+
+    function setApiKeyMsg(text, color = "text-slate-500") {
+        if (!apiKeyMsg) return;
+        apiKeyMsg.textContent = text;
+        apiKeyMsg.className = `mt-2 text-xs ${color}`;
+        apiKeyMsg.classList.remove("hidden");
+    }
+
+    if (btnToggleKey && apiKeyField) {
+        btnToggleKey.addEventListener("click", () => {
+            apiKeyField.type = apiKeyField.type === "password" ? "text" : "password";
+        });
+    }
+
+    if (btnCopyKey && apiKeyField) {
+        btnCopyKey.addEventListener("click", () => {
+            if (!apiKeyField.value) return;
+            navigator.clipboard.writeText(apiKeyField.value)
+                .then(() => setApiKeyMsg("Copiado!", "text-green-600"))
+                .catch(() => setApiKeyMsg("Falha ao copiar.", "text-red-600"));
+        });
+    }
+
+    if (btnRegenKey) {
+        btnRegenKey.addEventListener("click", async () => {
+            if (!confirm("Gerar nova API key? A chave atual será invalidada imediatamente.")) return;
+            try {
+                btnRegenKey.disabled = true;
+                btnRegenKey.textContent = "Gerando…";
+
+                const res = await fetch(SETTINGS_INIT.regenApiKeyUrl, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": csrfToken },
+                });
+                const data = await res.json();
+
+                if (!res.ok || !data.ok) throw new Error(data.error || `Erro ${res.status}`);
+
+                if (apiKeyField) {
+                    apiKeyField.value = data.api_key;
+                    apiKeyField.type  = "text";   // mostra a chave logo após geração
+                }
+                btnRegenKey.textContent = "Regenerar";
+                setApiKeyMsg("Nova chave gerada. Copie agora — ela não será exibida completa novamente após recarregar.", "text-amber-600");
+
+                // Exibe botão Copiar se não existia
+                if (!btnCopyKey) {
+                    const copyBtn = document.createElement("button");
+                    copyBtn.type = "button";
+                    copyBtn.textContent = "Copiar";
+                    copyBtn.className = "rounded-lg border border-[#d0dbe7] bg-white text-slate-700 font-bold h-10 px-4 hover:bg-slate-50 transition-colors text-sm";
+                    copyBtn.addEventListener("click", () => {
+                        navigator.clipboard.writeText(apiKeyField.value)
+                            .then(() => setApiKeyMsg("Copiado!", "text-green-600"))
+                            .catch(() => setApiKeyMsg("Falha ao copiar.", "text-red-600"));
+                    });
+                    btnRegenKey.insertAdjacentElement("afterend", copyBtn);
+                }
+            } catch (e) {
+                setApiKeyMsg(`Erro: ${e.message}`, "text-red-600");
+                btnRegenKey.textContent = SETTINGS_INIT.hasApiKey ? "Regenerar" : "Gerar chave";
+            } finally {
+                btnRegenKey.disabled = false;
+            }
+        });
+    }
 });

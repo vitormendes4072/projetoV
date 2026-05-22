@@ -1,7 +1,7 @@
 """Testes da REST API v1 documentada com Flask-Smorest."""
 import pytest
 from unittest.mock import MagicMock, patch
-from tests.conftest import auth_client as _auth_client
+from tests.conftest import auth_client as _auth_client, make_user
 
 
 @pytest.fixture
@@ -170,3 +170,57 @@ def test_alertas_add_recipient_missing_field(logged_client):
         json={},
     )
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# API Key authentication
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def user_with_key(db):
+    """Cria um usuário com api_key gerada e retorna (user, key)."""
+    user = make_user(db, email="apiuser@test.com", password="senha123")
+    key = user.generate_api_key()
+    db.session.commit()
+    return user, key
+
+
+def test_api_key_auth_works(client, user_with_key):
+    """X-API-Key válida autentica e acessa endpoint protegido."""
+    _, key = user_with_key
+    resp = client.post(
+        "/api/v1/financeiro/alertas/toggle",
+        json={"enabled": True},
+        headers={"X-API-Key": key},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+
+def test_api_key_invalid(client, db):
+    """X-API-Key inválida retorna 401."""
+    resp = client.post(
+        "/api/v1/financeiro/alertas/toggle",
+        json={"enabled": True},
+        headers={"X-API-Key": "chave-invalida-que-nao-existe"},
+    )
+    assert resp.status_code == 401
+
+
+def test_api_key_missing_returns_401(client, db):
+    """Sem X-API-Key e sem sessão retorna 401."""
+    resp = client.post(
+        "/api/v1/financeiro/alertas/toggle",
+        json={"enabled": True},
+    )
+    assert resp.status_code == 401
+
+
+def test_openapi_schema_has_api_key_security(client):
+    """Schema OpenAPI expõe ApiKeyAuth como securityScheme."""
+    resp = client.get("/api/openapi.json")
+    data = resp.get_json()
+    schemes = data.get("components", {}).get("securitySchemes", {})
+    assert "ApiKeyAuth" in schemes
+    assert schemes["ApiKeyAuth"]["in"] == "header"
+    assert schemes["ApiKeyAuth"]["name"] == "X-API-Key"

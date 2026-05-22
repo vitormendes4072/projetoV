@@ -1,6 +1,6 @@
 # app/settings/routes.py
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g, jsonify
 from flask_login import login_required, current_user
 from flask_mail import Message
 from threading import Thread
@@ -121,6 +121,16 @@ def index():
                            form=account_form,
                            password_form=password_form,
                            business_form=business_form)
+
+
+@settings_bp.post('/settings/api-key/regenerate')
+@login_required
+def regenerate_api_key():
+    if g.is_demo:
+        return jsonify({"ok": False, "error": "Conta demo — API key não pode ser alterada."}), 403
+    new_key = current_user.generate_api_key()
+    db.session.commit()
+    return jsonify({"ok": True, "api_key": new_key})
 
 
 @settings_bp.route('/settings/confirm_email/<token>')

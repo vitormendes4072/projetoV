@@ -332,6 +332,50 @@
         </div>
     </div>
 
+    <!-- ================= API KEY ================= -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#e8edf2] p-6 mt-6">
+        <h3 class="text-base font-bold text-slate-800 mb-1">API Key</h3>
+        <p class="text-sm text-slate-500 mb-4">
+            Use esta chave no header <code class="bg-slate-100 px-1 rounded">X-API-Key</code> para autenticar chamadas à
+            <a href="/api/docs" target="_blank" class="text-blue-500 hover:underline">API REST</a>.
+        </p>
+
+        <div class="flex items-center gap-3">
+            <div class="relative flex-1 max-w-lg">
+                <input id="apiKeyField" type="password" readonly
+                       value="{{ current_user.api_key or '' }}"
+                       placeholder="{{ 'Nenhuma chave gerada' if not current_user.api_key else '' }}"
+                       class="w-full rounded-lg border border-[#d0dbe7] bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-700 pr-10 focus:outline-none">
+                <button type="button" id="btnToggleKey" title="Mostrar/ocultar"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </button>
+            </div>
+
+            {% if not g.is_demo %}
+            <button type="button" id="btnRegenKey"
+                    class="rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-5 hover:bg-blue-600 transition-colors text-sm">
+                {{ 'Gerar chave' if not current_user.api_key else 'Regenerar' }}
+            </button>
+            {% if current_user.api_key %}
+            <button type="button" id="btnCopyKey" title="Copiar"
+                    class="rounded-lg border border-[#d0dbe7] bg-white text-slate-700 font-bold h-10 px-4 hover:bg-slate-50 transition-colors text-sm">
+                Copiar
+            </button>
+            {% endif %}
+            {% else %}
+            <span class="text-xs text-amber-600 font-medium">Desabilitado na conta demo</span>
+            {% endif %}
+        </div>
+
+        <p id="apiKeyMsg" class="mt-2 text-xs text-slate-500 hidden"></p>
+    </div>
+
 </div>
 
 <script nonce="{{ csp_nonce() }}">
@@ -340,6 +384,8 @@
     serverConfirmPass: {{ (password_form.confirm_password.data or '') | tojson }},
     openProfileModal: {{ (form.current_password.errors | length > 0) | tojson }},
     openPasswordModal: {{ (password_form.current_password.errors | length > 0) | tojson }},
+    regenApiKeyUrl: {{ url_for('settings.regenerate_api_key') | tojson }},
+    hasApiKey: {{ (current_user.api_key is not none and current_user.api_key != '') | tojson }},
   };
 </script>
 <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/settings.js') }}"></script>
