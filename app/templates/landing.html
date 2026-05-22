@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Marketplace Manager — Gestão inteligente para vendedores Amazon</title>
+  <title>VEntregaz — Gestão inteligente para vendedores Amazon</title>
+  <meta name="description" content="VEntregaz: calcule lucratividade, controle estoque FBA e gerencie pedidos Amazon em um só lugar." />
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,10 +20,8 @@
   <header class="bg-white border-b border-[#e7edf4] sticky top-0 z-50">
     <div class="max-w-[960px] mx-auto px-6 py-3 flex items-center justify-between">
       <a href="/" class="flex items-center gap-2">
-        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 flex-shrink-0">
-          <path d="M8.57829 8.57829C5.52816 11.6284 3.451 15.5145 2.60947 19.7452C1.76794 23.9758 2.19984 28.361 3.85056 32.3462C5.50128 36.3314 8.29667 39.7376 11.8832 42.134C15.4698 44.5305 19.6865 45.8096 24 45.8096C28.3135 45.8096 32.5302 44.5305 36.1168 42.134C39.7033 39.7375 42.4987 36.3314 44.1494 32.3462C45.8002 28.361 46.2321 23.9758 45.3905 19.7452C44.549 15.5145 42.4718 11.6284 39.4217 8.57829L24 24L8.57829 8.57829Z" fill="#0d80f2"/>
-        </svg>
-        <span class="font-bold text-[#0d141c] text-base">Marketplace Manager</span>
+        <img src="{{ url_for('static', filename='logo.svg') }}" alt="VEntregaz" class="h-8 w-8 flex-shrink-0" />
+        <span class="font-bold text-[#0d141c] text-base">VEntregaz</span>
       </a>
       <div class="flex items-center gap-2">
         <a href="{{ url_for('auth.login') }}"
@@ -48,7 +47,7 @@
       <span class="text-[#0d80f2]">vendedores Amazon</span>
     </h1>
     <p class="text-lg text-[#49739c] max-w-xl mx-auto mb-8">
-      Acompanhe pedidos, calcule lucratividade real, controle estoque FBA e tome decisões com dados — tudo em um só lugar.
+      O <strong class="text-[#0d141c]">VEntregaz</strong> acompanha pedidos, calcula lucratividade real, controla estoque FBA e centraliza decisões com dados — tudo em um só lugar.
     </p>
     <div class="flex items-center justify-center gap-3 flex-wrap">
       <a href="{{ url_for('auth.register') }}"
@@ -172,7 +171,7 @@
   <!-- Footer -->
   <footer class="border-t border-[#e7edf4] bg-white">
     <div class="max-w-[960px] mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#49739c]">
-      <span>© 2025 Marketplace Manager. Projeto SaaS independente.</span>
+      <span>© {{ now().year if now is defined else 2026 }} VEntregaz. Projeto SaaS independente.</span>
       <div class="flex items-center gap-4">
         <a href="{{ url_for('auth.login') }}" class="hover:text-[#0d141c] transition-colors">Entrar</a>
         <a href="{{ url_for('auth.register') }}" class="hover:text-[#0d141c] transition-colors">Criar conta</a>
