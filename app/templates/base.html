@@ -2,6 +2,17 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
+    <script nonce="{{ csp_nonce() }}">
+        // Aplica o tema antes do render para evitar flash de tela clara.
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) { /* localStorage indisponível */ }
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900">
@@ -12,6 +23,7 @@
     <title>{% block title %}VEntregaz - Manager{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}">
     <style>
         body { font-family: 'Inter', "Noto Sans", sans-serif; }
     </style>
@@ -29,6 +41,16 @@
 
         <div class="flex items-center gap-3">
             <span class="text-sm text-[#49739c] font-medium hidden md:block">Olá, {{ current_user.name.split()[0] }}</span>
+            <button type="button" data-theme-toggle aria-label="Alternar tema"
+                    title="Alternar tema claro/escuro"
+                    class="flex items-center justify-center rounded-lg h-10 w-10 bg-[#e7edf4] text-[#0d141c] hover:bg-[#d0dbe7] transition-colors">
+                <svg data-theme-icon="moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                </svg>
+                <svg data-theme-icon="sun" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+                </svg>
+            </button>
             <a href="{{ url_for('main.menu') }}"
                title="Ver todos os módulos"
                class="flex items-center gap-1.5 cursor-pointer rounded-lg h-10 px-3 bg-[#e7edf4] text-[#0d141c] text-sm font-bold hover:bg-[#d0dbe7] transition-colors">
@@ -42,6 +64,17 @@
             </a>
         </div>
     </header>
+    {% else %}
+    <button type="button" data-theme-toggle aria-label="Alternar tema"
+            title="Alternar tema claro/escuro"
+            class="fixed top-4 right-4 z-50 flex items-center justify-center rounded-lg h-10 w-10 bg-white border border-[#d0dbe7] text-[#0d141c] shadow-sm hover:bg-slate-50 transition-colors">
+        <svg data-theme-icon="moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+        </svg>
+        <svg data-theme-icon="sun" class="hidden" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+        </svg>
+    </button>
     {% endif %}
 
     {% if g.is_demo %}
@@ -72,9 +105,10 @@
         </div>
     </main>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
     </script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
