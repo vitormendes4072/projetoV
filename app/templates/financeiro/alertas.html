@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto p-6">
@@ -6,7 +6,7 @@
     <div>
       <h1 class="text-2xl font-bold">Alertas por e-mail</h1>
       <p class="mt-1 text-slate-600">
-        Receba avisos quando um custo fixo estiver prÃ³ximo do vencimento e/ou no dia do vencimento.
+        Receba avisos quando um custo fixo estiver próximo do vencimento e/ou no dia do vencimento.
       </p>
     </div>
 
@@ -15,7 +15,7 @@
     </a>
   </div>
 
-  <!-- Card: ConfiguraÃ§Ã£o -->
+  <!-- Card: Configuração -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <form method="post" class="space-y-5">
       <input
@@ -52,11 +52,11 @@
               Antes do vencimento e no dia do vencimento
             </option>
             <option value="none" {{ "selected" if settings.alert_mode == "none" else "" }}>
-              NÃ£o enviar alertas
+              Não enviar alertas
             </option>
           </select>
           <p class="mt-1 text-xs text-slate-500">
-            Se escolher â€œNÃ£o enviarâ€, o sistema nÃ£o manda e-mail mesmo com â€œAtivoâ€.
+            Se escolher “Não enviar”, o sistema não manda e-mail mesmo com “Ativo”.
           </p>
         </div>
 
@@ -71,7 +71,7 @@
             value="{{ settings.days_before }}"
             class="mt-1 w-full border rounded-lg px-3 py-2"
           >
-          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em â€œAntes e no diaâ€).</p>
+          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em “Antes e no dia”).</p>
         </div>
       </div>
 
@@ -83,13 +83,13 @@
     </form>
   </div>
 
-  <!-- Card: DestinatÃ¡rios -->
+  <!-- Card: Destinatários -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <div class="text-lg font-semibold">DestinatÃ¡rios</div>
+        <div class="text-lg font-semibold">Destinatários</div>
         <p class="mt-1 text-sm text-slate-600">
-          Esses e-mails receberÃ£o os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
+          Esses e-mails receberão os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
         </p>
       </div>
     </div>
@@ -136,14 +136,14 @@
         {% endfor %}
       {% else %}
         <div class="text-sm text-slate-500">
-          Nenhum destinatÃ¡rio extra cadastrado. (Por padrÃ£o, envia para <b>{{ current_user.email }}</b>.)
+          Nenhum destinatário extra cadastrado. (Por padrão, envia para <b>{{ current_user.email }}</b>.)
         </div>
       {% endif %}
     </div>
   </div>
 
   <div class="mt-4 text-sm text-slate-500">
-    <p><b>Regras:</b> sÃ³ alertamos itens ativos, vigentes no mÃªs, com dia de pagamento e que ainda nÃ£o foram marcados como pagos.</p>
+    <p><b>Regras:</b> só alertamos itens ativos, vigentes no mês, com dia de pagamento e que ainda não foram marcados como pagos.</p>
   </div>
 </div>
 {% endblock %}

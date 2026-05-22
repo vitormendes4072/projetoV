@@ -1,11 +1,11 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block content %}
 <div class="max-w-5xl mx-auto py-6 flex flex-col gap-6">
 
   <div class="flex items-center justify-between">
     <div class="flex items-center gap-4">
       <a href="{{ url_for('amazon.orders_page') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-        â†
+        ←
       </a>
       <div>
         <h1 class="text-[#0d141c] text-2xl font-bold">Vincular SKUs da Amazon</h1>
@@ -18,8 +18,8 @@
 
   <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-      <span class="font-bold text-slate-800 text-sm">SKUs sem vÃ­nculo</span>
-      <span id="missingCount" class="text-xs text-slate-500">â€”</span>
+      <span class="font-bold text-slate-800 text-sm">SKUs sem vínculo</span>
+      <span id="missingCount" class="text-xs text-slate-500">—</span>
     </div>
 
     <div class="p-4">
@@ -31,7 +31,7 @@
 
   <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-      <span class="font-bold text-slate-800 text-sm">VÃ­nculos existentes</span>
+      <span class="font-bold text-slate-800 text-sm">Vínculos existentes</span>
       <span class="text-xs text-slate-500">{{ links|length }}</span>
     </div>
 
@@ -41,7 +41,7 @@
           <tr>
             <th class="text-left px-3 py-2">SellerSKU (Amazon)</th>
             <th class="text-left px-3 py-2">Produto interno</th>
-            <th class="text-left px-3 py-2">AÃ§Ã£o</th>
+            <th class="text-left px-3 py-2">Ação</th>
             <th class="text-left px-3 py-2">Estoque Amazon</th>
           </tr>
         </thead>
@@ -51,9 +51,9 @@
             <td class="px-3 py-2 font-mono text-xs">{{ l.amazon_seller_sku }}</td>
             <td class="px-3 py-2">
               {% if l.product %}
-                <span class="font-bold">{{ l.product.sku }}</span> â€” {{ l.product.name }}
+                <span class="font-bold">{{ l.product.sku }}</span> — {{ l.product.name }}
               {% else %}
-                â€”
+                —
               {% endif %}
             </td>
             <td class="px-3 py-2">
@@ -69,7 +69,7 @@
               {% if qty is not none %}
                 <span class="font-bold">{{ qty }}</span>
               {% else %}
-                â€”
+                —
               {% endif %}
             </td>
 
