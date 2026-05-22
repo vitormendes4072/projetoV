@@ -189,6 +189,12 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     app.register_blueprint(settings_bp)
     app.register_blueprint(produtos_bp)
     app.register_blueprint(financeiro_bp)
+    # Rotas de desenvolvimento: importadas ANTES de register_blueprint para que
+    # os decoradores @amazon.post() sejam aplicados enquanto o blueprint ainda
+    # aceita novas rotas. Em produção as URLs /integrations/amazon/dev/* não existem.
+    if app.debug:
+        from app.integrations.amazon import routes_dev  # noqa: F401
+
     app.register_blueprint(amazon)
     app.register_blueprint(relatorios_bp)
 

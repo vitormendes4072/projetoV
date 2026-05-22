@@ -8,5 +8,5 @@ from . import (  # noqa: E402, F401
     routes_orders,
     routes_sku_links,
     routes_inventory,
-    routes_dev,
 )
+# routes_dev é importado condicionalmente em create_app() apenas quando app.debug=True
