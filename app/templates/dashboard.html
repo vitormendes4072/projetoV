@@ -374,6 +374,7 @@
 
 {% if total_simulations >= 2 %}
 <script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/chart-theme.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
   const DASHBOARD_CHART = {
     labels: {{ chart_labels | tojson }},

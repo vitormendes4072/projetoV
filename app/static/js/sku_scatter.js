@@ -2,17 +2,20 @@
 (function () {
   "use strict";
 
+  var c = ChartTheme.colors();
+
   /* Cor por margem */
   function marginColor(margin, alpha) {
     alpha = alpha || 0.75;
-    if (margin >= 20) return `rgba(22,163,74,${alpha})`;   // verde
-    if (margin >= 10) return `rgba(234,179,8,${alpha})`;   // amarelo
-    if (margin >= 0)  return `rgba(249,115,22,${alpha})`;  // laranja
-    return `rgba(220,38,38,${alpha})`;                     // vermelho
+    if (margin >= 20) return "rgba(22,163,74,"  + alpha + ")";  // verde
+    if (margin >= 10) return "rgba(234,179,8,"  + alpha + ")";  // amarelo
+    if (margin >= 0)  return "rgba(249,115,22," + alpha + ")";  // laranja
+    return               "rgba(220,38,38,"      + alpha + ")";  // vermelho
   }
 
   /* ---- Scatter Real (Amazon) ---- */
   var realCtx = document.getElementById("scatterReal");
+  var chartReal = null;
   if (realCtx && SKU_CHART.real && SKU_CHART.real.length > 0) {
     var realData = SKU_CHART.real.map(function (p) {
       return {
@@ -27,7 +30,7 @@
       };
     });
 
-    new Chart(realCtx, {
+    chartReal = new Chart(realCtx, {
       type: "scatter",
       data: {
         datasets: [{
@@ -63,14 +66,14 @@
         },
         scales: {
           x: {
-            title: { display: true, text: "Unidades vendidas", color: "#49739c", font: { size: 12 } },
-            ticks: { color: "#49739c" },
-            grid: { color: "#e7edf4" },
+            title: { display: true, text: "Unidades vendidas", color: c.tick, font: { size: 12 } },
+            ticks: { color: c.tick },
+            grid:  { color: c.grid },
           },
           y: {
-            title: { display: true, text: "Margem % real", color: "#49739c", font: { size: 12 } },
-            ticks: { color: "#49739c", callback: function (v) { return v + "%"; } },
-            grid: { color: "#e7edf4" },
+            title: { display: true, text: "Margem % real", color: c.tick, font: { size: 12 } },
+            ticks: { color: c.tick, callback: function (v) { return v + "%"; } },
+            grid:  { color: c.grid },
           },
         },
       },
@@ -79,6 +82,7 @@
 
   /* ---- Scatter Estimado (simulações) ---- */
   var estCtx = document.getElementById("scatterEstimado");
+  var chartEst = null;
   if (estCtx && SKU_CHART.estimado && SKU_CHART.estimado.length > 0) {
     var estData = SKU_CHART.estimado.map(function (p) {
       return {
@@ -91,7 +95,7 @@
       };
     });
 
-    new Chart(estCtx, {
+    chartEst = new Chart(estCtx, {
       type: "scatter",
       data: {
         datasets: [{
@@ -126,17 +130,31 @@
         },
         scales: {
           x: {
-            title: { display: true, text: "Simulações salvas", color: "#49739c", font: { size: 12 } },
-            ticks: { color: "#49739c", stepSize: 1 },
-            grid: { color: "#e7edf4" },
+            title: { display: true, text: "Simulações salvas", color: c.tick, font: { size: 12 } },
+            ticks: { color: c.tick, stepSize: 1 },
+            grid:  { color: c.grid },
           },
           y: {
-            title: { display: true, text: "Margem estimada %", color: "#49739c", font: { size: 12 } },
-            ticks: { color: "#49739c", callback: function (v) { return v + "%"; } },
-            grid: { color: "#e7edf4" },
+            title: { display: true, text: "Margem estimada %", color: c.tick, font: { size: 12 } },
+            ticks: { color: c.tick, callback: function (v) { return v + "%"; } },
+            grid:  { color: c.grid },
           },
         },
       },
     });
   }
+
+  /* Atualiza eixos ao trocar de tema */
+  ChartTheme.watch(function (c) {
+    [chartReal, chartEst].forEach(function (chart) {
+      if (!chart) return;
+      ["x", "y"].forEach(function (axis) {
+        chart.options.scales[axis].title.color  = c.tick;
+        chart.options.scales[axis].ticks.color  = c.tick;
+        chart.options.scales[axis].grid.color   = c.grid;
+      });
+      chart.update("none");
+    });
+  });
+
 })();
