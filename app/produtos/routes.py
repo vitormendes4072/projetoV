@@ -7,6 +7,7 @@ from flask import stream_with_context
 from flask_login import login_required, current_user
 from app import db
 from app.models.product import Product, ProductHistory
+from app.services.comparativo import get_sku_comparison
 from .forms import ProductForm, CsvUploadForm
 
 logger = logging.getLogger(__name__)
@@ -283,3 +284,16 @@ def historico_produto(product_id):
     }
 
     return render_template('produtos/historico.html', product=product, historico=historico, grafico=grafico, deltas=deltas)
+
+
+# --- COMPARATIVO: MARGEM ESTIMADA x REAL ---
+@produtos_bp.route('/produtos/<int:product_id>/comparativo')
+@login_required
+def comparativo_produto(product_id):
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        abort(403)
+
+    tax_rate = float(getattr(current_user, 'default_tax_rate', 0.0) or 0.0)
+    data = get_sku_comparison(current_user.id, product, tax_rate)
+    return render_template('produtos/comparativo.html', tax_rate=tax_rate, **data)

@@ -1,11 +1,15 @@
 # app/precificacao/forms.py
 from flask_wtf import FlaskForm
-from wtforms import FloatField, SubmitField, StringField
+from wtforms import FloatField, SubmitField, StringField, IntegerField
+from wtforms.widgets import HiddenInput
 from wtforms.validators import Length, NumberRange, InputRequired, Optional
 
 class CalculatorForm(FlaskForm):
     # Identificação
     title = StringField('Nome da Simulação (Opcional)', validators=[Length(max=50)], render_kw={"placeholder": "Ex: Teste Preço Alto"})
+
+    # Produto vinculado (opcional) — preenchido ao vir da lista de produtos
+    product_id = IntegerField('Produto vinculado', validators=[Optional()], widget=HiddenInput())
 
     # Preço e Custo: InputRequired aceita 0 (DataRequired rejeitaria), NumberRange impõe limites
     price = FloatField('Preço de Venda (R$)', validators=[

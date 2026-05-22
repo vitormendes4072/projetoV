@@ -45,7 +45,9 @@ def upgrade():
         batch_op.create_foreign_key(None, 'products', ['product_id'], ['id'])
 
     with op.batch_alter_table('products', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('min_stock', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('min_stock', sa.Integer(), nullable=False, server_default='5')
+        )
 
     # ### end Alembic commands ###
 
