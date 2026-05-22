@@ -10,7 +10,7 @@ def logged_client(client, db):
 
 
 # ---------------------------------------------------------------------------
-# Documentação OpenAPI
+# Documentacao OpenAPI
 # ---------------------------------------------------------------------------
 
 def test_openapi_schema_accessible(client):
@@ -35,7 +35,7 @@ def test_openapi_lists_amazon_and_financeiro_paths(client):
 
 
 # ---------------------------------------------------------------------------
-# Autenticação
+# Autenticacao
 # ---------------------------------------------------------------------------
 
 def test_api_requires_auth_sync(client):
@@ -55,7 +55,7 @@ def test_api_requires_auth_alertas(client):
 
 
 # ---------------------------------------------------------------------------
-# Amazon endpoints — sem integração configurada → 400
+# Amazon endpoints -- sem integracao configurada -> 400
 # ---------------------------------------------------------------------------
 
 def test_sync_orders_no_connection(logged_client):
@@ -94,7 +94,7 @@ def test_profit_no_connection(logged_client):
 
 
 # ---------------------------------------------------------------------------
-# Amazon sync com conexão mockada → 202 + job_id
+# Amazon sync com conexao mockada -> 202 + job_id
 # ---------------------------------------------------------------------------
 
 def _fake_conn(conn_id=1):
@@ -103,13 +103,17 @@ def _fake_conn(conn_id=1):
     return conn
 
 
+def _fake_job(job_id="job-abc-123"):
+    job = MagicMock()
+    job.id = job_id
+    return job
+
+
 def test_sync_orders_queued(logged_client):
     with patch("app.api.routes_sync.db") as mock_db, \
          patch("app.api.routes_sync._queue") as mock_queue:
         mock_db.session.scalar.return_value = _fake_conn()
-        fake_job = MagicMock()
-        fake_job.id = "job-abc-123"
-        mock_queue.return_value.enqueue.return_value = fake_job
+        mock_queue.return_value.enqueue.return_value = _fake_job("job-abc-123")
 
         resp = logged_client.post("/api/v1/amazon/sync/orders?days=7")
 
@@ -120,8 +124,156 @@ def test_sync_orders_queued(logged_client):
     assert data["status"] == "queued"
 
 
+def test_sync_finances_queued(logged_client):
+    with patch("app.api.routes_sync.db") as mock_db, \
+         patch("app.api.routes_sync._queue") as mock_queue:
+        mock_db.session.scalar.return_value = _fake_conn()
+        mock_queue.return_value.enqueue.return_value = _fake_job("job-fin-001")
+
+        resp = logged_client.post("/api/v1/amazon/sync/finances?days=30")
+
+    assert resp.status_code == 202
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["job_id"] == "job-fin-001"
+
+
+def test_sync_full_queued(logged_client):
+    with patch("app.api.routes_sync.db") as mock_db, \
+         patch("app.api.routes_sync._queue") as mock_queue:
+        mock_db.session.scalar.return_value = _fake_conn()
+        mock_queue.return_value.enqueue.return_value = _fake_job("job-full-007")
+
+        resp = logged_client.post("/api/v1/amazon/sync/full?days=14")
+
+    assert resp.status_code == 202
+    assert resp.get_json()["job_id"] == "job-full-007"
+
+
 # ---------------------------------------------------------------------------
-# Alertas (não precisam de integração Amazon)
+# Job status
+# ---------------------------------------------------------------------------
+
+class _JobStatus:
+    """Simula rq.job.JobStatus: tem .value e __str__ corretos."""
+    def __init__(self, v: str):
+        self.value = v
+
+    def __str__(self):
+        return self.value
+
+
+def test_job_status_not_found(logged_client):
+    with patch("app.api.routes_sync._queue") as mock_queue, \
+         patch("rq.job.Job") as mock_job_cls:
+        from rq.exceptions import NoSuchJobError
+        mock_queue.return_value.connection = MagicMock()
+        mock_job_cls.fetch.side_effect = NoSuchJobError("no job")
+        resp = logged_client.get("/api/v1/amazon/jobs/nao-existe-este-job")
+
+    assert resp.status_code == 404
+
+
+def test_job_status_queued(logged_client):
+    with patch("app.api.routes_sync._queue") as mock_queue, \
+         patch("rq.job.Job") as mock_job_cls:
+        mock_queue.return_value.connection = MagicMock()
+        mock_job = MagicMock()
+        mock_job.get_status.return_value = _JobStatus("queued")
+        mock_job.result = None
+        mock_job_cls.fetch.return_value = mock_job
+
+        resp = logged_client.get("/api/v1/amazon/jobs/job-queued-123")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["status"] == "queued"
+
+
+def test_job_status_finished(logged_client):
+    with patch("app.api.routes_sync._queue") as mock_queue, \
+         patch("rq.job.Job") as mock_job_cls:
+        mock_queue.return_value.connection = MagicMock()
+        mock_job = MagicMock()
+        mock_job.get_status.return_value = _JobStatus("finished")
+        mock_job.result = {"synced": 42}
+        mock_job_cls.fetch.return_value = mock_job
+
+        resp = logged_client.get("/api/v1/amazon/jobs/job-done-456")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "finished"
+    assert data["result"] == {"synced": 42}
+
+
+def test_job_status_failed(logged_client):
+    with patch("app.api.routes_sync._queue") as mock_queue, \
+         patch("rq.job.Job") as mock_job_cls:
+        mock_queue.return_value.connection = MagicMock()
+        mock_job = MagicMock()
+        mock_job.get_status.return_value = _JobStatus("failed")
+        mock_result = MagicMock()
+        mock_result.exc_string = "SomeError: something broke"
+        mock_job.latest_result.return_value = mock_result
+        mock_job_cls.fetch.return_value = mock_job
+
+        resp = logged_client.get("/api/v1/amazon/jobs/job-fail-789")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "failed"
+    assert "SomeError" in data["error"]
+
+
+# ---------------------------------------------------------------------------
+# Profit endpoint com conexao mas sem dados financeiros
+# ---------------------------------------------------------------------------
+
+def test_profit_with_connection_no_finance_data(logged_client):
+    fake_conn = _fake_conn()
+    with patch("app.api.routes_profit.db") as mock_db, \
+         patch("app.api.routes_profit.compute_order_profit", return_value=None):
+        mock_db.session.scalar.return_value = fake_conn
+        resp = logged_client.get("/api/v1/amazon/profit/222-3333333-4444444")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["mode"] == "no_finance_events"
+
+
+def test_profit_with_connection_returns_result(logged_client):
+    fake_result = {
+        "ok": True,
+        "amazon_order_id": "333-4444444-5555555",
+        "mode": "finance_events",
+    }
+    with patch("app.api.routes_profit.db") as mock_db, \
+         patch("app.api.routes_profit.compute_order_profit", return_value=fake_result):
+        mock_db.session.scalar.return_value = _fake_conn()
+        resp = logged_client.get("/api/v1/amazon/profit/333-4444444-5555555")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["mode"] == "finance_events"
+
+
+def test_order_items_returns_result(logged_client):
+    """items endpoint nao verifica conexao -- retorna resultado direto do servico."""
+    fake_result = {"ok": True, "amazon_order_id": "444-5555555-6666666", "mode": "items"}
+    with patch("app.api.routes_profit.compute_order_item_breakdown", return_value=fake_result):
+        resp = logged_client.get("/api/v1/amazon/orders/444-5555555-6666666/items")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+
+
+# ---------------------------------------------------------------------------
+# Alertas (nao precisam de integracao Amazon)
 # ---------------------------------------------------------------------------
 
 def test_alertas_toggle_true(logged_client):
@@ -178,7 +330,7 @@ def test_alertas_add_recipient_missing_field(logged_client):
 
 @pytest.fixture
 def user_with_key(db):
-    """Cria um usuário com api_key gerada e retorna (user, key)."""
+    """Cria um usuario com api_key gerada e retorna (user, key)."""
     user = make_user(db, email="apiuser@test.com", password="senha123")
     key = user.generate_api_key()
     db.session.commit()
@@ -186,7 +338,7 @@ def user_with_key(db):
 
 
 def test_api_key_auth_works(client, user_with_key):
-    """X-API-Key válida autentica e acessa endpoint protegido."""
+    """X-API-Key valida autentica e acessa endpoint protegido."""
     _, key = user_with_key
     resp = client.post(
         "/api/v1/financeiro/alertas/toggle",
@@ -198,7 +350,7 @@ def test_api_key_auth_works(client, user_with_key):
 
 
 def test_api_key_invalid(client, db):
-    """X-API-Key inválida retorna 401."""
+    """X-API-Key invalida retorna 401."""
     resp = client.post(
         "/api/v1/financeiro/alertas/toggle",
         json={"enabled": True},
@@ -208,7 +360,7 @@ def test_api_key_invalid(client, db):
 
 
 def test_api_key_missing_returns_401(client, db):
-    """Sem X-API-Key e sem sessão retorna 401."""
+    """Sem X-API-Key e sem sessao retorna 401."""
     resp = client.post(
         "/api/v1/financeiro/alertas/toggle",
         json={"enabled": True},
@@ -217,7 +369,7 @@ def test_api_key_missing_returns_401(client, db):
 
 
 def test_openapi_schema_has_api_key_security(client):
-    """Schema OpenAPI expõe ApiKeyAuth como securityScheme."""
+    """Schema OpenAPI expoe ApiKeyAuth como securityScheme."""
     resp = client.get("/api/openapi.json")
     data = resp.get_json()
     schemes = data.get("components", {}).get("securitySchemes", {})
