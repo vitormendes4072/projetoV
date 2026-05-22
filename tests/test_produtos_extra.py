@@ -260,7 +260,6 @@ def test_ajustar_estoque_registra_historico(client, db):
                 data={"delta": "10", "motivo": "Entrada de NF"},
                 follow_redirects=True)
 
-    from app.models.product import ProductHistory
     hist = ProductHistory.query.filter_by(product_id=produto.id).order_by(
         ProductHistory.changed_at.desc()
     ).first()
