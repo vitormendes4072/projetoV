@@ -66,12 +66,15 @@
                             <div class="text-xs text-slate-500">Custo: R$ {{ "%.2f"|format(product.cost) }}</div>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <span class="px-2 py-1 rounded-full text-xs font-bold 
-                                {% if product.stock_quantity > 10 %} bg-green-100 text-green-700 
-                                {% elif product.stock_quantity > 0 %} bg-yellow-100 text-yellow-700 
-                                {% else %} bg-red-100 text-red-700 {% endif %}">
+                            <span class="px-2 py-1 rounded-full text-xs font-bold
+                                {% if product.stock_quantity <= 0 %} bg-red-100 text-red-700
+                                {% elif product.stock_quantity <= product.min_stock %} bg-yellow-100 text-yellow-700
+                                {% else %} bg-green-100 text-green-700 {% endif %}">
                                 {{ product.stock_quantity }} unid.
                             </span>
+                            {% if product.stock_quantity <= product.min_stock %}
+                            <div class="text-xs text-amber-600 mt-0.5">mín. {{ product.min_stock }}</div>
+                            {% endif %}
                         </td>
                         <td class="px-6 py-4 text-center">
                             <div class="flex items-center justify-center gap-3">

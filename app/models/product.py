@@ -17,6 +17,7 @@ class Product(db.Model):
     cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     packaging_cost = db.Column(db.Numeric(10, 2), nullable=False, default=0.0)
     stock_quantity = db.Column(db.Integer, default=0)
+    min_stock = db.Column(db.Integer, nullable=False, default=5)
     image_url = db.Column(db.String(500), nullable=True)
 
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)

@@ -16,6 +16,7 @@ class ProductForm(FlaskForm):
     packaging_cost = FloatField('Custo de Embalagem (R$)', validators=[Optional(), NumberRange(min=0)], default=0.0)
 
     stock_quantity = IntegerField('Estoque Atual', default=0)
+    min_stock = IntegerField('Estoque mínimo (alerta)', validators=[Optional(), NumberRange(min=0)], default=5)
     image_url = StringField('URL da Imagem (Opcional)')
     submit = SubmitField('Salvar Produto')
 

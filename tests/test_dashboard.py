@@ -142,3 +142,70 @@ def test_dashboard_negative_margin_bucket(client, db):
 
     resp = client.get("/dashboard")
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# min_stock — alertas de reposição
+# ---------------------------------------------------------------------------
+
+def test_dashboard_low_stock_alert_appears(client, db):
+    """Produto abaixo do min_stock aparece no alerta de estoque baixo."""
+    user = _auth_client_and_get_user(client, db, email="low@test.com")
+    p = Product(
+        user_id=user.id, name="Produto Baixo", sku="LOW-001",
+        price=10, cost=5, stock_quantity=2, min_stock=10,
+    )
+    db.session.add(p)
+    db.session.commit()
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    assert "estoque baixo".encode() in resp.data.lower()
+    assert b"Produto Baixo" in resp.data
+
+
+def test_dashboard_low_stock_shows_min_stock_value(client, db):
+    """O alerta exibe 'X / Y un.' com o min_stock por produto."""
+    user = _auth_client_and_get_user(client, db, email="minval@test.com")
+    p = Product(
+        user_id=user.id, name="Item Critico", sku="CRIT-001",
+        price=10, cost=5, stock_quantity=3, min_stock=15,
+    )
+    db.session.add(p)
+    db.session.commit()
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    # deve exibir "3 / 15 un."
+    assert b"3 / 15" in resp.data
+
+
+def test_dashboard_no_low_stock_alert_when_stock_ok(client, db):
+    """Produto com stock_quantity > min_stock não dispara o alerta."""
+    user = _auth_client_and_get_user(client, db, email="ok@test.com")
+    p = Product(
+        user_id=user.id, name="Produto Ok", sku="OK-001",
+        price=10, cost=5, stock_quantity=50, min_stock=10,
+    )
+    db.session.add(p)
+    db.session.commit()
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    assert b"Produto Ok" not in resp.data or "estoque baixo".encode() not in resp.data.lower()
+
+
+def test_dashboard_low_stock_zero_shows_red(client, db):
+    """Produto com stock_quantity=0 é incluído no alerta (zerado)."""
+    user = _auth_client_and_get_user(client, db, email="zero@test.com")
+    p = Product(
+        user_id=user.id, name="Produto Zerado", sku="ZERO-001",
+        price=10, cost=5, stock_quantity=0, min_stock=5,
+    )
+    db.session.add(p)
+    db.session.commit()
+
+    resp = client.get("/dashboard")
+    assert resp.status_code == 200
+    assert b"Produto Zerado" in resp.data
+    assert b"0 / 5" in resp.data
