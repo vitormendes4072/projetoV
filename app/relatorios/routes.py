@@ -7,6 +7,7 @@ from flask_login import login_required, current_user
 
 from app.relatorios.service import get_monthly_report, available_months
 from app.relatorios.pdf_builder import build_monthly_pdf
+from app.services.sku_chart import get_sku_scatter_real, get_sku_scatter_estimado
 
 relatorios_bp = Blueprint("relatorios", __name__, url_prefix="/relatorios")
 
@@ -66,3 +67,22 @@ def mensal_pdf():
     response.headers["Content-Type"] = "application/pdf"
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
+
+
+@relatorios_bp.get("/sku")
+@login_required
+def sku_scatter():
+    """Scatter plot de margem real × volume por SKU."""
+    period = request.args.get("period", "all")
+    if period not in ("30d", "90d", "all"):
+        period = "all"
+
+    real_points = get_sku_scatter_real(current_user.id, period)
+    estimado_points = get_sku_scatter_estimado(current_user.id)
+
+    return render_template(
+        "relatorios/sku_scatter.html",
+        real_points=real_points,
+        estimado_points=estimado_points,
+        period=period,
+    )

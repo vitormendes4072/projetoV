@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}VEntregaz – Gráfico Margem por SKU{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6 py-4">
+
+  {# Cabeçalho #}
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight tracking-tight">
+        Margem por SKU
+      </h1>
+      <p class="text-[#49739c] text-sm mt-1">
+        Scatter: lucro estimado × simulações salvas por produto{% if real_points %} · dados reais Amazon{% endif %}
+      </p>
+    </div>
+
+    {# Seletor de período (só relevante para dados reais) #}
+    <form method="GET" action="{{ url_for('relatorios.sku_scatter') }}" class="flex items-center gap-2">
+      {% for val, label in [("30d", "30 dias"), ("90d", "90 dias"), ("all", "Todos")] %}
+      <button type="submit" name="period" value="{{ val }}"
+        class="h-9 px-4 rounded-lg text-sm font-semibold border transition-colors
+          {% if period == val %}bg-[#0d80f2] text-white border-[#0d80f2]{% else %}bg-white text-[#0d141c] border-[#d0dbe7] hover:bg-slate-50{% endif %}">
+        {{ label }}
+      </button>
+      {% endfor %}
+    </form>
+  </div>
+
+  {# === DADOS REAIS (Amazon) === #}
+  {% if real_points %}
+
+  <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
+    <h2 class="font-bold text-[#0d141c] mb-1">Margem Real × Volume (Amazon)</h2>
+    <p class="text-xs text-[#49739c] mb-4">Cada ponto = 1 SKU. X = unidades vendidas · Y = margem % real</p>
+    <div class="relative" style="height: 380px;">
+      <canvas id="scatterReal"></canvas>
+    </div>
+  </div>
+
+  {# Tabela ranking real #}
+  <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-[#d0dbe7]">
+      <h2 class="font-bold text-[#0d141c]">Ranking por Receita (dados Amazon)</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-[#0d141c]">
+          <tr>
+            <th class="text-left px-4 py-3 font-semibold">#</th>
+            <th class="text-left px-4 py-3 font-semibold">SKU / Produto</th>
+            <th class="text-right px-4 py-3 font-semibold">Unidades</th>
+            <th class="text-right px-4 py-3 font-semibold">Receita</th>
+            <th class="text-right px-4 py-3 font-semibold">Lucro Total</th>
+            <th class="text-right px-4 py-3 font-semibold">Lucro/un.</th>
+            <th class="text-right px-4 py-3 font-semibold">Margem %</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#e7edf4]">
+          {% for p in real_points %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-[#49739c] font-mono text-xs">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-[#0d141c]">{{ p.product_name }}</div>
+              {% if p.product_name != p.sku %}
+              <div class="text-xs text-[#49739c] font-mono">{{ p.sku }}</div>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 text-right">{{ "%.0f"|format(p.units_sold) }}</td>
+            <td class="px-4 py-3 text-right">R$ {{ "%.2f"|format(p.revenue_total) }}</td>
+            <td class="px-4 py-3 text-right font-medium {% if p.lucro_total >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+              R$ {{ "%.2f"|format(p.lucro_total) }}
+            </td>
+            <td class="px-4 py-3 text-right {% if p.avg_lucro_per_unit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+              R$ {{ "%.2f"|format(p.avg_lucro_per_unit) }}
+            </td>
+            <td class="px-4 py-3 text-right font-bold {% if p.margin_pct >= 15 %}text-green-600{% elif p.margin_pct >= 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
+              {{ "%.1f"|format(p.margin_pct) }}%
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  {# Empty state Amazon #}
+  <div class="rounded-xl border border-dashed border-[#d0dbe7] bg-slate-50 p-8 text-center flex flex-col items-center gap-3 text-[#49739c]">
+    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
+    </svg>
+    <p class="font-medium text-sm">Sem dados de vendas Amazon para o período selecionado.</p>
+    <p class="text-xs">Sincronize os eventos financeiros em
+      <a href="{{ url_for('amazon.orders_page') }}" class="text-[#0d80f2] hover:underline">Pedidos Amazon</a>
+      para ver a margem real por SKU.
+    </p>
+  </div>
+  {% endif %}
+
+  {# === DADOS ESTIMADOS (Simulações vinculadas) === #}
+  {% if estimado_points %}
+  <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
+    <h2 class="font-bold text-[#0d141c] mb-1">
+      Margem Estimada × Simulações Salvas
+    </h2>
+    <p class="text-xs text-[#49739c] mb-4">
+      Cada ponto = 1 produto vinculado no simulador.
+      X = nº de simulações salvas · Y = margem estimada média (%)
+    </p>
+    <div class="relative" style="height: 300px;">
+      <canvas id="scatterEstimado"></canvas>
+    </div>
+  </div>
+
+  {# Tabela ranking estimado #}
+  <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-[#d0dbe7]">
+      <h2 class="font-bold text-[#0d141c]">Ranking Estimado por Margem</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-[#0d141c]">
+          <tr>
+            <th class="text-left px-4 py-3 font-semibold">#</th>
+            <th class="text-left px-4 py-3 font-semibold">SKU / Produto</th>
+            <th class="text-right px-4 py-3 font-semibold">Simulações</th>
+            <th class="text-right px-4 py-3 font-semibold">Margem Média %</th>
+            <th class="text-right px-4 py-3 font-semibold">Lucro Médio/un.</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#e7edf4]">
+          {% for p in estimado_points %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-[#49739c] font-mono text-xs">{{ loop.index }}</td>
+            <td class="px-4 py-3">
+              <div class="font-medium text-[#0d141c]">{{ p.product_name }}</div>
+              <div class="text-xs text-[#49739c] font-mono">{{ p.sku }}</div>
+            </td>
+            <td class="px-4 py-3 text-right">{{ p.sim_count }}</td>
+            <td class="px-4 py-3 text-right font-bold {% if p.avg_margin_pct >= 15 %}text-green-600{% elif p.avg_margin_pct >= 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
+              {{ "%.1f"|format(p.avg_margin_pct) }}%
+            </td>
+            <td class="px-4 py-3 text-right {% if p.avg_net_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+              R$ {{ "%.2f"|format(p.avg_net_profit) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Empty state total #}
+  {% if not real_points and not estimado_points %}
+  <div class="rounded-xl border border-dashed border-[#d0dbe7] bg-slate-50 p-10 text-center flex flex-col items-center gap-3 text-[#49739c]">
+    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#cbd5e1">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+    </svg>
+    <p class="font-semibold text-sm">Sem dados para exibir.</p>
+    <p class="text-xs max-w-sm">
+      Salve simulações vinculadas a produtos no
+      <a href="{{ url_for('pricing.calculator') }}" class="text-[#0d80f2] hover:underline">Simulador FBA</a>
+      ou sincronize vendas Amazon para ver o scatter.
+    </p>
+  </div>
+  {% endif %}
+
+</div>
+
+{# Chart.js #}
+{% if real_points or estimado_points %}
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce() }}">
+const SKU_CHART = {
+  real: {{ real_points | tojson }},
+  estimado: {{ estimado_points | tojson }},
+};
+</script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/sku_scatter.js') }}"></script>
+{% endif %}
+{% endblock %}
