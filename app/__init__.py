@@ -1,7 +1,7 @@
 # app/__init__.py
 import os
 import logging
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
@@ -134,6 +134,17 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     login_manager.login_message = "Por favor, faça login para acessar."
 
     # ---------------------------------------
+    # API Key — request_loader (X-API-Key header)
+    # ---------------------------------------
+    @login_manager.request_loader
+    def _load_user_from_api_key(req):
+        key = req.headers.get("X-API-Key", "").strip()
+        if not key:
+            return None
+        from app.models import User
+        return db.session.scalar(db.select(User).filter_by(api_key=key))
+
+    # ---------------------------------------
     # Fila assíncrona (RQ)
     # ---------------------------------------
     _init_rq(app)
@@ -178,6 +189,12 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     app.register_blueprint(settings_bp)
     app.register_blueprint(produtos_bp)
     app.register_blueprint(financeiro_bp)
+    # Rotas de desenvolvimento: importadas ANTES de register_blueprint para que
+    # os decoradores @amazon.post() sejam aplicados enquanto o blueprint ainda
+    # aceita novas rotas. Em produção as URLs /integrations/amazon/dev/* não existem.
+    if app.debug:
+        from app.integrations.amazon import routes_dev  # noqa: F401
+
     app.register_blueprint(amazon)
     app.register_blueprint(relatorios_bp)
 
@@ -202,6 +219,19 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return render_template("429.html", error=e), 429
+
+    # ---------------------------------------
+    # Demo flag — disponível em g.is_demo para templates e rotas
+    # ---------------------------------------
+    from app.commands import DEMO_EMAIL as _DEMO_EMAIL
+
+    @app.before_request
+    def _set_demo_flag() -> None:
+        from flask_login import current_user
+        g.is_demo = (
+            current_user.is_authenticated
+            and current_user.email == _DEMO_EMAIL
+        )
 
     # ---------------------------------------
     # CLI Commands

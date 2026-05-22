@@ -2,10 +2,12 @@
 import csv
 import io
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, make_response
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response
+from flask import stream_with_context
 from flask_login import login_required, current_user
 from app import db
 from app.models.product import Product, ProductHistory
+from app.services.comparativo import get_sku_comparison
 from .forms import ProductForm, CsvUploadForm
 
 logger = logging.getLogger(__name__)
@@ -26,30 +28,49 @@ def registrar_historico(produto, user, acao):
 
 COLUNAS_OBRIGATORIAS = {'name', 'sku', 'cost'}
 LIMITE_LINHAS = 1000
+_CSV_CHUNK = 500
+
+
+def _iter_produtos_csv(uid: int):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
+    yield buf.getvalue()
+    buf.seek(0)
+    buf.truncate()
+
+    offset = 0
+    while True:
+        batch = db.session.scalars(
+            db.select(Product)
+            .where(Product.user_id == uid)
+            .order_by(Product.name)
+            .limit(_CSV_CHUNK)
+            .offset(offset)
+        ).all()
+        if not batch:
+            break
+        for p in batch:
+            writer.writerow([
+                p.name, p.sku, p.asin or '',
+                p.cost, p.price, p.packaging_cost,
+                p.stock_quantity,
+                p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
+            ])
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate()
+        offset += _CSV_CHUNK
 
 
 @produtos_bp.route('/produtos/exportar-csv')
 @login_required
 def exportar_csv():
-    products = db.session.scalars(
-        db.select(Product).where(Product.user_id == current_user.id).order_by(Product.name)
-    ).all()
-
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
-    for p in products:
-        writer.writerow([
-            p.name, p.sku, p.asin or '',
-            p.cost, p.price, p.packaging_cost,
-            p.stock_quantity,
-            p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
-        ])
-
-    resp = make_response(buf.getvalue())
-    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    resp.headers['Content-Disposition'] = 'attachment; filename="produtos.csv"'
-    return resp
+    return Response(
+        stream_with_context(_iter_produtos_csv(current_user.id)),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename="produtos.csv"'},
+    )
 
 
 @produtos_bp.route('/produtos/importar-csv', methods=['POST'])
@@ -151,8 +172,9 @@ def criar_produto():
             sku=form.sku.data,
             price=form.price.data or 0.0,
             cost=form.cost.data,
-            packaging_cost=form.packaging_cost.data or 0.0,  # ✅ OK
+            packaging_cost=form.packaging_cost.data or 0.0,
             stock_quantity=form.stock_quantity.data,
+            min_stock=form.min_stock.data if form.min_stock.data is not None else 5,
             image_url=form.image_url.data,
             owner=current_user
         )
@@ -184,6 +206,7 @@ def editar_produto(product_id):
         product.cost = form.cost.data
         product.packaging_cost = form.packaging_cost.data or 0.0
         product.stock_quantity = form.stock_quantity.data
+        product.min_stock = form.min_stock.data if form.min_stock.data is not None else 5
         product.image_url = form.image_url.data
 
         registrar_historico(product, current_user, 'Alteração Manual')
@@ -199,6 +222,7 @@ def editar_produto(product_id):
         form.cost.data = product.cost
         form.packaging_cost.data = product.packaging_cost
         form.stock_quantity.data = product.stock_quantity
+        form.min_stock.data = product.min_stock
         form.image_url.data = product.image_url
 
     return render_template('produtos/editar.html', form=form, title="Editar Produto", product=product)
@@ -260,3 +284,16 @@ def historico_produto(product_id):
     }
 
     return render_template('produtos/historico.html', product=product, historico=historico, grafico=grafico, deltas=deltas)
+
+
+# --- COMPARATIVO: MARGEM ESTIMADA x REAL ---
+@produtos_bp.route('/produtos/<int:product_id>/comparativo')
+@login_required
+def comparativo_produto(product_id):
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        abort(403)
+
+    tax_rate = float(getattr(current_user, 'default_tax_rate', 0.0) or 0.0)
+    data = get_sku_comparison(current_user.id, product, tax_rate)
+    return render_template('produtos/comparativo.html', tax_rate=tax_rate, **data)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 class CustoFixoHistory(db.Model):
@@ -13,7 +13,7 @@ class CustoFixoHistory(db.Model):
     note = db.Column(db.Text, nullable=True)
 
     changed_by = db.Column(db.BigInteger, nullable=True, index=True)
-    changed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
+    changed_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
 
     def __repr__(self):
         return f"<CustoFixoHistory item_id={self.item_id} action={self.action}>"

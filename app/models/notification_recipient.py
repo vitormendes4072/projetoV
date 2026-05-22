@@ -1,5 +1,5 @@
 # app/models/notification_recipient.py
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 class NotificationRecipient(db.Model):
@@ -20,7 +20,7 @@ class NotificationRecipient(db.Model):
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
     )
 
     __table_args__ = (

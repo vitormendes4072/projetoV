@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto p-6">
@@ -6,7 +6,7 @@
     <div>
       <h1 class="text-2xl font-bold">Alertas por e-mail</h1>
       <p class="mt-1 text-slate-600">
-        Receba avisos quando um custo fixo estiver prÃ³ximo do vencimento e/ou no dia do vencimento.
+        Receba avisos quando um custo fixo estiver próximo do vencimento e/ou no dia do vencimento.
       </p>
     </div>
 
@@ -15,7 +15,7 @@
     </a>
   </div>
 
-  <!-- Card: ConfiguraÃ§Ã£o -->
+  <!-- Card: Configuração -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <form method="post" class="space-y-5">
       <input
@@ -52,11 +52,11 @@
               Antes do vencimento e no dia do vencimento
             </option>
             <option value="none" {{ "selected" if settings.alert_mode == "none" else "" }}>
-              NÃ£o enviar alertas
+              Não enviar alertas
             </option>
           </select>
           <p class="mt-1 text-xs text-slate-500">
-            Se escolher â€œNÃ£o enviarâ€, o sistema nÃ£o manda e-mail mesmo com â€œAtivoâ€.
+            Se escolher “Não enviar”, o sistema não manda e-mail mesmo com “Ativo”.
           </p>
         </div>
 
@@ -71,7 +71,7 @@
             value="{{ settings.days_before }}"
             class="mt-1 w-full border rounded-lg px-3 py-2"
           >
-          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em â€œAntes e no diaâ€).</p>
+          <p class="mt-1 text-xs text-slate-500">De 1 a 10 dias (usado apenas em “Antes e no dia”).</p>
         </div>
       </div>
 
@@ -83,13 +83,13 @@
     </form>
   </div>
 
-  <!-- Card: DestinatÃ¡rios -->
+  <!-- Card: Destinatários -->
   <div class="mt-6 bg-white border rounded-2xl p-5">
     <div class="flex items-start justify-between gap-4">
       <div>
-        <div class="text-lg font-semibold">DestinatÃ¡rios</div>
+        <div class="text-lg font-semibold">Destinatários</div>
         <p class="mt-1 text-sm text-slate-600">
-          Esses e-mails receberÃ£o os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
+          Esses e-mails receberão os alertas. Se nenhum estiver ativo, usamos o e-mail da conta.
         </p>
       </div>
     </div>
@@ -136,233 +136,27 @@
         {% endfor %}
       {% else %}
         <div class="text-sm text-slate-500">
-          Nenhum destinatÃ¡rio extra cadastrado. (Por padrÃ£o, envia para <b>{{ current_user.email }}</b>.)
+          Nenhum destinatário extra cadastrado. (Por padrão, envia para <b>{{ current_user.email }}</b>.)
         </div>
       {% endif %}
     </div>
   </div>
 
   <div class="mt-4 text-sm text-slate-500">
-    <p><b>Regras:</b> sÃ³ alertamos itens ativos, vigentes no mÃªs, com dia de pagamento e que ainda nÃ£o foram marcados como pagos.</p>
+    <p><b>Regras:</b> só alertamos itens ativos, vigentes no mês, com dia de pagamento e que ainda não foram marcados como pagos.</p>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script nonce="{{ csp_nonce() }}">
-  // =========================
-  // 1) Toggle enabled (auto-save) + UX do formulÃ¡rio
-  // =========================
-  (function () {
-    const toggle = document.getElementById("enabledToggle");
-    const enabledField = document.getElementById("enabledField");
-    const status = document.getElementById("enabledStatus");
-
-    const wrap = document.getElementById("controlsWrap");
-    const mode = document.getElementById("alert_mode");
-    const days = document.getElementById("days_before");
-    const saveBtn = document.getElementById("saveBtn");
-
-    function applyUI() {
-      const isOn = !!toggle.checked;
-
-      wrap.classList.toggle("opacity-60", !isOn);
-      wrap.classList.toggle("pointer-events-none", !isOn);
-
-      // select nÃ£o tem readonly
-      mode.disabled = !isOn;
-
-      // days: readonly mantÃ©m no POST, disabled nÃ£o.
-      const allowDays = isOn && mode.value === "before_and_due";
-      days.readOnly = !allowDays;
-
-      days.classList.toggle("bg-slate-100", !allowDays);
-      days.classList.toggle("opacity-60", !allowDays);
-
-      // se OFF, nÃ£o faz sentido salvar â€œmodo/diasâ€
-      saveBtn.disabled = !isOn;
-      saveBtn.classList.toggle("opacity-60", !isOn);
-      saveBtn.classList.toggle("cursor-not-allowed", !isOn);
-    }
-
-    async function saveEnabled(value) {
-      try {
-        toggle.disabled = true;
-        status.textContent = "Salvando...";
-
-        const fd = new FormData();
-        fd.append("enabled", value ? "on" : "off");
-
-        const res = await fetch("{{ url_for('financeiro.alertas_enabled') }}", {
-          method: "POST",
-          body: fd,
-          credentials: "same-origin",
-        });
-
-        if (!res.ok) throw new Error("HTTP " + res.status);
-
-        enabledField.value = value ? "on" : "off";
-        status.textContent = "Salvo âœ…";
-        setTimeout(() => (status.textContent = ""), 1200);
-      } catch (e) {
-        toggle.checked = !toggle.checked;
-        status.textContent = "Erro ao salvar. Tente novamente.";
-      } finally {
-        toggle.disabled = false;
-        applyUI();
-      }
-    }
-
-    toggle.addEventListener("change", () => {
-      applyUI();
-      saveEnabled(toggle.checked);
-    });
-
-    mode.addEventListener("change", applyUI);
-
-    applyUI();
-  })();
+  const ALERTAS_URLS = {
+    enabled: "{{ url_for('financeiro.alertas_enabled') }}",
+    addRecipient: "{{ url_for('financeiro.alertas_recipients_add') }}",
+    deleteRecipient: "{{ url_for('financeiro.alertas_recipients_delete', rid=0) }}",
+    toggleRecipient: "{{ url_for('financeiro.alertas_recipients_toggle', rid=0) }}",
+  };
+  const CURRENT_USER_EMAIL = {{ current_user.email | tojson }};
 </script>
-
-<script nonce="{{ csp_nonce() }}">
-  // =========================
-  // 2) DestinatÃ¡rios (add / toggle / remove)
-  // =========================
-  (function () {
-    const addBtn = document.getElementById("addRecipientBtn");
-    const emailInput = document.getElementById("newRecipientEmail");
-    const err = document.getElementById("recipientError");
-    const list = document.getElementById("recipientsList");
-
-    if (!addBtn || !emailInput || !err || !list) return;
-
-    function escapeHtml(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    function rowHtml(r) {
-      const email = escapeHtml(r.email);
-      return `
-        <div class="flex items-center justify-between border rounded-lg px-3 py-2" data-id="${r.id}">
-          <div class="text-sm">
-            <div class="font-medium">${email}</div>
-            <div class="text-xs text-slate-500">${r.enabled ? "Ativo" : "Inativo"}</div>
-          </div>
-          <div class="flex items-center gap-3">
-            <label class="inline-flex items-center gap-2 select-none">
-              <input class="recipientToggle w-5 h-5" type="checkbox" ${r.enabled ? "checked" : ""}>
-              <span class="text-sm">Ativo</span>
-            </label>
-            <button type="button" class="removeRecipient text-sm px-3 py-1 border rounded-lg">Remover</button>
-          </div>
-        </div>
-      `;
-    }
-
-    addBtn.addEventListener("click", async () => {
-      err.textContent = "";
-      const email = (emailInput.value || "").trim();
-
-      try {
-        const fd = new FormData();
-        fd.append("email", email);
-
-        const res = await fetch("{{ url_for('financeiro.alertas_recipients_add') }}", {
-          method: "POST",
-          body: fd,
-          credentials: "same-origin",
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.ok) throw new Error(data.error || "Erro ao adicionar.");
-
-        // Se jÃ¡ existe, sÃ³ marca ativo; se nÃ£o existe, cria
-        const existing = list.querySelector(`[data-id="${data.id}"]`);
-        if (existing) {
-          const chk = existing.querySelector(".recipientToggle");
-          if (chk) chk.checked = true;
-          const statusLine = existing.querySelector(".text-xs");
-          if (statusLine) statusLine.textContent = "Ativo";
-        } else {
-          // se list estava com texto "Nenhum destinatÃ¡rio...", substitui pelo primeiro item
-          if (list.children.length === 1 && list.firstElementChild && list.firstElementChild.classList.contains("text-slate-500")) {
-            list.innerHTML = "";
-          }
-          list.insertAdjacentHTML("afterbegin", rowHtml(data));
-        }
-
-        emailInput.value = "";
-      } catch (e) {
-        err.textContent = e.message || "Erro ao adicionar.";
-      }
-    });
-
-    list.addEventListener("click", async (ev) => {
-      const row = ev.target.closest("[data-id]");
-      if (!row) return;
-      const rid = row.getAttribute("data-id");
-
-      if (ev.target.classList.contains("removeRecipient")) {
-        try {
-          const url = `{{ url_for('financeiro.alertas_recipients_delete', rid=0) }}`.replace("/0", "/" + rid);
-
-          const res = await fetch(url, {
-            method: "DELETE",
-            credentials: "same-origin",
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.ok) throw new Error("Erro ao remover.");
-
-          row.remove();
-
-          // se ficou vazio, mostra fallback
-          if (list.children.length === 0) {
-            list.innerHTML = `<div class="text-sm text-slate-500">
-              Nenhum destinatÃ¡rio extra cadastrado. (Por padrÃ£o, envia para <b>{{ current_user.email }}</b>.)
-            </div>`;
-          }
-        } catch (e) {
-          err.textContent = "Erro ao remover.";
-        }
-      }
-    });
-
-    list.addEventListener("change", async (ev) => {
-      const row = ev.target.closest("[data-id]");
-      if (!row) return;
-      const rid = row.getAttribute("data-id");
-
-      if (ev.target.classList.contains("recipientToggle")) {
-        const enabled = ev.target.checked;
-        try {
-          const fd = new FormData();
-          fd.append("enabled", enabled ? "on" : "off");
-
-          const url = `{{ url_for('financeiro.alertas_recipients_toggle', rid=0) }}`.replace("/0/", "/" + rid + "/");
-
-          const res = await fetch(url, {
-            method: "POST",
-            body: fd,
-            credentials: "same-origin",
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.ok) throw new Error("Erro ao salvar.");
-
-          const statusLine = row.querySelector(".text-xs");
-          if (statusLine) statusLine.textContent = enabled ? "Ativo" : "Inativo";
-        } catch (e) {
-          ev.target.checked = !enabled;
-          err.textContent = "Erro ao salvar status.";
-        }
-      }
-    });
-  })();
-</script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/financeiro/alertas.js') }}"></script>
 {% endblock %}

@@ -20,7 +20,7 @@ def safe_url_for(endpoint: str, fallback: str = "#") -> str:
 def index():
     # Se já estiver logado, redireciona para a rota oficial do menu
     if current_user.is_authenticated:
-        return redirect(url_for("main.menu"))
+        return redirect(url_for("main.dashboard"))
 
     return render_template("landing.html")
 
@@ -133,6 +133,15 @@ def menu():
             "description": "Listar pedidos importados da Amazon e ver lucro por pedido.",
             "route": "/integrations/amazon/orders",
             "color": "primary",
+            "enabled": True,
+        },
+
+        {
+            "id": "sku_scatter",
+            "title": "Gráfico Margem por SKU",
+            "description": "Scatter plot de margem real × volume de pedidos por SKU.",
+            "route": safe_url_for("relatorios.sku_scatter", fallback="/relatorios/sku"),
+            "color": "success",
             "enabled": True,
         },
 

@@ -1,29 +1,25 @@
 import csv
 import io
 import logging
-from datetime import timedelta
+from datetime import timedelta, timezone
 
-from flask import jsonify, make_response
+from flask import Response, jsonify, render_template, request, stream_with_context
 from flask_login import login_required, current_user
 
 from app import db
 from app.models import AmazonConnection, AmazonOrder
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.integrations.amazon import amazon
-from app.integrations.amazon.utils import user_key, utcnow, iso_z
+from app.integrations.amazon.utils import user_key, utcnow, iso_z, SP_TZ
 from app.integrations.amazon.service import sync_financial_events
 from app.integrations.amazon.profit_service import compute_order_profit, compute_order_item_breakdown
 
 logger = logging.getLogger(__name__)
 
-from app.integrations.amazon.utils import SP_TZ
-
 
 @amazon.get("/orders")
 @login_required
 def orders_page():
-    from flask import render_template, request
-
     page   = request.args.get("page", 1, type=int)
     q      = request.args.get("q", "").strip()
     status = request.args.get("status", "").strip()
@@ -50,32 +46,51 @@ def orders_page():
     )
 
 
-@amazon.get("/orders/exportar-csv")
-@login_required
-def exportar_orders_csv():
-    orders = db.session.scalars(
-        db.select(AmazonOrder)
-        .filter_by(user_id=user_key())
-        .order_by(AmazonOrder.purchase_date.desc().nullslast())
-    ).all()
+_CSV_CHUNK = 500
 
+
+def _iter_orders_csv(uid: int):
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(['order_id', 'status', 'data_compra', 'total', 'moeda', 'qtd_itens'])
-    for o in orders:
-        writer.writerow([
-            o.amazon_order_id,
-            o.order_status or '',
-            o.purchase_date.strftime('%Y-%m-%d') if o.purchase_date else '',
-            o.order_total_amount or '',
-            o.currency or '',
-            o.num_items_shipped or '',
-        ])
+    yield buf.getvalue()
+    buf.seek(0)
+    buf.truncate()
 
-    resp = make_response(buf.getvalue())
-    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    resp.headers['Content-Disposition'] = 'attachment; filename="pedidos_amazon.csv"'
-    return resp
+    offset = 0
+    while True:
+        batch = db.session.scalars(
+            db.select(AmazonOrder)
+            .filter_by(user_id=uid)
+            .order_by(AmazonOrder.purchase_date.desc().nullslast())
+            .limit(_CSV_CHUNK)
+            .offset(offset)
+        ).all()
+        if not batch:
+            break
+        for o in batch:
+            writer.writerow([
+                o.amazon_order_id,
+                o.order_status or '',
+                o.purchase_date.strftime('%Y-%m-%d') if o.purchase_date else '',
+                o.order_total_amount or '',
+                o.currency or '',
+                o.num_items_shipped or '',
+            ])
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate()
+        offset += _CSV_CHUNK
+
+
+@amazon.get("/orders/exportar-csv")
+@login_required
+def exportar_orders_csv():
+    return Response(
+        stream_with_context(_iter_orders_csv(user_key())),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename="pedidos_amazon.csv"'},
+    )
 
 
 @amazon.get("/profit/order/<amazon_order_id>")
@@ -97,7 +112,6 @@ def profit_order(amazon_order_id: str):
 
     start = utcnow() - timedelta(days=7)
     if order and order.purchase_date:
-        from datetime import timezone
         purchase_utc = order.purchase_date.astimezone(timezone.utc)
         start = purchase_utc - timedelta(days=5)
 

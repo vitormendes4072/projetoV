@@ -1,15 +1,15 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <div class="flex flex-col gap-6 py-4 relative">
     
-    <!-- CabeÃ§alho -->
+    <!-- Cabeçalho -->
     <div class="flex items-center gap-4">
         <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
         </a>
         <div>
-            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">ConfiguraÃ§Ãµes</h1>
+            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Configurações</h1>
         </div>
     </div>
 
@@ -29,7 +29,7 @@
             </div>
         </div>
 
-        <!-- Ãrea Principal -->
+        <!-- Área Principal -->
         <div class="lg:col-span-2 space-y-6">
             
             <!-- CARD 1: DADOS PESSOAIS -->
@@ -59,7 +59,7 @@
 
                     <div class="pt-4 border-t border-slate-100 flex justify-end">
                         <button type="button" onclick="openModal()" class="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-6 hover:bg-blue-600 transition-colors">
-                            Salvar AlteraÃ§Ãµes
+                            Salvar Alterações
                         </button>
                     </div>
 
@@ -70,10 +70,10 @@
                                 <div class="p-2 bg-red-100 rounded-full text-red-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-[#0d141c]">ConfirmaÃ§Ã£o de SeguranÃ§a</h3>
+                                <h3 class="text-lg font-bold text-[#0d141c]">Confirmação de Segurança</h3>
                             </div>
                             <div class="p-6 flex flex-col gap-4">
-                                <p class="text-sm text-slate-600">Confirme sua senha atual para salvar as alteraÃ§Ãµes.</p>
+                                <p class="text-sm text-slate-600">Confirme sua senha atual para salvar as alterações.</p>
                                 <label class="flex flex-col gap-1">
                                     <span class="text-sm font-medium text-[#0d141c]">Sua senha atual</span>
                                     {{ form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-red-500 h-12 px-4", placeholder="Digite para confirmar", id="current_password") }}
@@ -91,11 +91,11 @@
                 </form>
             </div>
 
-            <!-- CARD 2: CONFIGURAÃ‡ÃƒO FISCAL -->
+            <!-- CARD 2: CONFIGURAÇÃO FISCAL -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
                 <h2 class="text-xl font-bold text-[#0d141c] mb-6 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-[#0d80f2]"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    ConfiguraÃ§Ã£o Fiscal
+                    Configuração Fiscal
                 </h2>
                 
                 <form method="POST" class="flex flex-col gap-5">
@@ -103,14 +103,14 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <label class="flex flex-col gap-1">
-                            <span class="text-sm font-medium text-[#0d141c]">Regime TributÃ¡rio</span>
+                            <span class="text-sm font-medium text-[#0d141c]">Regime Tributário</span>
                             {{ business_form.tax_regime(class_="form-select w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", id="tax_regime") }}
                         </label>
 
                         <label class="flex flex-col gap-1">
-                            <span class="text-sm font-medium text-[#0d141c]">AlÃ­quota PadrÃ£o (%)</span>
+                            <span class="text-sm font-medium text-[#0d141c]">Alíquota Padrão (%)</span>
                             {{ business_form.default_tax_rate(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", placeholder="Ex: 6.0", id="default_tax_rate") }}
-                            <span class="text-xs text-slate-400">Este valor serÃ¡ usado automaticamente na calculadora.</span>
+                            <span class="text-xs text-slate-400">Este valor será usado automaticamente na calculadora.</span>
                         </label>
                     </div>
 
@@ -120,7 +120,7 @@
                 </form>
             </div>
 
-            <!-- CARD 3: ALTERAÃ‡ÃƒO DE SENHA -->
+            <!-- CARD 3: ALTERAÇÃO DE SENHA -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
                 <h2 class="text-xl font-bold text-[#0d141c] mb-6">Alterar Senha</h2>
                 
@@ -181,13 +181,13 @@
                 </form>
             </div>
 
-            <!-- CARD 4: INTEGRAÃ‡ÃƒO AMAZON (SP-API) -->
+            <!-- CARD 4: INTEGRAÇÃO AMAZON (SP-API) -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
                 <h2 class="text-xl font-bold text-[#0d141c] mb-2 flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-[#0d80f2]">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/>
                     </svg>
-                    IntegraÃ§Ã£o Amazon (SP-API)
+                    Integração Amazon (SP-API)
                 </h2>
 
                 <p class="text-sm text-[#49739c] mb-6">
@@ -202,14 +202,14 @@
                             <span id="amz_status" class="text-slate-600">Carregando...</span>
                         </div>
                         <div class="text-sm">
-                            <span class="font-bold text-slate-800">Ãšltima sync:</span>
-                            <span id="amz_last_sync" class="text-slate-600">â€”</span>
+                            <span class="font-bold text-slate-800">Última sync:</span>
+                            <span id="amz_last_sync" class="text-slate-600">—</span>
                         </div>
                     </div>
                     <div id="amz_status_hint" class="text-xs text-slate-500"></div>
                 </div>
 
-                <!-- Form Amazon (nÃ£o Ã© WTForms; Ã© via fetch) -->
+                <!-- Form Amazon (não é WTForms; é via fetch) -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <label class="flex flex-col gap-1">
                         <span class="text-sm font-medium text-[#0d141c]">Marketplace ID</span>
@@ -278,7 +278,8 @@
                 </div>
 
                 <div class="pt-6 mt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3 justify-end">
-                    <!-- BOTÃƒO DEV -->
+                    {% if config.DEBUG %}
+                    <!-- Botões DEV — só renderizados quando app.debug=True -->
                     <button type="button" id="btn_amz_mock"
                             class="rounded-lg border border-orange-200 bg-orange-50 text-orange-700 font-bold h-10 px-6 hover:bg-orange-100 transition-colors">
                         Inserir Mock Finance (DEV)
@@ -288,6 +289,7 @@
                         class="rounded-lg border border-orange-200 bg-orange-50 text-orange-700 font-bold h-10 px-6 hover:bg-orange-100 transition-colors">
                         Criar Produtos Mock (DEV)
                     </button>
+                    {% endif %}
 
 
                     <button type="button" id="btn_amz_save"
@@ -332,391 +334,62 @@
         </div>
     </div>
 
+    <!-- ================= API KEY ================= -->
+    <div class="bg-white rounded-2xl shadow-sm border border-[#e8edf2] p-6 mt-6">
+        <h3 class="text-base font-bold text-slate-800 mb-1">API Key</h3>
+        <p class="text-sm text-slate-500 mb-4">
+            Use esta chave no header <code class="bg-slate-100 px-1 rounded">X-API-Key</code> para autenticar chamadas à
+            <a href="/api/docs" target="_blank" class="text-blue-500 hover:underline">API REST</a>.
+        </p>
+
+        <div class="flex items-center gap-3">
+            <div class="relative flex-1 max-w-lg">
+                <input id="apiKeyField" type="password" readonly
+                       value="{{ current_user.api_key or '' }}"
+                       placeholder="{{ 'Nenhuma chave gerada' if not current_user.api_key else '' }}"
+                       class="w-full rounded-lg border border-[#d0dbe7] bg-slate-50 px-4 py-2.5 text-sm font-mono text-slate-700 pr-10 focus:outline-none">
+                <button type="button" id="btnToggleKey" title="Mostrar/ocultar"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </button>
+            </div>
+
+            {% if not g.is_demo %}
+            <button type="button" id="btnRegenKey"
+                    class="rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-5 hover:bg-blue-600 transition-colors text-sm">
+                {{ 'Gerar chave' if not current_user.api_key else 'Regenerar' }}
+            </button>
+            {% if current_user.api_key %}
+            <button type="button" id="btnCopyKey" title="Copiar"
+                    class="rounded-lg border border-[#d0dbe7] bg-white text-slate-700 font-bold h-10 px-4 hover:bg-slate-50 transition-colors text-sm">
+                Copiar
+            </button>
+            {% endif %}
+            {% else %}
+            <span class="text-xs text-amber-600 font-medium">Desabilitado na conta demo</span>
+            {% endif %}
+        </div>
+
+        <p id="apiKeyMsg" class="mt-2 text-xs text-slate-500 hidden"></p>
+    </div>
+
 </div>
 
 <script nonce="{{ csp_nonce() }}">
-    // --- 1. RESTAURAÃ‡ÃƒO DE SENHAS (Bypass de SeguranÃ§a) ---
-    document.addEventListener("DOMContentLoaded", function() {
-        const serverNewPass = {{ (password_form.new_password.data or '') | tojson }};
-        const serverConfirmPass = {{ (password_form.confirm_password.data or '') | tojson }};
-
-        if (serverNewPass) {
-            const newInput = document.getElementById('new_pass_input');
-            if (newInput) newInput.value = serverNewPass;
-        }
-        if (serverConfirmPass) {
-            const confirmInput = document.getElementById('confirm_pass_input');
-            if (confirmInput) confirmInput.value = serverConfirmPass;
-        }
-    });
-
-    // --- 2. SUGESTÃƒO DE ALÃQUOTAS COM TOAST (ATUALIZADO) ---
-    const regimeSelect = document.getElementById('tax_regime');
-    const taxInput = document.getElementById('default_tax_rate');
-
-    function showToast(msg) {
-        const toast = document.getElementById('toast');
-        const msgEl = document.getElementById('toast-message');
-        msgEl.innerText = msg;
-
-        toast.classList.remove('hidden');
-        setTimeout(() => {
-            toast.classList.remove('translate-x-full', 'opacity-0');
-        }, 10);
-
-        setTimeout(closeToast, 8000);
-    }
-
-    function closeToast() {
-        const toast = document.getElementById('toast');
-        toast.classList.add('translate-x-full', 'opacity-0');
-        setTimeout(() => {
-            toast.classList.add('hidden');
-        }, 500);
-    }
-
-    if (regimeSelect && taxInput) {
-        regimeSelect.addEventListener('change', function() {
-            const regime = this.value;
-            let sugestao = "";
-
-            if (regime === 'mei') {
-                taxInput.value = 0.0;
-                sugestao = "Para MEI, a alÃ­quota sobre venda Ã© 0% (vocÃª paga apenas o DAS fixo mensal). Ajustamos para zero automaticamente.";
-            } else if (regime === 'simples') {
-                sugestao = "O Simples Nacional comeÃ§a em 4.0% para ComÃ©rcio (Anexo I). Verifique em qual faixa de faturamento sua empresa estÃ¡.";
-            } else if (regime === 'presumido') {
-                taxInput.value = 5.93;
-                sugestao = "Definimos 5.93% (Federais). Lembre-se de somar o ICMS do seu estado (ex: 18%) neste campo para o cÃ¡lculo ficar correto.";
-            } else if (regime === 'real') {
-                taxInput.value = 9.25;
-                sugestao = "Definimos 9.25% (PIS/COFINS). NÃ£o se esqueÃ§a de adicionar o ICMS no valor total.";
-            }
-
-            if (sugestao) showToast(sugestao);
-        });
-    }
-
-    // --- 3. LÃ“GICA DOS MODAIS (Mantida) ---
-    const profileModal = document.getElementById('securityModal');
-    const profilePassInput = document.getElementById('current_password');
-
-    function openModal() {
-        profileModal.classList.remove('hidden');
-        profileModal.classList.add('flex');
-        setTimeout(() => { if(profilePassInput) profilePassInput.focus(); }, 100);
-    }
-    function closeModal() {
-        profileModal.classList.add('hidden');
-        profileModal.classList.remove('flex');
-        if(profilePassInput) profilePassInput.value = '';
-    }
-
-    const passModal = document.getElementById('passwordModal');
-    const passInput = document.getElementById('modal_current_password');
-    const newPassInput = document.getElementById('new_pass_input');
-    const confirmPassInput = document.getElementById('confirm_pass_input');
-    const errorNew = document.getElementById('js_error_new');
-    const errorConfirm = document.getElementById('js_error_confirm');
-
-    function forceOpenPasswordModal() {
-        passModal.classList.remove('hidden');
-        passModal.classList.add('flex');
-        setTimeout(() => { if(passInput) passInput.focus(); }, 100);
-    }
-
-    function validateAndOpenPasswordModal() {
-        errorNew.classList.add('hidden');
-        errorConfirm.classList.add('hidden');
-        newPassInput.classList.remove('border-red-500');
-        confirmPassInput.classList.remove('border-red-500');
-
-        let isValid = true;
-        const newPass = newPassInput.value;
-        const confirmPass = confirmPassInput.value;
-
-        if (newPass.length < 8) {
-            errorNew.innerText = "A senha deve ter pelo menos 8 caracteres.";
-            errorNew.classList.remove('hidden');
-            newPassInput.classList.add('border-red-500');
-            isValid = false;
-        }
-        if (newPass !== confirmPass) {
-            errorConfirm.innerText = "As senhas nÃ£o conferem.";
-            errorConfirm.classList.remove('hidden');
-            confirmPassInput.classList.add('border-red-500');
-            isValid = false;
-        }
-
-        if (!isValid) return;
-        forceOpenPasswordModal();
-    }
-
-    function closePasswordModal() {
-        passModal.classList.add('hidden');
-        passModal.classList.remove('flex');
-        if(passInput) passInput.value = '';
-    }
-
-    window.onclick = function(event) {
-        if (event.target == profileModal) closeModal();
-        if (event.target == passModal) closePasswordModal();
-    }
-
-    {% if form.current_password.errors %}
-        openModal();
-    {% endif %}
-
-    {% if password_form.current_password.errors %}
-        forceOpenPasswordModal();
-    {% endif %}
-
-    // ================= AMAZON SP-API (IntegraÃ§Ã£o) =================
-
-    async function amzFetchJSON(url, options = {}) {
-        const res = await fetch(url, {
-            headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
-            ...options
-        });
-
-        let body = null;
-        try { body = await res.json(); } catch (e) {}
-
-        if (!res.ok) {
-            const msg = (body && body.error) ? body.error : `Erro ${res.status}`;
-            throw new Error(msg);
-        }
-        return body;
-    }
-
-    function setAmzResult(msg, type="info") {
-        const el = document.getElementById("amz_result");
-        if (!el) return;
-
-        const base = "rounded-lg border p-3";
-        if (type === "success") el.className = base + " border-green-200 bg-green-50 text-green-800";
-        else if (type === "error") el.className = base + " border-red-200 bg-red-50 text-red-800";
-        else el.className = base + " border-slate-200 bg-slate-50 text-slate-700";
-
-        el.textContent = msg;
-    }
-
-    async function loadAmazonStatus() {
-        try {
-            const data = await amzFetchJSON("/integrations/amazon/status", { method: "GET" });
-
-            const statusEl = document.getElementById("amz_status");
-            const lastSyncEl = document.getElementById("amz_last_sync");
-            const hintEl = document.getElementById("amz_status_hint");
-
-            if (!data.connected) {
-                statusEl.textContent = "NÃ£o conectado";
-                statusEl.className = "text-red-600 font-bold";
-                lastSyncEl.textContent = "â€”";
-                hintEl.textContent = "Preencha as credenciais e clique em Salvar.";
-                return;
-            }
-
-            statusEl.textContent = "Conectado";
-            statusEl.className = "text-green-700 font-bold";
-            lastSyncEl.textContent = data.last_sync_at ? data.last_sync_at : "â€”";
-            hintEl.textContent = `Marketplace: ${data.marketplace_id || "â€”"}`;
-        } catch (e) {
-            const statusEl = document.getElementById("amz_status");
-            if (statusEl) {
-                statusEl.textContent = "Erro ao carregar status";
-                statusEl.className = "text-red-600 font-bold";
-            }
-        }
-    }
-
-    function getAmazonPayload() {
-        return {
-            marketplace_id: document.getElementById("amz_marketplace_id")?.value?.trim(),
-            seller_id: document.getElementById("amz_seller_id")?.value?.trim() || null,
-
-            lwa_client_id: document.getElementById("amz_lwa_client_id")?.value?.trim(),
-            lwa_client_secret: document.getElementById("amz_lwa_client_secret")?.value,
-            lwa_refresh_token: document.getElementById("amz_lwa_refresh_token")?.value,
-
-            aws_access_key_id: document.getElementById("amz_aws_access_key_id")?.value?.trim(),
-            aws_secret_access_key: document.getElementById("amz_aws_secret_access_key")?.value,
-            aws_region: document.getElementById("amz_aws_region")?.value?.trim() || "us-east-1",
-            role_arn: document.getElementById("amz_role_arn")?.value?.trim() || null,
-        };
-    }
-
-    async function onAmazonSave() {
-        try {
-            setAmzResult("Salvando credenciais...", "info");
-            const payload = getAmazonPayload();
-            await amzFetchJSON("/integrations/amazon/connect", {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-            setAmzResult("Credenciais salvas com sucesso.", "success");
-            await loadAmazonStatus();
-        } catch (e) {
-            setAmzResult(`Falha ao salvar: ${e.message}`, "error");
-        }
-    }
-
-    async function onAmazonTest() {
-        try {
-            setAmzResult("Testando conexÃ£o (Ãºltimos 2 dias)...", "info");
-            const data = await amzFetchJSON("/integrations/amazon/test", { method: "POST" });
-            setAmzResult(`ConexÃ£o OK. Pedidos encontrados: ${data.orders_found}`, "success");
-        } catch (e) {
-            setAmzResult(`Falha no teste: ${e.message}`, "error");
-        }
-    }
-
-    /**
-     * Polling de um job RQ até conclusão ou timeout.
-     * Atualiza setAmzResult a cada tick e resolve/rejeita ao final.
-     *
-     * @param {string} jobId   - ID retornado pelo endpoint que enfileirou o job
-     * @param {number} maxWaitMs - timeout total em ms (default: 5 min)
-     * @param {number} intervalMs - intervalo entre polls em ms (default: 2 s)
-     * @returns {Promise<object>} - result do job quando finished
-     */
-    async function pollJob(jobId, maxWaitMs = 300_000, intervalMs = 2_000) {
-        const deadline = Date.now() + maxWaitMs;
-        let tick = 0;
-
-        while (Date.now() < deadline) {
-            await new Promise(r => setTimeout(r, intervalMs));
-            tick++;
-
-            const res = await fetch(
-                `/integrations/amazon/jobs/${encodeURIComponent(jobId)}`,
-                { headers: { "X-CSRFToken": csrfToken } }
-            );
-            const data = await res.json();
-
-            if (!res.ok || !data.ok) {
-                throw new Error(data.error || `Erro ao verificar job (HTTP ${res.status})`);
-            }
-
-            const status = data.status;
-
-            if (status === "queued" || status === "scheduled") {
-                setAmzResult(`Na fila… aguardando worker (${tick * intervalMs / 1000}s)`, "info");
-
-            } else if (status === "started") {
-                setAmzResult(`Sincronizando com a Amazon… (${tick * intervalMs / 1000}s)`, "info");
-
-            } else if (status === "finished") {
-                return data.result || {};
-
-            } else if (status === "failed") {
-                throw new Error(data.error || "O job falhou sem mensagem de erro.");
-
-            } else {
-                setAmzResult(`Status desconhecido: ${status}`, "info");
-            }
-        }
-
-        throw new Error(
-            "Timeout: o sync está demorando mais que 5 minutos. " +
-            "Verifique se o worker RQ está em execução."
-        );
-    }
-
-    async function onAmazonSync() {
-        try {
-            setAmzResult("Enfileirando sync completo (30 dias)…", "info");
-
-            const queued = await amzFetchJSON("/integrations/amazon/sync_full?days=30", { method: "POST" });
-
-            if (!queued.job_id) {
-                throw new Error(queued.error || "Resposta inesperada: sem job_id");
-            }
-
-            setAmzResult(`Job enfileirado (${queued.job_id.slice(0, 8)}…). Aguardando worker…`, "info");
-
-            const result = await pollJob(queued.job_id);
-
-            setAmzResult(
-                `Sync concluído. ` +
-                `Pedidos: ${result.orders ?? "?"} | ` +
-                `Itens: ${result.items ?? "?"} | ` +
-                `Eventos financeiros: ${result.financial_events ?? "?"}`,
-                "success"
-            );
-            await loadAmazonStatus();
-
-        } catch (e) {
-            setAmzResult(`Falha na sync: ${e.message}`, "error");
-        }
-    }
-
-    async function onAmazonMock() {
-        try {
-            const orderId = prompt("Digite o AmazonOrderId para inserir o mock:", "702-1234567-1234567");
-            if (!orderId) return;
-
-            setAmzResult("Inserindo mock de eventos financeiros (DEV)...", "info");
-
-            const res = await fetch(`/integrations/amazon/dev/mock_finances?order_id=${encodeURIComponent(orderId)}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" }
-            });
-
-            const text = await res.text();
-            if (!res.ok) {
-                throw new Error(text);
-            }
-
-            let data = null;
-            try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
-
-            setAmzResult(`Mock inserido com sucesso. inserted=${data.inserted || "?"}`, "success");
-        } catch (e) {
-            setAmzResult(`Falha ao inserir mock: ${e.message}`, "error");
-        }
-    }
-
-    async function onAmazonMockProducts() {
-        try {
-            setAmzResult("Criando produtos mock (DEV)...", "info");
-
-            const res = await fetch("/integrations/amazon/dev/mock_products", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}) // usa defaults (SKU-TESTE-001/002)
-            });
-
-            const text = await res.text();
-            if (!res.ok) throw new Error(text);
-
-            let data = null;
-            try { data = JSON.parse(text); } catch { data = { raw: text }; }
-
-            setAmzResult(`Produtos mock criados/atualizados. upserted=${data.upserted || "?"}`, "success");
-        } catch (e) {
-            setAmzResult(`Falha ao criar produtos mock: ${e.message}`, "error");
-        }
-        }
-
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const btnSave = document.getElementById("btn_amz_save");
-        const btnTest = document.getElementById("btn_amz_test");
-        const btnSync = document.getElementById("btn_amz_sync");
-        const btnMock = document.getElementById("btn_amz_mock");
-
-        if (btnSave) btnSave.addEventListener("click", onAmazonSave);
-        if (btnTest) btnTest.addEventListener("click", onAmazonTest);
-        if (btnSync) btnSync.addEventListener("click", onAmazonSync);
-        if (btnMock) btnMock.addEventListener("click", onAmazonMock);
-
-        const btnMockProducts = document.getElementById("btn_amz_mock_products");
-        if (btnMockProducts) btnMockProducts.addEventListener("click", onAmazonMockProducts);
-
-
-        loadAmazonStatus();
-    });
+  const SETTINGS_INIT = {
+    serverNewPass: {{ (password_form.new_password.data or '') | tojson }},
+    serverConfirmPass: {{ (password_form.confirm_password.data or '') | tojson }},
+    openProfileModal: {{ (form.current_password.errors | length > 0) | tojson }},
+    openPasswordModal: {{ (password_form.current_password.errors | length > 0) | tojson }},
+    regenApiKeyUrl: {{ url_for('settings.regenerate_api_key') | tojson }},
+    hasApiKey: {{ (current_user.api_key is not none and current_user.api_key != '') | tojson }},
+  };
 </script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/settings.js') }}"></script>
 
 {% endblock %}

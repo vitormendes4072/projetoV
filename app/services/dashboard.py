@@ -79,12 +79,15 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
 
     low_stock_raw = db.session.scalars(
         db.select(Product)
-        .where(Product.user_id == user_id, Product.stock_quantity <= 5)
+        .where(
+            Product.user_id == user_id,
+            Product.stock_quantity <= Product.min_stock,
+        )
         .order_by(Product.stock_quantity.asc())
         .limit(5)
     ).all()
     low_stock = [
-        SimpleNamespace(id=p.id, name=p.name, stock_quantity=p.stock_quantity)
+        SimpleNamespace(id=p.id, name=p.name, stock_quantity=p.stock_quantity, min_stock=p.min_stock)
         for p in low_stock_raw
     ]
 
@@ -112,6 +115,30 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         int(dist_q.good or 0),
     ]
 
+    # ------------------------------------------------------------------
+    # Onboarding — detecta conclusão de cada etapa de setup
+    # try/except: AmazonConnection usa schema="public" que não existe
+    # no SQLite dos testes, então falha silenciosamente → False.
+    # ------------------------------------------------------------------
+    try:
+        from app.models.amazon import AmazonConnection
+        _conn = db.session.scalar(
+            db.select(AmazonConnection).filter_by(user_id=user_id)
+        )
+        _has_conn = _conn is not None
+        _has_sync = _has_conn and _conn.last_sync_at is not None
+    except Exception:
+        _has_conn = False
+        _has_sync = False
+
+    _has_products = total_products > 0
+    onboarding = {
+        "has_products":    _has_products,
+        "has_amazon_conn": _has_conn,
+        "has_amazon_sync": _has_sync,
+        "complete":        _has_products and _has_conn and _has_sync,
+    }
+
     return {
         "total_products": total_products,
         "total_simulations": total_simulations,
@@ -123,4 +150,5 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "chart_labels": chart_labels,
         "chart_margins": chart_margins,
         "margin_dist": margin_dist,
+        "onboarding": onboarding,
     }

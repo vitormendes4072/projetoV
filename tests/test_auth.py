@@ -39,7 +39,7 @@ def test_login_ok(client, db):
     make_user(db, email="ok@test.com", password="senha123")
     r = login(client, "ok@test.com", "senha123")
     assert r.status_code == 200
-    assert r.request.path == "/menu"
+    assert r.request.path == "/dashboard"
 
 
 def test_login_wrong_password(client, db):

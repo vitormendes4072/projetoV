@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto py-8 flex flex-col gap-6">
+
+    {# Cabeçalho #}
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('produtos.editar_produto', product_id=product.id) }}"
+           class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+        </a>
+        <div>
+            <h1 class="text-[#0d141c] text-2xl font-bold">Margem Real vs. Estimada</h1>
+            <p class="text-slate-500 text-sm">
+                Produto: <span class="font-bold text-[#0d141c]">{{ product.name }}</span> ({{ product.sku }})
+            </p>
+        </div>
+    </div>
+
+    {# Banner de DELTA — só aparece quando há os dois lados #}
+    {% if estimado and real %}
+    {% set margin_better = delta_margin >= 0 %}
+    <div class="rounded-xl border p-5 {% if margin_better %}border-emerald-200 bg-emerald-50{% else %}border-red-200 bg-red-50{% endif %}">
+        <div class="flex flex-wrap items-center gap-x-8 gap-y-3">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide {% if margin_better %}text-emerald-700{% else %}text-red-700{% endif %}">
+                    Diferença de Margem
+                </p>
+                <p class="text-3xl font-black {% if margin_better %}text-emerald-700{% else %}text-red-700{% endif %}">
+                    {{ "%+.1f"|format(delta_margin) }} pp
+                </p>
+            </div>
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide {% if delta_net_unit >= 0 %}text-emerald-700{% else %}text-red-700{% endif %}">
+                    Lucro por Unidade
+                </p>
+                <p class="text-3xl font-black {% if delta_net_unit >= 0 %}text-emerald-700{% else %}text-red-700{% endif %}">
+                    R$ {{ "%+.2f"|format(delta_net_unit) }}
+                </p>
+            </div>
+            <p class="text-sm {% if margin_better %}text-emerald-800{% else %}text-red-800{% endif %} flex-1 min-w-[240px]">
+                {% if margin_better %}
+                    Suas vendas reais na Amazon estão <strong>acima</strong> do que você estimou no simulador.
+                {% else %}
+                    Suas vendas reais na Amazon estão <strong>abaixo</strong> do estimado — revise tarifas, impostos ou custo na simulação.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Duas colunas: Estimado x Real #}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {# ----- ESTIMADO ----- #}
+        <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-[#d0dbe7] bg-slate-50">
+                <h2 class="font-bold text-[#0d141c] flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#0d80f2]"></span>
+                    Estimado (Simulação)
+                </h2>
+            </div>
+            {% if estimado %}
+            <div class="p-6 flex flex-col gap-4">
+                <div class="text-center">
+                    <p class="text-xs text-slate-500 uppercase font-bold">Margem Estimada</p>
+                    <p class="text-4xl font-black {% if estimado.margin_pct >= 0 %}text-[#0d80f2]{% else %}text-red-600{% endif %}">
+                        {{ "%.1f"|format(estimado.margin_pct) }}%
+                    </p>
+                </div>
+                <ul class="flex flex-col gap-2 text-sm">
+                    <li class="flex justify-between"><span class="text-slate-600">Preço de venda</span><span class="font-medium">R$ {{ "%.2f"|format(estimado.price) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Custo do produto</span><span class="font-medium">R$ {{ "%.2f"|format(estimado.cost) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Lucro líquido / un.</span><span class="font-bold {% if estimado.net_profit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">R$ {{ "%.2f"|format(estimado.net_profit) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">ROI</span><span class="font-medium">{{ "%.0f"|format(estimado.roi_pct) }}%</span></li>
+                </ul>
+                <p class="text-xs text-slate-400 border-t border-slate-100 pt-3">
+                    Simulação "{{ estimado.title }}" — salva em {{ estimado.created_at.strftime('%d/%m/%Y %H:%M') }}
+                </p>
+                <a href="{{ url_for('pricing.calculator', price=product.price, cost=product.cost, product_id=product.id) }}"
+                   class="text-sm text-[#0d80f2] hover:underline font-semibold">Refazer simulação →</a>
+            </div>
+            {% else %}
+            <div class="p-8 flex flex-col items-center text-center gap-3 text-slate-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#cbd5e1"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V18zm2.498-6.75h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V13.5zm0 2.25h.007v.008h-.007v-.008zm0 2.25h.007v.008h-.007V18zm2.504-6.75h.008v.008h-.008v-.008zm0 2.25h.008v.008h-.008V13.5zM8.25 6h7.5a2.25 2.25 0 012.25 2.25v12a2.25 2.25 0 01-2.25 2.25H8.25A2.25 2.25 0 016 20.25V8.25A2.25 2.25 0 018.25 6z" /></svg>
+                <p class="text-sm">Nenhuma simulação vinculada a este produto.</p>
+                <a href="{{ url_for('pricing.calculator', price=product.price, cost=product.cost, product_id=product.id) }}"
+                   class="text-sm text-[#0d80f2] hover:underline font-semibold">Simular e vincular agora →</a>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ----- REAL ----- #}
+        <div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-[#d0dbe7] bg-slate-50">
+                <h2 class="font-bold text-[#0d141c] flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    Real (Vendas Amazon)
+                </h2>
+            </div>
+            {% if real %}
+            <div class="p-6 flex flex-col gap-4">
+                <div class="text-center">
+                    <p class="text-xs text-slate-500 uppercase font-bold">Margem Real</p>
+                    <p class="text-4xl font-black {% if real.margin_pct >= 0 %}text-emerald-600{% else %}text-red-600{% endif %}">
+                        {{ "%.1f"|format(real.margin_pct) }}%
+                    </p>
+                </div>
+                <ul class="flex flex-col gap-2 text-sm">
+                    <li class="flex justify-between"><span class="text-slate-600">Unidades vendidas</span><span class="font-medium">{{ "%.0f"|format(real.units_sold) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Receita média / un.</span><span class="font-medium">R$ {{ "%.2f"|format(real.avg_revenue_per_unit) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Receita total</span><span class="font-medium">R$ {{ "%.2f"|format(real.revenue_total) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Tarifas Amazon</span><span class="font-medium text-red-500">R$ {{ "%.2f"|format(real.fees_total) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">CMV ({{ "%.0f"|format(real.units_sold) }}× custo)</span><span class="font-medium text-red-500">- R$ {{ "%.2f"|format(real.cmv_total) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Embalagem</span><span class="font-medium text-red-500">- R$ {{ "%.2f"|format(real.embalagem_total) }}</span></li>
+                    <li class="flex justify-between"><span class="text-slate-600">Impostos ({{ "%.1f"|format(tax_rate) }}%)</span><span class="font-medium text-red-500">- R$ {{ "%.2f"|format(real.imposto_total) }}</span></li>
+                    <li class="flex justify-between border-t border-slate-100 pt-2 mt-1"><span class="font-bold text-[#0d141c]">Lucro líquido / un.</span><span class="font-bold {% if real.avg_net_per_unit >= 0 %}text-green-600{% else %}text-red-600{% endif %}">R$ {{ "%.2f"|format(real.avg_net_per_unit) }}</span></li>
+                </ul>
+                <p class="text-xs text-slate-400 border-t border-slate-100 pt-3">
+                    Calculado a partir dos eventos financeiros (ShipmentEventList) sincronizados da Amazon.
+                </p>
+            </div>
+            {% else %}
+            <div class="p-8 flex flex-col items-center text-center gap-3 text-slate-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="#cbd5e1"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /></svg>
+                <p class="text-sm">Sem dados financeiros da Amazon para este SKU.</p>
+                <a href="{{ url_for('amazon.orders_page') }}"
+                   class="text-sm text-[#0d80f2] hover:underline font-semibold">Sincronizar vendas Amazon →</a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    {% if not estimado and not real %}
+    <div class="rounded-xl border border-dashed border-[#d0dbe7] bg-slate-50 p-6 text-center text-sm text-slate-500">
+        Para ver o comparativo, salve uma simulação vinculada a este produto e
+        sincronize as vendas da Amazon.
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -68,20 +68,20 @@
           <thead class="bg-slate-50 text-slate-700">
             <tr>
               <th class="text-left px-4 py-3">Seller SKU</th>
-              <th class="text-left px-4 py-3">ASIN</th>
+              <th class="text-left px-4 py-3 hidden md:table-cell">ASIN</th>
               <th class="text-right px-4 py-3">Disponível</th>
               <th class="text-right px-4 py-3">Reservado</th>
-              <th class="text-right px-4 py-3">Entrada (working)</th>
-              <th class="text-right px-4 py-3">Entrada (enviado)</th>
-              <th class="text-right px-4 py-3">Entrada (recebendo)</th>
-              <th class="text-left px-4 py-3">Atualizado em</th>
+              <th class="text-right px-4 py-3 hidden md:table-cell">Entrada (working)</th>
+              <th class="text-right px-4 py-3 hidden md:table-cell">Entrada (enviado)</th>
+              <th class="text-right px-4 py-3 hidden md:table-cell">Entrada (recebendo)</th>
+              <th class="text-left px-4 py-3 hidden sm:table-cell">Atualizado em</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
             {% for snap in pagination.items %}
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3 font-mono text-xs font-bold">{{ snap.seller_sku }}</td>
-                <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ snap.asin or "—" }}</td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-500 hidden md:table-cell">{{ snap.asin or "—" }}</td>
                 <td class="px-4 py-3 text-right">
                   <span class="font-bold
                     {% if (snap.fulfillable_qty or 0) == 0 %}text-red-600
@@ -91,10 +91,10 @@
                   </span>
                 </td>
                 <td class="px-4 py-3 text-right text-slate-600">{{ snap.reserved_qty or 0 }}</td>
-                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_working_qty or 0 }}</td>
-                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_shipped_qty or 0 }}</td>
-                <td class="px-4 py-3 text-right text-slate-600">{{ snap.inbound_receiving_qty or 0 }}</td>
-                <td class="px-4 py-3 text-xs text-slate-500">
+                <td class="px-4 py-3 text-right text-slate-600 hidden md:table-cell">{{ snap.inbound_working_qty or 0 }}</td>
+                <td class="px-4 py-3 text-right text-slate-600 hidden md:table-cell">{{ snap.inbound_shipped_qty or 0 }}</td>
+                <td class="px-4 py-3 text-right text-slate-600 hidden md:table-cell">{{ snap.inbound_receiving_qty or 0 }}</td>
+                <td class="px-4 py-3 text-xs text-slate-500 hidden sm:table-cell">
                   {% if snap.updated_at %}
                     {{ snap.updated_at.strftime("%d/%m/%Y %H:%M") }}
                   {% else %}—{% endif %}
@@ -148,6 +148,12 @@
 </div>
 
 <script nonce="{{ csp_nonce() }}">
+  const SPINNER_SVG =
+    '<svg class="inline-block animate-spin mr-1.5" style="width:14px;height:14px;vertical-align:-2px" ' +
+    'xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
+    '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+    '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>';
+
   function setResult(msg, type = "info") {
     const el = document.getElementById("syncResult");
     if (!el) return;
@@ -159,7 +165,23 @@
     el.textContent = msg;
   }
 
-  document.getElementById("btnSyncInventory")?.addEventListener("click", async () => {
+  function setBtnLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.textContent.trim();
+      btn.innerHTML = SPINNER_SVG + btn.dataset.originalText;
+      btn.classList.add("opacity-60", "cursor-not-allowed");
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.originalText || btn.textContent;
+      btn.classList.remove("opacity-60", "cursor-not-allowed");
+    }
+  }
+
+  const btnSyncInventory = document.getElementById("btnSyncInventory");
+  btnSyncInventory?.addEventListener("click", async () => {
+    setBtnLoading(btnSyncInventory, true);
     try {
       setResult("Sincronizando inventário FBA…", "info");
       const res  = await fetch("/integrations/amazon/sync_inventory", {
@@ -175,6 +197,7 @@
       setTimeout(() => location.reload(), 900);
     } catch (e) {
       setResult("Falha no sync: " + e.message, "error");
+      setBtnLoading(btnSyncInventory, false);
     }
   });
 </script>

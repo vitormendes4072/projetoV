@@ -289,12 +289,12 @@
               <input type="checkbox" id="selectAll" class="w-4 h-4 align-middle rounded-md border-slate-300" title="Selecionar todos">
             </th>
             <th class="py-2">Nome</th>
-            <th class="py-2">Categoria</th>
+            <th class="py-2 hidden sm:table-cell">Categoria</th>
             <th class="py-2">Valor</th>
-            <th class="py-2">Início</th>
-            <th class="py-2">Fim</th>
-            <th class="py-2">Pagamento</th>
-            <th class="py-2">Situação</th>
+            <th class="py-2 hidden md:table-cell">Início</th>
+            <th class="py-2 hidden md:table-cell">Fim</th>
+            <th class="py-2 hidden md:table-cell">Pagamento</th>
+            <th class="py-2 hidden sm:table-cell">Situação</th>
             <th class="py-2">Status</th>
             <th class="py-2 text-right">Ações</th>
           </tr>
@@ -311,7 +311,7 @@
 
               <td class="py-2 font-medium">{{ i.nome }}</td>
 
-              <td class="py-2">
+              <td class="py-2 hidden sm:table-cell">
                 {% set cls = cat_styles.get(i.categoria, "bg-slate-100 text-slate-700 border-slate-200") %}
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border {{ cls }}">
                   {{ i.categoria }}
@@ -319,14 +319,14 @@
               </td>
 
               <td class="py-2">R$ {{ "%.2f"|format(i.valor_mensal) }}</td>
-              <td class="py-2">{{ i.data_inicio }}</td>
-              <td class="py-2">{{ i.data_fim or "-" }}</td>
+              <td class="py-2 hidden md:table-cell">{{ i.data_inicio }}</td>
+              <td class="py-2 hidden md:table-cell">{{ i.data_fim or "-" }}</td>
 
-              <td class="py-2 whitespace-nowrap">
+              <td class="py-2 whitespace-nowrap hidden md:table-cell">
                 {% if i.dia_pagamento %}Dia {{ i.dia_pagamento }}{% else %}-{% endif %}
               </td>
 
-              <td class="py-2">
+              <td class="py-2 hidden sm:table-cell">
                 {% if st %}
                   <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap {{ st[1] }}">
                     {{ st[0] }}

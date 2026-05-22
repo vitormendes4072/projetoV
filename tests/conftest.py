@@ -13,6 +13,7 @@ from app.models.custo_fixo_history import CustoFixoHistory
 from app.models.custo_fixo_pagamento import CustoFixoPagamento
 from app.models.notification_settings import NotificationSettings
 from app.models.notification_recipient import NotificationRecipient
+from app.models.notification_log import NotificationLog
 
 # TEST_DATABASE_URL is set by CI (GitHub Actions postgres service).
 # DATABASE_URL from .env points to production — never used in tests.
@@ -31,6 +32,7 @@ _SQLITE_TABLES = [
     CustoFixoPagamento.__table__,
     NotificationSettings.__table__,
     NotificationRecipient.__table__,
+    NotificationLog.__table__,
 ]
 
 

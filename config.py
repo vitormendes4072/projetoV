@@ -22,6 +22,19 @@ class Config:
     OPENAPI_URL_PREFIX = "/api"
     OPENAPI_SWAGGER_UI_PATH = "/docs"
     OPENAPI_SWAGGER_UI_URL = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    API_SPEC_OPTIONS = {
+        "components": {
+            "securitySchemes": {
+                "ApiKeyAuth": {
+                    "type": "apiKey",
+                    "in": "header",
+                    "name": "X-API-Key",
+                    "description": "Chave de API gerada em Configurações → API Key. Envie no header `X-API-Key: <sua-chave>`.",
+                }
+            }
+        },
+        "security": [{"ApiKeyAuth": []}],
+    }
     SECRET_KEY = os.environ.get("SECRET_KEY")
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False

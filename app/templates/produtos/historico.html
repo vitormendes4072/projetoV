@@ -33,16 +33,17 @@
     {% endif %}
 
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm overflow-hidden">
-        <table class="w-full text-left text-sm text-[#0d141c]">
+        <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-[#0d141c] min-w-[640px]">
             <thead class="bg-slate-50 border-b border-[#d0dbe7]">
                 <tr>
                     <th class="px-4 py-4 font-bold">Data / Hora</th>
                     <th class="px-4 py-4 font-bold">Ação</th>
                     <th class="px-4 py-4 font-bold text-right">Preço</th>
-                    <th class="px-4 py-4 font-bold text-right">Custo</th>
+                    <th class="px-4 py-4 font-bold text-right hidden sm:table-cell">Custo</th>
                     <th class="px-4 py-4 font-bold text-right">Estoque</th>
                     <th class="px-4 py-4 font-bold text-right">Variação</th>
-                    <th class="px-4 py-4 font-bold">Usuário</th>
+                    <th class="px-4 py-4 font-bold hidden md:table-cell">Usuário</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#d0dbe7]">
@@ -61,7 +62,7 @@
                         </span>
                     </td>
                     <td class="px-4 py-4 text-right font-mono">R$ {{ "%.2f"|format(entry.price) }}</td>
-                    <td class="px-4 py-4 text-right font-mono text-slate-500">R$ {{ "%.2f"|format(entry.cost) }}</td>
+                    <td class="px-4 py-4 text-right font-mono text-slate-500 hidden sm:table-cell">R$ {{ "%.2f"|format(entry.cost) }}</td>
                     <td class="px-4 py-4 text-right font-mono font-bold">{{ entry.stock_quantity }}</td>
                     <td class="px-4 py-4 text-right font-mono">
                         {% if delta is not none %}
@@ -76,7 +77,7 @@
                         <span class="text-slate-300 text-xs">inicial</span>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-4 text-xs text-slate-500">
+                    <td class="px-4 py-4 text-xs text-slate-500 hidden md:table-cell">
                         {% if entry.user %}{{ entry.user.name }}{% else %}—{% endif %}
                     </td>
                 </tr>
@@ -89,6 +90,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 
     {% if historico.pages > 1 %}
@@ -111,68 +113,11 @@
 </div>
 
 {% if grafico.labels|length > 1 %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/chart-theme.js') }}"></script>
 <script nonce="{{ csp_nonce() }}">
-    const dados = {{ grafico | tojson }};
-
-    new Chart(document.getElementById('graficoPreco'), {
-        type: 'line',
-        data: {
-            labels: dados.labels,
-            datasets: [
-                {
-                    label: 'Preço (R$)',
-                    data: dados.precos,
-                    borderColor: '#0d80f2',
-                    backgroundColor: 'rgba(13,128,242,0.08)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 4,
-                },
-                {
-                    label: 'Custo (R$)',
-                    data: dados.custos,
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245,158,11,0.08)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 4,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { label: ctx => 'R$ ' + ctx.parsed.y.toFixed(2) } }
-            },
-            scales: { y: { ticks: { callback: val => 'R$ ' + val.toFixed(2) } } }
-        }
-    });
-
-    new Chart(document.getElementById('graficoEstoque'), {
-        type: 'line',
-        data: {
-            labels: dados.labels,
-            datasets: [{
-                label: 'Estoque (un.)',
-                data: dados.estoques,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16,185,129,0.08)',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' un.' } }
-            },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
+  const GRAFICO = {{ grafico | tojson }};
 </script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/produtos/historico.js') }}"></script>
 {% endif %}
 {% endblock %}
