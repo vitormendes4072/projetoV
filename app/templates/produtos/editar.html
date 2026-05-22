@@ -62,11 +62,23 @@
                     <span class="text-xs text-slate-400">Ex.: caixa, saco, etiqueta, inserto, etc. (por unidade)</span>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-[#0d141c] mb-1">Estoque Atual</label>
-                    {{ form.stock_quantity(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-[#0d141c] mb-1">Estoque Atual</label>
+                        {{ form.stock_quantity(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-[#0d141c] mb-1">
+                            Estoque mínimo
+                            <span class="text-xs text-slate-400 font-normal ml-1">(alerta de reposição)</span>
+                        </label>
+                        {{ form.min_stock(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
+                        {% for error in form.min_stock.errors %}
+                            <span class="text-red-500 text-xs">{{ error }}</span>
+                        {% endfor %}
+                    </div>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-[#0d141c] mb-1">URL da Imagem</label>
                     {{ form.image_url(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}

@@ -227,7 +227,7 @@
                     <li class="flex items-center justify-between text-sm">
                         <a href="{{ url_for('produtos.editar_produto', product_id=product.id) }}" class="text-amber-700 hover:underline font-medium">{{ product.name }}</a>
                         <span class="font-bold {% if product.stock_quantity == 0 %}text-red-600{% else %}text-amber-700{% endif %}">
-                            {{ product.stock_quantity }} un.
+                            {{ product.stock_quantity }} / {{ product.min_stock }} un.
                         </span>
                     </li>
                     {% endfor %}

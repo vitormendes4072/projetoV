@@ -79,12 +79,15 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
 
     low_stock_raw = db.session.scalars(
         db.select(Product)
-        .where(Product.user_id == user_id, Product.stock_quantity <= 5)
+        .where(
+            Product.user_id == user_id,
+            Product.stock_quantity <= Product.min_stock,
+        )
         .order_by(Product.stock_quantity.asc())
         .limit(5)
     ).all()
     low_stock = [
-        SimpleNamespace(id=p.id, name=p.name, stock_quantity=p.stock_quantity)
+        SimpleNamespace(id=p.id, name=p.name, stock_quantity=p.stock_quantity, min_stock=p.min_stock)
         for p in low_stock_raw
     ]
 

@@ -169,8 +169,9 @@ def criar_produto():
             sku=form.sku.data,
             price=form.price.data or 0.0,
             cost=form.cost.data,
-            packaging_cost=form.packaging_cost.data or 0.0,  # ✅ OK
+            packaging_cost=form.packaging_cost.data or 0.0,
             stock_quantity=form.stock_quantity.data,
+            min_stock=form.min_stock.data if form.min_stock.data is not None else 5,
             image_url=form.image_url.data,
             owner=current_user
         )
@@ -202,6 +203,7 @@ def editar_produto(product_id):
         product.cost = form.cost.data
         product.packaging_cost = form.packaging_cost.data or 0.0
         product.stock_quantity = form.stock_quantity.data
+        product.min_stock = form.min_stock.data if form.min_stock.data is not None else 5
         product.image_url = form.image_url.data
 
         registrar_historico(product, current_user, 'Alteração Manual')
@@ -217,6 +219,7 @@ def editar_produto(product_id):
         form.cost.data = product.cost
         form.packaging_cost.data = product.packaging_cost
         form.stock_quantity.data = product.stock_quantity
+        form.min_stock.data = product.min_stock
         form.image_url.data = product.image_url
 
     return render_template('produtos/editar.html', form=form, title="Editar Produto", product=product)
