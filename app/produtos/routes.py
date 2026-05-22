@@ -35,7 +35,8 @@ def _iter_produtos_csv(uid: int):
     writer = csv.writer(buf)
     writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
     yield buf.getvalue()
-    buf.seek(0); buf.truncate()
+    buf.seek(0)
+    buf.truncate()
 
     offset = 0
     while True:
@@ -56,7 +57,8 @@ def _iter_produtos_csv(uid: int):
                 p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
             ])
         yield buf.getvalue()
-        buf.seek(0); buf.truncate()
+        buf.seek(0)
+        buf.truncate()
         offset += _CSV_CHUNK
 
 
