@@ -134,6 +134,17 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     login_manager.login_message = "Por favor, faça login para acessar."
 
     # ---------------------------------------
+    # API Key — request_loader (X-API-Key header)
+    # ---------------------------------------
+    @login_manager.request_loader
+    def _load_user_from_api_key(req):
+        key = req.headers.get("X-API-Key", "").strip()
+        if not key:
+            return None
+        from app.models import User
+        return db.session.scalar(db.select(User).filter_by(api_key=key))
+
+    # ---------------------------------------
     # Fila assíncrona (RQ)
     # ---------------------------------------
     _init_rq(app)

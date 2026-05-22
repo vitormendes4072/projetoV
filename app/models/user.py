@@ -1,4 +1,6 @@
 # app/models/user.py
+import secrets
+
 from app import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -24,6 +26,9 @@ class User(UserMixin, db.Model):
     tax_regime = db.Column(db.String(50), nullable=True)
     default_tax_rate = db.Column(db.Numeric(5, 2), default=4.0)
 
+    # --- API KEY ---
+    api_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
+
     # Relacionamento: um usuário tem muitos produtos
     products = db.relationship(
         "Product",
@@ -45,6 +50,11 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def generate_api_key(self) -> str:
+        """Gera e persiste uma nova API key segura. Retorna a key gerada."""
+        self.api_key = secrets.token_urlsafe(32)
+        return self.api_key
 
     def __repr__(self):
         return f"<User {self.email}>"
