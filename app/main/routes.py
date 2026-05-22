@@ -136,6 +136,15 @@ def menu():
             "enabled": True,
         },
 
+        {
+            "id": "sku_scatter",
+            "title": "Gráfico Margem por SKU",
+            "description": "Scatter plot de margem real × volume de pedidos por SKU.",
+            "route": safe_url_for("relatorios.sku_scatter", fallback="/relatorios/sku"),
+            "color": "success",
+            "enabled": True,
+        },
+
     ]
 
     return render_template("menu.html", tools=tools)
