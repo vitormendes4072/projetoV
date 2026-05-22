@@ -2,7 +2,8 @@
 import csv
 import io
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, make_response
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response
+from flask import stream_with_context
 from flask_login import login_required, current_user
 from app import db
 from app.models.product import Product, ProductHistory
@@ -26,30 +27,47 @@ def registrar_historico(produto, user, acao):
 
 COLUNAS_OBRIGATORIAS = {'name', 'sku', 'cost'}
 LIMITE_LINHAS = 1000
+_CSV_CHUNK = 500
+
+
+def _iter_produtos_csv(uid: int):
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
+    yield buf.getvalue()
+    buf.seek(0); buf.truncate()
+
+    offset = 0
+    while True:
+        batch = db.session.scalars(
+            db.select(Product)
+            .where(Product.user_id == uid)
+            .order_by(Product.name)
+            .limit(_CSV_CHUNK)
+            .offset(offset)
+        ).all()
+        if not batch:
+            break
+        for p in batch:
+            writer.writerow([
+                p.name, p.sku, p.asin or '',
+                p.cost, p.price, p.packaging_cost,
+                p.stock_quantity,
+                p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
+            ])
+        yield buf.getvalue()
+        buf.seek(0); buf.truncate()
+        offset += _CSV_CHUNK
 
 
 @produtos_bp.route('/produtos/exportar-csv')
 @login_required
 def exportar_csv():
-    products = db.session.scalars(
-        db.select(Product).where(Product.user_id == current_user.id).order_by(Product.name)
-    ).all()
-
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(['name', 'sku', 'asin', 'cost', 'price', 'packaging_cost', 'stock_quantity', 'created_at'])
-    for p in products:
-        writer.writerow([
-            p.name, p.sku, p.asin or '',
-            p.cost, p.price, p.packaging_cost,
-            p.stock_quantity,
-            p.created_at.strftime('%Y-%m-%d') if p.created_at else '',
-        ])
-
-    resp = make_response(buf.getvalue())
-    resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    resp.headers['Content-Disposition'] = 'attachment; filename="produtos.csv"'
-    return resp
+    return Response(
+        stream_with_context(_iter_produtos_csv(current_user.id)),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': 'attachment; filename="produtos.csv"'},
+    )
 
 
 @produtos_bp.route('/produtos/importar-csv', methods=['POST'])
