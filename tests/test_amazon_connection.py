@@ -145,10 +145,13 @@ _FULL_PAYLOAD = {
 
 def test_connect_creates_new_connection(client, db):
     auth_client(client, db)
+    # Mocka AmazonConnection para evitar o setter criptografado (CREDENTIALS_ENCRYPTION_KEY)
     with patch("app.integrations.amazon.routes_connection.db") as mock_db, \
-         patch("app.integrations.amazon.routes_connection.g") as mock_g:
+         patch("app.integrations.amazon.routes_connection.g") as mock_g, \
+         patch("app.integrations.amazon.routes_connection.AmazonConnection") as mock_cls:
         mock_g.is_demo = False
         mock_db.session.scalar.return_value = None  # sem conexao existente
+        mock_cls.return_value = MagicMock()
         resp = client.post(f"{BASE}/connect", json=_FULL_PAYLOAD)
 
     assert resp.status_code == 200
