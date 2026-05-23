@@ -2,9 +2,11 @@
 Testes para app/main/routes.py — rota /dashboard.
 """
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 
 from app.models.pricing import PricingHistory
 from app.models.product import Product
+from app.services.dashboard import _get_amazon_conn_status
 from tests.conftest import auth_client, login, make_user
 
 
@@ -209,3 +211,61 @@ def test_dashboard_low_stock_zero_shows_red(client, db):
     assert resp.status_code == 200
     assert b"Produto Zerado" in resp.data
     assert b"0 / 5" in resp.data
+
+
+# ---------------------------------------------------------------------------
+# _get_amazon_conn_status — dialeto explícito, sem try/except genérico
+# ---------------------------------------------------------------------------
+
+class TestGetAmazonConnStatus:
+    """Testa a função helper que verifica conexão Amazon por dialeto BD."""
+
+    def test_returns_false_false_on_sqlite(self, client, db):
+        """SQLite → (False, False) imediatamente, sem consultar BD."""
+        # O fixture db usa SQLite, portanto dialect.name != "postgresql"
+        has_conn, has_sync = _get_amazon_conn_status(user_id=1)
+        assert has_conn is False
+        assert has_sync is False
+
+    def test_does_not_query_db_on_non_postgres(self, client, db):
+        """Dialeto não-postgres não deve chamar db.session.scalar."""
+        with patch("app.services.dashboard.db") as mock_db:
+            mock_db.engine.dialect.name = "sqlite"
+            has_conn, has_sync = _get_amazon_conn_status(user_id=1)
+        mock_db.session.scalar.assert_not_called()
+        assert has_conn is False
+        assert has_sync is False
+
+    def test_queries_db_on_postgres_no_conn(self, client, db):
+        """Dialeto postgres + sem AmazonConnection → (False, False)."""
+        with patch("app.services.dashboard.db") as mock_db:
+            mock_db.engine.dialect.name = "postgresql"
+            mock_db.session.scalar.return_value = None
+            mock_db.select.return_value = MagicMock()
+            has_conn, has_sync = _get_amazon_conn_status(user_id=1)
+        assert has_conn is False
+        assert has_sync is False
+
+    def test_queries_db_on_postgres_conn_no_sync(self, client, db):
+        """Dialeto postgres + conexão sem sync → (True, False)."""
+        fake_conn = MagicMock()
+        fake_conn.last_sync_at = None
+        with patch("app.services.dashboard.db") as mock_db:
+            mock_db.engine.dialect.name = "postgresql"
+            mock_db.session.scalar.return_value = fake_conn
+            mock_db.select.return_value = MagicMock()
+            has_conn, has_sync = _get_amazon_conn_status(user_id=1)
+        assert has_conn is True
+        assert has_sync is False
+
+    def test_queries_db_on_postgres_conn_with_sync(self, client, db):
+        """Dialeto postgres + conexão com sync → (True, True)."""
+        fake_conn = MagicMock()
+        fake_conn.last_sync_at = "2026-01-01T00:00:00Z"
+        with patch("app.services.dashboard.db") as mock_db:
+            mock_db.engine.dialect.name = "postgresql"
+            mock_db.session.scalar.return_value = fake_conn
+            mock_db.select.return_value = MagicMock()
+            has_conn, has_sync = _get_amazon_conn_status(user_id=1)
+        assert has_conn is True
+        assert has_sync is True

@@ -11,6 +11,26 @@ from app import cache, db
 from app.models.pricing import PricingHistory
 from app.models.product import Product, ProductHistory
 
+
+def _get_amazon_conn_status(user_id: int) -> tuple[bool, bool]:
+    """Retorna (has_conn, has_sync) para o usuário.
+
+    Apenas consulta o BD quando o dialeto é PostgreSQL — AmazonConnection
+    usa schema="public" que não existe no SQLite.  Para outros dialetos
+    retorna (False, False) explicitamente, sem engolir exceções genéricas.
+    """
+    if db.engine.dialect.name != "postgresql":
+        return False, False
+
+    from app.models.amazon import AmazonConnection
+
+    conn = db.session.scalar(
+        db.select(AmazonConnection).filter_by(user_id=user_id)
+    )
+    has_conn = conn is not None
+    has_sync = has_conn and conn.last_sync_at is not None
+    return has_conn, has_sync
+
 _PERIOD_DAYS = {"7d": 7, "30d": 30, "90d": 90}
 
 
@@ -117,19 +137,10 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
 
     # ------------------------------------------------------------------
     # Onboarding — detecta conclusão de cada etapa de setup
-    # try/except: AmazonConnection usa schema="public" que não existe
-    # no SQLite dos testes, então falha silenciosamente → False.
+    # _get_amazon_conn_status verifica o dialeto antes de consultar,
+    # evitando exceção em SQLite (AmazonConnection usa schema="public").
     # ------------------------------------------------------------------
-    try:
-        from app.models.amazon import AmazonConnection
-        _conn = db.session.scalar(
-            db.select(AmazonConnection).filter_by(user_id=user_id)
-        )
-        _has_conn = _conn is not None
-        _has_sync = _has_conn and _conn.last_sync_at is not None
-    except Exception:
-        _has_conn = False
-        _has_sync = False
+    _has_conn, _has_sync = _get_amazon_conn_status(user_id)
 
     _has_products = total_products > 0
     onboarding = {
