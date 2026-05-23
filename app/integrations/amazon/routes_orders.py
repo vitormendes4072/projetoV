@@ -1,18 +1,20 @@
 import csv
 import io
 import logging
-from datetime import timedelta, timezone
 
 from flask import Response, jsonify, render_template, request, stream_with_context
 from flask_login import login_required, current_user
 
 from app import db, limiter
 from app.models import AmazonConnection, AmazonOrder
-from app.models.amazon_finances import AmazonFinancialEvent
 from app.integrations.amazon import amazon
-from app.integrations.amazon.utils import user_key, utcnow, iso_z, SP_TZ
-from app.integrations.amazon.service import sync_financial_events
-from app.integrations.amazon.profit_service import compute_order_profit, compute_order_item_breakdown
+from app.integrations.amazon.utils import user_key, SP_TZ
+from app.integrations.amazon.profit_service import (
+    compute_order_profit,
+    compute_order_item_breakdown,
+    _compute_order_start,
+    refresh_order_finances,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,14 +111,7 @@ def profit_order(amazon_order_id: str):
         return jsonify(result)
 
     # Sem ShipmentEventList local — indica ao cliente sem fazer writes.
-    order = db.session.scalar(
-        db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id)
-    )
-    start = utcnow() - timedelta(days=7)
-    if order and order.purchase_date:
-        purchase_utc = order.purchase_date.astimezone(timezone.utc)
-        start = purchase_utc - timedelta(days=5)
-
+    _, start_iso = _compute_order_start(user_key(), amazon_order_id)
     return jsonify({
         "ok": True,
         "amazon_order_id": amazon_order_id,
@@ -125,7 +120,7 @@ def profit_order(amazon_order_id: str):
             "Nenhum ShipmentEventList encontrado para este pedido. "
             "Use POST /profit/order/<id>/refresh para buscar do SP-API."
         ),
-        "from": iso_z(start),
+        "from": start_iso,
     })
 
 
@@ -140,26 +135,8 @@ def profit_order_refresh(amazon_order_id: str):
 
     default_tax_rate = float(getattr(current_user, "default_tax_rate", 4.0) or 0.0)
 
-    order = db.session.scalar(
-        db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id)
-    )
-    start = utcnow() - timedelta(days=7)
-    if order and order.purchase_date:
-        purchase_utc = order.purchase_date.astimezone(timezone.utc)
-        start = purchase_utc - timedelta(days=5)
-
-    start_iso = iso_z(start)
-
     try:
-        db.session.execute(
-            db.delete(AmazonFinancialEvent)
-            .where(
-                AmazonFinancialEvent.user_id == user_key(),
-                AmazonFinancialEvent.posted_date >= start,
-            )
-        )
-        db.session.flush()
-        sync_financial_events(conn, user_id=user_key(), posted_after_iso=start_iso)
+        start_iso, _ = refresh_order_finances(conn, user_key(), amazon_order_id)
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -168,7 +145,6 @@ def profit_order_refresh(amazon_order_id: str):
             "ok": False,
             "amazon_order_id": amazon_order_id,
             "error": "Falha ao sincronizar finances do SP-API.",
-            "from": start_iso,
         }), 500
 
     result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
