@@ -106,7 +106,6 @@
               <th class="text-left px-4 py-3">Status</th>
               <th class="text-left px-4 py-3">Total</th>
               <th class="text-left px-4 py-3">Moeda</th>
-              <th class="text-left px-4 py-3">Ações</th>
             </tr>
           </thead>
 
@@ -146,17 +145,11 @@
                 </td>
                 <td class="px-4 py-3 font-semibold">{{ "%.2f"|format(o.order_total_amount or 0) }}</td>
                 <td class="px-4 py-3">{{ o.currency or "—" }}</td>
-                <td class="px-4 py-3">
-                  <a class="text-[#0d80f2] font-bold hover:underline"
-                     href="/integrations/amazon/profit/order/{{ o.amazon_order_id }}">
-                    Ver lucro →
-                  </a>
-                </td>
               </tr>
 
               <!-- Linha expandível de detalhes -->
               <tr class="order-details hidden" id="details-{{ o.amazon_order_id }}">
-                <td colspan="7" class="px-4 pb-4">
+                <td colspan="6" class="px-4 pb-4">
                   <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm">
                     Carregando detalhes…
                   </div>

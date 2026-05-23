@@ -194,50 +194,100 @@ def test_profit_order_with_conn_returns_result(client, db):
 
 
 # ---------------------------------------------------------------------------
-# GET /profit/order/<id> -- resultado None -> tenta sync, sync falha -> 400
+# GET /profit/order/<id> -- resultado None -> retorna 200 sem writes (GET puro)
 # ---------------------------------------------------------------------------
 
-def test_profit_order_sync_fails_returns_400(client, db):
+def test_profit_order_no_finance_events_is_readonly(client, db):
+    """GET deve retornar mode=no_finance_events sem tocar no BD."""
+    auth_client(client, db)
+    with patch("app.integrations.amazon.routes_orders.db") as mock_db, \
+         patch("app.integrations.amazon.routes_orders.compute_order_profit",
+               return_value=None):
+        mock_db.session.scalar.side_effect = [_fake_conn(), None]
+        resp = client.get(f"{BASE}/profit/order/111-NOSYNC")
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["mode"] == "no_finance_events"
+    # GET não deve fazer commit/flush (sem writes)
+    mock_db.session.commit.assert_not_called()
+    mock_db.session.flush.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# POST /profit/order/<id>/refresh -- sync falha -> 500
+# ---------------------------------------------------------------------------
+
+def test_profit_order_refresh_sync_fails_returns_500(client, db):
+    """POST /refresh deve retornar 500 quando o sync do SP-API lança exceção."""
     auth_client(client, db)
     with patch("app.integrations.amazon.routes_orders.db") as mock_db, \
          patch("app.integrations.amazon.routes_orders.compute_order_profit",
                return_value=None), \
          patch("app.integrations.amazon.routes_orders.sync_financial_events",
                side_effect=Exception("SP-API error")):
-        # 1o scalar -> conn; 2o scalar -> None (order) para start ser datetime real
         mock_db.session.scalar.side_effect = [_fake_conn(), None]
         mock_db.session.execute = MagicMock()
         mock_db.session.flush = MagicMock()
         mock_db.session.rollback = MagicMock()
-        resp = client.get(f"{BASE}/profit/order/111-NOSYNC")
+        resp = client.post(f"{BASE}/profit/order/111-NOSYNC/refresh",
+                           headers={"X-CSRFToken": "ignored-in-test"})
 
-    assert resp.status_code == 400
+    assert resp.status_code == 500
     data = resp.get_json()
     assert data["ok"] is False
-    assert "mode" in data
+    assert "error" in data
 
 
 # ---------------------------------------------------------------------------
-# GET /profit/order/<id> -- resultado None -> sync ok -> ainda None -> 200 sem finance
+# POST /profit/order/<id>/refresh -- sync ok mas ainda sem dados -> 200
 # ---------------------------------------------------------------------------
 
-def test_profit_order_sync_ok_but_still_no_data(client, db):
+def test_profit_order_refresh_sync_ok_still_no_data(client, db):
+    """POST /refresh: sync roda sem erro mas não há ShipmentEventList -> 200 mode=no_finance_events."""
     auth_client(client, db)
     with patch("app.integrations.amazon.routes_orders.db") as mock_db, \
          patch("app.integrations.amazon.routes_orders.compute_order_profit",
                return_value=None), \
          patch("app.integrations.amazon.routes_orders.sync_financial_events"):
-        # 1o scalar -> conn; 2o scalar -> None (order) para start ser datetime real
         mock_db.session.scalar.side_effect = [_fake_conn(), None]
         mock_db.session.execute = MagicMock()
         mock_db.session.flush = MagicMock()
         mock_db.session.commit = MagicMock()
-        resp = client.get(f"{BASE}/profit/order/111-STILLNONE")
+        resp = client.post(f"{BASE}/profit/order/111-STILLNONE/refresh",
+                           headers={"X-CSRFToken": "ignored-in-test"})
 
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["ok"] is True
     assert data["mode"] == "no_finance_events"
+
+
+# ---------------------------------------------------------------------------
+# POST /profit/order/<id>/refresh -- sync ok, dados encontrados -> 200 com resultado
+# ---------------------------------------------------------------------------
+
+def test_profit_order_refresh_returns_result_after_sync(client, db):
+    """POST /refresh: após sync bem-sucedido retorna o profit calculado."""
+    auth_client(client, db)
+    fake_result = {"ok": True, "amazon_order_id": "111-OK", "mode": "finance_events", "net_profit": 42.0}
+    with patch("app.integrations.amazon.routes_orders.db") as mock_db, \
+         patch("app.integrations.amazon.routes_orders.compute_order_profit",
+               return_value=fake_result), \
+         patch("app.integrations.amazon.routes_orders.sync_financial_events"):
+        mock_db.session.scalar.side_effect = [_fake_conn(), None]
+        mock_db.session.execute = MagicMock()
+        mock_db.session.flush = MagicMock()
+        mock_db.session.commit = MagicMock()
+        resp = client.post(f"{BASE}/profit/order/111-OK/refresh",
+                           headers={"X-CSRFToken": "ignored-in-test"})
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["ok"] is True
+    assert data["mode"] == "finance_events"
+    assert data["net_profit"] == 42.0
 
 
 # ---------------------------------------------------------------------------
