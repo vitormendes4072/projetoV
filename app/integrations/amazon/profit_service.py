@@ -3,6 +3,7 @@ Cálculos de lucro/margem por pedido Amazon, baseados em finance events.
 """
 from __future__ import annotations
 
+from datetime import timedelta, timezone
 from typing import Any
 
 from sqlalchemy.orm import joinedload
@@ -12,6 +13,8 @@ from app.models import AmazonOrder, AmazonOrderItem
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.models.amazon_sku_link import AmazonSkuLink
 from app.models.product import Product
+from app.integrations.amazon.utils import utcnow, iso_z
+from app.integrations.amazon.service import sync_financial_events
 
 
 def _r2(x: Any) -> float:
@@ -67,6 +70,58 @@ def _resolve_products_bulk(user_id: int, skus: list[str]) -> dict[str, Any]:
             result[p.sku] = p
 
     return result
+
+
+def _compute_order_start(user_id: int, amazon_order_id: str) -> tuple:
+    """
+    Calcula a janela de início para busca de finance events de um pedido.
+
+    Regra:
+    - Padrão: 7 dias atrás.
+    - Se o pedido existe e tem purchase_date: purchase_date - 5 dias
+      (garante captura de eventos que chegam ligeiramente antes da data oficial).
+
+    Retorna (start_dt, start_iso) onde start_iso é string ISO-8601 com 'Z'.
+    Não faz commit — apenas leitura.
+    """
+    start = utcnow() - timedelta(days=7)
+    order = db.session.scalar(
+        db.select(AmazonOrder).filter_by(user_id=user_id, amazon_order_id=amazon_order_id)
+    )
+    if order and order.purchase_date:
+        purchase_utc = order.purchase_date.astimezone(timezone.utc)
+        start = purchase_utc - timedelta(days=5)
+    return start, iso_z(start)
+
+
+def refresh_order_finances(conn, user_id: int, amazon_order_id: str) -> tuple:
+    """
+    Faz sync curto de finance events para um pedido específico.
+
+    Passos:
+    1. Calcula a janela temporal ideal via _compute_order_start.
+    2. Apaga AmazonFinancialEvent do user_id com posted_date >= start
+       (limpa dados possivelmente desatualizados antes de re-sincronizar).
+    3. Chama sync_financial_events para repopular a janela.
+
+    Retorna (start_iso, events_inserted).
+    Não faz db.session.commit() — responsabilidade do chamador.
+    Lança exceção em caso de falha no SP-API — o chamador faz rollback.
+    """
+    start_dt, start_iso = _compute_order_start(user_id, amazon_order_id)
+
+    db.session.execute(
+        db.delete(AmazonFinancialEvent).where(
+            AmazonFinancialEvent.user_id == user_id,
+            AmazonFinancialEvent.posted_date >= start_dt,
+        )
+    )
+    db.session.flush()
+
+    events_inserted = sync_financial_events(
+        conn, user_id=user_id, posted_after_iso=start_iso
+    )
+    return start_iso, events_inserted
 
 
 def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any] | None:
