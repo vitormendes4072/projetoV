@@ -1,5 +1,6 @@
 # app/models/user.py
 import secrets
+from datetime import datetime, timezone
 
 from app import db, login_manager
 from flask_login import UserMixin
@@ -29,6 +30,10 @@ class User(UserMixin, db.Model):
     # --- API KEY ---
     api_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
+    # --- SEGURANÇA: invalida tokens de reset após troca de senha ---
+    # Carimbado em set_password(); reset_token rejeita tokens emitidos antes deste timestamp.
+    password_changed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     # Relacionamento: um usuário tem muitos produtos
     products = db.relationship(
         "Product",
@@ -47,6 +52,10 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        # Truncado a segundos para alinhar com a precisão dos tokens itsdangerous.
+        # Tokens emitidos ANTES desta marca são inválidos após a troca de senha.
+        now = datetime.now(timezone.utc)
+        self.password_changed_at = now.replace(microsecond=0)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
