@@ -26,7 +26,8 @@ from app.integrations.amazon.service import (
 # Constantes
 # ---------------------------------------------------------------------------
 
-_SERVICE = "app.integrations.amazon.service"
+_SERVICE_ORDERS   = "app.integrations.amazon.service.orders"
+_SERVICE_FINANCES = "app.integrations.amazon.service.finances"
 _PG_INSERT = "sqlalchemy.dialects.postgresql.insert"
 _MARKETPLACE = "A2Q3Y263D00KWC"
 
@@ -114,8 +115,8 @@ class TestSyncOrdersAndItems:
         items_side_effect = items_fn if items_fn is not None else (lambda *_: [])
 
         with patch("app.db", mock_db), \
-             patch(f"{_SERVICE}.list_orders", return_value=api_orders), \
-             patch(f"{_SERVICE}.list_order_items", side_effect=items_side_effect):
+             patch(f"{_SERVICE_ORDERS}.list_orders", return_value=api_orders), \
+             patch(f"{_SERVICE_ORDERS}.list_order_items", side_effect=items_side_effect):
             result = sync_orders_and_items(
                 _fake_conn(), user_id=user_id, created_after_iso="2026-01-01T00:00:00Z"
             )
@@ -263,7 +264,7 @@ class TestSyncFinancialEvents:
 
         with patch("app.db", mock_db), \
              patch(_PG_INSERT, mock_pg_insert), \
-             patch(f"{_SERVICE}.list_financial_events",
+             patch(f"{_SERVICE_FINANCES}.list_financial_events",
                    return_value=(events_dict, {})):
             inserted = sync_financial_events(
                 _fake_conn(), user_id=user_id, posted_after_iso="2026-01-01T00:00:00Z"
