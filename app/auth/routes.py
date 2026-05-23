@@ -146,19 +146,44 @@ def reset_request():
 def reset_token(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
+
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+    # 1. Valida assinatura + max_age (30 min)
     try:
         email = s.loads(token, salt='password-reset', max_age=1800)
     except Exception:
         flash('Token inválido/expirado.', 'danger')
         return redirect(url_for('auth.reset_request'))
+
     user = db.session.scalar(db.select(User).filter_by(email=email))
     if not user:
         flash('Usuário não encontrado.', 'danger')
         return redirect(url_for('auth.reset_request'))
+
+    # 2. Rejeita token já utilizado: extrai o timestamp de emissão do token
+    # e compara com password_changed_at. Se a senha foi alterada APÓS a emissão,
+    # o token é inválido — impede reutilização dentro da janela de 30 min.
+    try:
+        from datetime import timezone as _tz
+        _, token_issued_at = s.make_signer('password-reset').unsign(
+            token, return_timestamp=True
+        )
+        token_issued_at = token_issued_at.replace(tzinfo=_tz.utc)
+        if (
+            user.password_changed_at is not None
+            and token_issued_at < user.password_changed_at.replace(tzinfo=_tz.utc)
+        ):
+            flash('Este link já foi utilizado. Solicite um novo.', 'danger')
+            return redirect(url_for('auth.reset_request'))
+    except Exception:
+        # Se não conseguir extrair o timestamp (token malformado), nega por segurança
+        flash('Token inválido/expirado.', 'danger')
+        return redirect(url_for('auth.reset_request'))
+
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user.set_password(form.password.data)
+        user.set_password(form.password.data)  # carimba password_changed_at automaticamente
         db.session.commit()
         flash('Senha atualizada.', 'success')
         return redirect(url_for('auth.login'))
