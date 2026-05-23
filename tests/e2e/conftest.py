@@ -207,18 +207,21 @@ def seeded_amazon_data(clean_db, seeded_user):
     from app.models.amazon import AmazonConnection, AmazonOrder, AmazonOrderItem
     from app.models.amazon_finances import AmazonFinancialEvent
 
+    # Seta colunas _enc diretamente (None) para não chamar encrypt(), que exige
+    # CREDENTIALS_ENCRYPTION_KEY. Os testes E2E não fazem chamadas reais à SP-API,
+    # então as credenciais cifradas não precisam existir — só a linha no banco.
     conn = AmazonConnection(
         id=uuid4(),
         user_id=seeded_user.id,
         marketplace_id="A2Q3Y263D00KWC",
         seller_id="A1FAKESELLERID",
         lwa_client_id="amzn1.application-oa2-client.fake",
+        lwa_client_secret_enc=None,
+        lwa_refresh_token_enc=None,
         aws_access_key_id="AKIA_FAKE_KEY",
+        aws_secret_access_key_enc=None,
         aws_region="us-east-1",
     )
-    conn.lwa_client_secret = "fake-lwa-secret"
-    conn.lwa_refresh_token = "fake-refresh-token"
-    conn.aws_secret_access_key = "fake-secret-key"
     _db.session.add(conn)
 
     order1 = AmazonOrder(
