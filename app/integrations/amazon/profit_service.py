@@ -94,7 +94,7 @@ def _compute_order_start(user_id: int, amazon_order_id: str) -> tuple:
     return start, iso_z(start)
 
 
-def refresh_order_finances(conn, user_id: int, amazon_order_id: str) -> tuple:
+def refresh_order_finances(conn: Any, user_id: int, amazon_order_id: str) -> tuple:
     """
     Faz sync curto de finance events para um pedido específico.
 
