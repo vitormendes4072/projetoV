@@ -97,20 +97,52 @@ def exportar_orders_csv():
 @login_required
 @limiter.limit("10 per minute")
 def profit_order(amazon_order_id: str):
+    """Leitura pura: retorna lucro calculado a partir dos dados locais. Não escreve no BD."""
+    conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
+    if not conn:
+        return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
+
+    default_tax_rate = float(getattr(current_user, "default_tax_rate", 4.0) or 0.0)
+    result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
+
+    if result is not None:
+        return jsonify(result)
+
+    # Sem ShipmentEventList local — indica ao cliente sem fazer writes.
+    order = db.session.scalar(
+        db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id)
+    )
+    start = utcnow() - timedelta(days=7)
+    if order and order.purchase_date:
+        purchase_utc = order.purchase_date.astimezone(timezone.utc)
+        start = purchase_utc - timedelta(days=5)
+
+    return jsonify({
+        "ok": True,
+        "amazon_order_id": amazon_order_id,
+        "mode": "no_finance_events",
+        "message": (
+            "Nenhum ShipmentEventList encontrado para este pedido. "
+            "Use POST /profit/order/<id>/refresh para buscar do SP-API."
+        ),
+        "from": iso_z(start),
+    })
+
+
+@amazon.post("/profit/order/<amazon_order_id>/refresh")
+@login_required
+@limiter.limit("5 per minute")
+def profit_order_refresh(amazon_order_id: str):
+    """Dispara sync curto de finances e recalcula o lucro. Separa a escrita do GET."""
     conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
 
     default_tax_rate = float(getattr(current_user, "default_tax_rate", 4.0) or 0.0)
 
-    result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
-
-    if result is not None:
-        return jsonify(result)
-
-    # Nenhum ShipmentEventList: tenta sync curto focado na data do pedido
-    order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id))
-
+    order = db.session.scalar(
+        db.select(AmazonOrder).filter_by(user_id=user_key(), amazon_order_id=amazon_order_id)
+    )
     start = utcnow() - timedelta(days=7)
     if order and order.purchase_date:
         purchase_utc = order.purchase_date.astimezone(timezone.utc)
@@ -127,22 +159,19 @@ def profit_order(amazon_order_id: str):
             )
         )
         db.session.flush()
-
         sync_financial_events(conn, user_id=user_key(), posted_after_iso=start_iso)
         db.session.commit()
-
-        result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
-
     except Exception:
         db.session.rollback()
-        logger.exception("Falha no sync_finances curto para profit_order %s", amazon_order_id)
+        logger.exception("Falha no sync_finances curto para profit_order_refresh %s", amazon_order_id)
         return jsonify({
             "ok": False,
             "amazon_order_id": amazon_order_id,
-            "mode": "no_finance_events",
-            "message": "Não encontrei ShipmentEventList e falhou ao tentar sync_finances curto.",
+            "error": "Falha ao sincronizar finances do SP-API.",
             "from": start_iso,
-        }), 400
+        }), 500
+
+    result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
 
     if result is None:
         return jsonify({
@@ -150,7 +179,7 @@ def profit_order(amazon_order_id: str):
             "amazon_order_id": amazon_order_id,
             "mode": "no_finance_events",
             "message": (
-                "Nenhum ShipmentEventList encontrado para este pedido mesmo após sync curto. "
+                "Nenhum ShipmentEventList encontrado mesmo após sync curto. "
                 "Tente ampliar a janela: POST /sync_finances?days=30&wipe=1"
             ),
             "from": start_iso,
