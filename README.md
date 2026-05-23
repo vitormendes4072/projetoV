@@ -1,6 +1,6 @@
-# Marketplace Manager
+# VEntregaz
 
-SaaS web application for Amazon marketplace sellers to manage products, simulate pricing margins, and track inventory — built with Flask and PostgreSQL.
+SaaS platform for Amazon FBA sellers — track orders, calculate real profitability, manage FBA inventory and automate pricing decisions. Built with Flask and PostgreSQL.
 
 [![CI](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml/badge.svg)](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)
