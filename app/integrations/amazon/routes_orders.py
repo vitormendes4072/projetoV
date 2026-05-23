@@ -6,7 +6,7 @@ from datetime import timedelta, timezone
 from flask import Response, jsonify, render_template, request, stream_with_context
 from flask_login import login_required, current_user
 
-from app import db
+from app import db, limiter
 from app.models import AmazonConnection, AmazonOrder
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.integrations.amazon import amazon
@@ -95,6 +95,7 @@ def exportar_orders_csv():
 
 @amazon.get("/profit/order/<amazon_order_id>")
 @login_required
+@limiter.limit("10 per minute")
 def profit_order(amazon_order_id: str):
     conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
@@ -160,6 +161,7 @@ def profit_order(amazon_order_id: str):
 
 @amazon.get("/orders/<amazon_order_id>/details")
 @login_required
+@limiter.limit("20 per minute")
 def order_details(amazon_order_id: str):
     default_tax_rate = float(getattr(current_user, "default_tax_rate", 0.0) or 0.0)
     result = compute_order_item_breakdown(user_key(), amazon_order_id, default_tax_rate)
