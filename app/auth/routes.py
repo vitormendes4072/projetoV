@@ -30,7 +30,7 @@ def send_async_email(app, msg):
 def send_reset_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='password-reset')
-    msg = Message('Redefinição de Senha - Marketplace Manager',
+    msg = Message('Redefinição de Senha - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.reset_token', token=token, _external=True)
@@ -43,7 +43,7 @@ def send_reset_email(user):
 def send_confirmation_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='email-confirm')
-    msg = Message('Confirme sua Conta - Marketplace Manager',
+    msg = Message('Confirme sua Conta - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.confirm_email', token=token, _external=True)
@@ -57,12 +57,12 @@ def send_account_exists_email(user):
     Não revela a existência da conta na UI — a resposta HTTP é sempre idêntica.
     """
     reset_link  = url_for('auth.reset_request', _external=True)
-    msg = Message('Tentativa de cadastro - Marketplace Manager',
+    msg = Message('Tentativa de cadastro - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     msg.body = (
         f"Recebemos uma solicitação de cadastro com este e-mail, "
-        f"mas ele já possui uma conta no Marketplace Manager.\n\n"
+        f"mas ele já possui uma conta no VEntregaz.\n\n"
         f"Se foi você, faça login normalmente. "
         f"Esqueceu a senha? Redefina aqui: {reset_link}\n\n"
         f"Se não foi você, ignore este e-mail."

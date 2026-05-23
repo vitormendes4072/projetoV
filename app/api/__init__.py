@@ -6,7 +6,7 @@ blp = Blueprint(
     "api_v1",
     __name__,
     url_prefix="/api/v1",
-    description="VEntregaz REST API — Amazon FBA Marketplace Manager",
+    description="VEntregaz REST API — Gestão inteligente para vendedores Amazon FBA",
 )
 
 

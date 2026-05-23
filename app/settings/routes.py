@@ -24,7 +24,7 @@ def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps({'new_email': new_email, 'user_id': user.id}, salt='email-update')
 
-    msg = Message('Confirme seu novo E-mail - Marketplace Manager',
+    msg = Message('Confirme seu novo E-mail - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'), recipients=[new_email])
 
     link = url_for('settings.confirm_email_update', token=token, _external=True)
