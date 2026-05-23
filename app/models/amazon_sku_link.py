@@ -3,7 +3,14 @@ from datetime import datetime
 
 class AmazonSkuLink(db.Model):
     __tablename__ = "amazon_sku_links"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id", "amazon_seller_sku",
+            name="uq_amazon_sku_links_user_seller_sku",
+        ),
+        db.Index("ix_amazon_sku_links_user_id", "user_id"),
+        {"schema": "public"},
+    )
 
     id = db.Column(db.BigInteger, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
