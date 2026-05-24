@@ -47,6 +47,8 @@ class NotificationLog(db.Model):
             "alert_type",
             name="uq_notification_dedupe",
         ),
+        # Cobre queries futuras: WHERE user_id = X ORDER BY sent_at DESC
+        db.Index('ix_notification_log_user_sent', 'user_id', 'sent_at'),
     )
 
     def __repr__(self) -> str:
