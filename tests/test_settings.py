@@ -150,3 +150,50 @@ def test_confirm_email_already_in_use(app, client, db):
     resp = client.get(f"/settings/confirm_email/{token}",
                       follow_redirects=True)
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# UX: modal unificado + senha inline
+# ---------------------------------------------------------------------------
+
+def test_password_modal_removed(client, db):
+    """O modal escuro de senha (#passwordModal) não deve mais existir."""
+    auth_client(client, db)
+    resp = client.get("/settings")
+    assert resp.status_code == 200
+    assert b'id="passwordModal"' not in resp.data
+
+
+def test_password_card_has_inline_current_password(client, db):
+    """Campo 'Senha Atual' deve estar inline no card, não escondido em modal."""
+    auth_client(client, db)
+    resp = client.get("/settings")
+    assert resp.status_code == 200
+    body = resp.data
+    # Campo inline identificado pelo id que não é o modal
+    assert b'id="pass_current_input"' in body
+    # E o card tem os 3 campos de senha visíveis
+    assert b'id="new_pass_input"' in body
+    assert b'id="confirm_pass_input"' in body
+
+
+def test_profile_modal_uses_blue_not_red(client, db):
+    """Modal de perfil deve usar tema azul, não vermelho."""
+    auth_client(client, db)
+    resp = client.get("/settings")
+    assert resp.status_code == 200
+    body = resp.data
+    # Azul presente no modal de perfil
+    assert b"bg-blue-50" in body
+    assert b"bg-blue-100" in body
+    # Vermelho removido do modal (bg-red-600 era o botão, bg-red-50 era o header)
+    assert b"bg-red-50" not in body
+    assert b"bg-red-600" not in body
+
+
+def test_settings_renders_with_unified_title(client, db):
+    """Modal de perfil deve usar título 'Confirmar Identidade'."""
+    auth_client(client, db)
+    resp = client.get("/settings")
+    assert resp.status_code == 200
+    assert "Confirmar Identidade".encode() in resp.data
