@@ -65,6 +65,10 @@ def job_sync_finances(user_id: int, conn_id: int, days: int = 7) -> dict:
     db.session.add(conn)
     db.session.commit()
 
+    # Finance events mudaram — invalida todo o cache de profit do usuário.
+    from app.integrations.amazon.profit_service import invalidate_user_profit_cache
+    invalidate_user_profit_cache(user_id)
+
     logger.info("job_sync_finances user=%s events=%s", user_id, events_count)
     return {"from": start_iso, "financial_events": events_count}
 
@@ -103,6 +107,10 @@ def job_sync_full(user_id: int, conn_id: int, days: int = 30) -> dict:
     conn.last_sync_at = now
     db.session.add(conn)
     db.session.commit()
+
+    # Finance events mudaram — invalida todo o cache de profit do usuário.
+    from app.integrations.amazon.profit_service import invalidate_user_profit_cache
+    invalidate_user_profit_cache(user_id)
 
     logger.info("job_sync_full user=%s orders=%s items=%s events=%s", user_id, orders_count, items_count, events_count)
     return {

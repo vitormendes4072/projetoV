@@ -14,6 +14,7 @@ from app.integrations.amazon.profit_service import (
     compute_order_item_breakdown,
     _compute_order_start,
     refresh_order_finances,
+    invalidate_order_profit_cache,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,6 +147,9 @@ def profit_order_refresh(amazon_order_id: str):
             "amazon_order_id": amazon_order_id,
             "error": "Falha ao sincronizar finances do SP-API.",
         }), 500
+
+    # Dados novos no DB — descarta a entrada em cache para este pedido.
+    invalidate_order_profit_cache(user_key(), amazon_order_id, default_tax_rate)
 
     result = compute_order_profit(user_key(), amazon_order_id, default_tax_rate)
 
