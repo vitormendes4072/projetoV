@@ -96,9 +96,9 @@
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mt-6">
         <h2 class="text-base font-bold text-[#0d141c] mb-1">Ajuste Rápido de Estoque</h2>
         <p class="text-sm text-slate-500 mb-4">
-            Estoque atual: <span class="font-bold text-[#0d141c]">{{ product.stock_quantity }}</span> unidades
+            Estoque atual: <span id="stock-display" class="font-bold text-[#0d141c]">{{ product.stock_quantity }}</span> unidades
         </p>
-        <form method="POST" action="{{ url_for('produtos.ajustar_estoque', product_id=product.id) }}">
+        <form id="stock-adjust-form" method="POST" action="{{ url_for('produtos.ajustar_estoque', product_id=product.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="flex flex-wrap gap-4 items-end">
                 <div>
@@ -119,6 +119,7 @@
                 </button>
             </div>
         </form>
+        <div id="stock-feedback" class="mt-2 text-sm" role="status" aria-live="polite"></div>
         <div class="mt-3 flex flex-wrap gap-4">
             <a href="{{ url_for('produtos.historico_produto', product_id=product.id) }}"
                class="text-sm text-[#49739c] hover:underline">Ver histórico completo →</a>
@@ -126,6 +127,43 @@
                class="text-sm text-emerald-600 hover:underline font-medium">Comparativo margem real x estimada →</a>
         </div>
     </div>
+
+    <script>
+    (function () {
+        var form = document.getElementById('stock-adjust-form');
+        var stockDisplay = document.getElementById('stock-display');
+        var feedback = document.getElementById('stock-feedback');
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            feedback.textContent = '';
+            feedback.className = 'mt-2 text-sm';
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(form),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                if (json.ok) {
+                    stockDisplay.textContent = json.new_qty;
+                    feedback.textContent = json.message;
+                    feedback.classList.add('text-green-600');
+                    form.reset();
+                } else {
+                    feedback.textContent = json.error || 'Erro ao ajustar estoque.';
+                    feedback.classList.add('text-red-600');
+                }
+            })
+            .catch(function () {
+                feedback.textContent = 'Erro de rede. Tente novamente.';
+                feedback.classList.add('text-red-600');
+            });
+        });
+    })();
+    </script>
     {% endif %}
 </div>
 {% endblock %}
