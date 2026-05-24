@@ -4,6 +4,11 @@ from datetime import datetime
 
 class PricingHistory(db.Model):
     __tablename__ = 'pricing_history'
+    __table_args__ = (
+        # Cobre queries: WHERE user_id = X ORDER BY created_at [ASC|DESC]
+        # e WHERE user_id = X AND created_at >= date ORDER BY created_at
+        db.Index('ix_pricing_history_user_created', 'user_id', 'created_at'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
