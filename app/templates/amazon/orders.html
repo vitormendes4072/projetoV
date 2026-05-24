@@ -4,7 +4,7 @@
 <div class="max-w-6xl mx-auto py-6 flex flex-col gap-6">
 
   <!-- Cabeçalho -->
-  <div class="flex items-center justify-between gap-4">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div class="flex items-center gap-4">
       <a href="{{ url_for('main.menu') }}"
          class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <a href="{{ url_for('amazon.exportar_orders_csv') }}"
          class="rounded-lg border border-[#d0dbe7] bg-white text-slate-800 font-bold h-10 px-5 flex items-center gap-2 hover:bg-slate-50 transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -162,13 +162,13 @@
 
       <!-- Paginação -->
       {% if pagination.pages > 1 %}
-        <div class="p-4 border-t border-slate-100 flex items-center justify-between gap-4">
+        <div class="p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <span class="text-xs text-slate-500">
             Exibindo {{ ((pagination.page - 1) * 50) + 1 }}–{{ [pagination.page * 50, pagination.total] | min }}
             de {{ pagination.total }}
           </span>
 
-          <div class="flex gap-1">
+          <div class="flex flex-wrap gap-1">
             {% if pagination.has_prev %}
               <a href="{{ url_for('amazon.orders_page', page=pagination.prev_num, q=q, status=status) }}"
                  class="px-3 py-1.5 rounded border border-[#d0dbe7] bg-white text-sm hover:bg-slate-50">‹</a>
