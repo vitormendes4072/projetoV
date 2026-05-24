@@ -1,0 +1,40 @@
+{#
+  Top-nav persistente com itens principais.
+  Estado ativo: matching por endpoint exato OU por prefixo de blueprint
+  (ex: /produtos/editar/1 também marca o item "Produtos").
+  Mobile: overflow-x-auto — scroll horizontal sem hamburger.
+#}
+{% set current = request.endpoint or '' %}
+{% set bp = current.split('.')[0] if current else '' %}
+
+{% set nav_items = [
+  {'label': 'Dashboard',     'endpoint': 'main.dashboard',         'bp': 'main',       'match': ['main.dashboard']},
+  {'label': 'Produtos',      'endpoint': 'produtos.lista_produtos','bp': 'produtos',   'match': []},
+  {'label': 'Pedidos',       'endpoint': 'amazon.orders_page',     'bp': 'amazon',     'match': []},
+  {'label': 'Custos Fixos',  'endpoint': 'financeiro.custos_fixos','bp': 'financeiro', 'match': []},
+  {'label': 'Precificação',  'endpoint': 'pricing.calculator',     'bp': 'pricing',    'match': []},
+  {'label': 'Configurações', 'endpoint': 'settings.index',         'bp': 'settings',   'match': []},
+] %}
+
+<nav class="bg-white border-b border-[#e7edf4] sticky top-0 z-30" aria-label="Navegação principal">
+  <div class="max-w-[1100px] mx-auto px-4">
+    <ul class="flex items-center gap-1 overflow-x-auto no-scrollbar -mb-px">
+      {% for item in nav_items %}
+        {% set is_active = (current == item.endpoint) or (item.match and current in item.match) or (bp == item.bp and item.bp not in ['main']) or (item.bp == 'main' and current == item.endpoint) %}
+        <li class="flex-shrink-0">
+          <a href="{{ url_for(item.endpoint) }}"
+             data-nav-item="{{ item.endpoint }}"
+             class="inline-flex items-center gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors
+                    {% if is_active %}
+                      border-[#0d80f2] text-[#0d80f2]
+                    {% else %}
+                      border-transparent text-[#49739c] hover:text-[#0d141c] hover:border-[#d0dbe7]
+                    {% endif %}"
+             {% if is_active %}aria-current="page"{% endif %}>
+            {{ item.label }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</nav>

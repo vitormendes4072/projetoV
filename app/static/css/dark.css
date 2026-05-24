@@ -192,3 +192,9 @@ html.dark { color-scheme: dark; }
    Botão de alternância de tema
    ============================================================ */
 [data-theme-toggle] { cursor: pointer; }
+
+/* ============================================================
+   Top-nav persistente — esconde scrollbar no mobile
+   ============================================================ */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
