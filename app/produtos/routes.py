@@ -2,7 +2,7 @@
 import csv
 import io
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response, jsonify
 from flask import stream_with_context
 from flask_login import login_required, current_user
 from app import db
@@ -237,9 +237,13 @@ def ajustar_estoque(product_id):
     try:
         delta = int(request.form.get('delta', 0))
     except (ValueError, TypeError):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"ok": False, "error": "Valor de ajuste inválido."}), 400
         flash('Valor de ajuste inválido.', 'danger')
         return redirect(url_for('produtos.editar_produto', product_id=product_id))
     if delta == 0:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"ok": False, "error": "Informe uma variação diferente de zero."}), 400
         flash('Informe uma variação diferente de zero.', 'warning')
         return redirect(url_for('produtos.editar_produto', product_id=product_id))
     motivo = request.form.get('motivo', '').strip() or 'Ajuste Manual'
@@ -247,8 +251,58 @@ def ajustar_estoque(product_id):
     registrar_historico(product, current_user, f'Ajuste de Estoque: {motivo}')
     db.session.commit()
     sinal = '+' if delta >= 0 else ''
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            "ok": True,
+            "new_qty": product.stock_quantity,
+            "message": f'Estoque ajustado em {sinal}{delta} un. Novo total: {product.stock_quantity}.',
+        })
     flash(f'Estoque ajustado em {sinal}{delta} un. Novo total: {product.stock_quantity}.', 'success')
     return redirect(url_for('produtos.editar_produto', product_id=product_id))
+
+
+# Whitelist de campos editáveis via PATCH inline
+_PATCH_FIELDS: dict[str, type] = {
+    "price": float,
+    "cost": float,
+    "packaging_cost": float,
+    "min_stock": int,
+    "stock_quantity": int,
+}
+
+
+@produtos_bp.route('/produtos/<int:product_id>', methods=['PATCH'])
+@login_required
+def patch_produto(product_id):
+    """Edição inline AJAX de um campo numérico do produto.
+
+    Body JSON: {"field": "price", "value": 39.90}
+    Retorna: {"ok": true, "field": "price", "new_value": 39.9}
+    """
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        return jsonify({"ok": False, "error": "Acesso negado."}), 403
+
+    data = request.get_json(silent=True) or {}
+    field = data.get("field", "")
+    raw_value = data.get("value")
+
+    if field not in _PATCH_FIELDS:
+        return jsonify({"ok": False, "error": f"Campo '{field}' não permitido."}), 400
+
+    try:
+        cast = _PATCH_FIELDS[field]
+        value = cast(raw_value)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Valor inválido."}), 400
+
+    if cast is float and value < 0:
+        return jsonify({"ok": False, "error": "Valor não pode ser negativo."}), 400
+
+    setattr(product, field, value)
+    registrar_historico(product, current_user, f'Edição inline: {field}')
+    db.session.commit()
+    return jsonify({"ok": True, "field": field, "new_value": getattr(product, field)})
 
 
 # --- NOVA ROTA: VISUALIZAR HISTÓRICO ---

@@ -62,8 +62,20 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <div class="font-medium">R$ {{ "%.2f"|format(product.price) }}</div>
-                            <div class="text-xs text-slate-500">Custo: R$ {{ "%.2f"|format(product.cost) }}</div>
+                            <div class="font-medium inline-edit-cell cursor-pointer hover:text-[#0d80f2] transition-colors"
+                                 data-field="price"
+                                 data-product-id="{{ product.id }}"
+                                 data-value="{{ product.price }}"
+                                 title="Clique para editar o pre&#231;o">
+                                R$ {{ "%.2f"|format(product.price) }}
+                            </div>
+                            <div class="text-xs text-slate-500 inline-edit-cell cursor-pointer hover:text-[#0d80f2] transition-colors"
+                                 data-field="cost"
+                                 data-product-id="{{ product.id }}"
+                                 data-value="{{ product.cost }}"
+                                 title="Clique para editar o custo">
+                                Custo: R$ {{ "%.2f"|format(product.cost) }}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right">
                             <span class="px-2 py-1 rounded-full text-xs font-bold
@@ -171,4 +183,77 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+(function () {
+    document.querySelectorAll('.inline-edit-cell').forEach(function (cell) {
+        cell.addEventListener('click', function () {
+            if (cell.querySelector('input')) return; // already editing
+
+            var field = cell.dataset.field;
+            var productId = cell.dataset.productId;
+            var originalValue = parseFloat(cell.dataset.value);
+            var originalText = cell.textContent.trim();
+
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.min = '0';
+            input.value = originalValue.toFixed(2);
+            input.className = 'w-24 rounded border border-[#0d80f2] px-2 py-1 text-right text-sm focus:outline-none';
+
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            var saved = false;
+
+            function revert() {
+                cell.textContent = originalText;
+            }
+
+            function save() {
+                if (saved) return;
+                saved = true;
+
+                var newValue = parseFloat(input.value);
+                if (isNaN(newValue) || newValue < 0) { revert(); return; }
+                if (newValue === originalValue) { revert(); return; }
+
+                fetch('/produtos/' + productId, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ field: field, value: newValue }),
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (json) {
+                    if (json.ok) {
+                        var formatted = parseFloat(json.new_value).toFixed(2);
+                        cell.dataset.value = json.new_value;
+                        cell.textContent = field === 'price'
+                            ? 'R$ ' + formatted
+                            : 'Custo: R$ ' + formatted;
+                        cell.classList.add('text-green-600');
+                        setTimeout(function () { cell.classList.remove('text-green-600'); }, 1500);
+                    } else {
+                        revert();
+                        alert(json.error || 'Erro ao salvar.');
+                    }
+                })
+                .catch(function () { revert(); });
+            }
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') { saved = true; revert(); }
+            });
+        });
+    });
+})();
+</script>
 {% endblock %}
