@@ -41,8 +41,7 @@ def _patch(client, product_id, field, value, csrf="test-csrf"):
 class TestPatchProduto:
 
     def test_patch_price_success(self, client, db):
-        user = auth_client(client, db)
-        # auth_client returns the client, not the user — fetch user from DB
+        auth_client(client, db)
         from app.models.user import User
         u = db.session.scalars(db.select(User)).first()
         product = _make_product(db, u)

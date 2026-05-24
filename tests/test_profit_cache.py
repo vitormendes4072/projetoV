@@ -105,10 +105,6 @@ class TestInvalidateOrderCache:
     def test_deletes_profit_and_breakdown_keys(self):
         with patch(f"{_PS}.cache") as mock_cache:
             mock_cache.get.return_value = 0
-            with patch(f"{_PS}.cache", mock_cache):
-                expected_profit = _profit_key.__wrapped__(0, 1, "ORD-1", 4.0) \
-                    if hasattr(_profit_key, "__wrapped__") else None
-
             invalidate_order_profit_cache(1, "ORD-1", 4.0)
 
         # Verifica que as duas chaves deletadas são distintas (profit ≠ breakdown)
