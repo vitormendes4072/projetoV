@@ -269,3 +269,48 @@ class TestGetAmazonConnStatus:
             has_conn, has_sync = _get_amazon_conn_status(user_id=1)
         assert has_conn is True
         assert has_sync is True
+
+
+# ---------------------------------------------------------------------------
+# Top-nav persistente — partials/_main_nav.html
+# ---------------------------------------------------------------------------
+
+class TestMainNav:
+    """Garante que a nav persistente é renderizada em páginas autenticadas."""
+
+    def test_renders_on_authenticated_pages(self, client, db):
+        """/dashboard inclui a nav persistente com os 6 itens principais."""
+        auth_client(client, db)
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        body = resp.data
+        # A nav em si deve estar presente
+        assert 'aria-label="Navegação principal"'.encode() in body
+        # Os 6 itens principais — verificados pelo atributo data-nav-item
+        # (label de texto colidiria com outros elementos da página).
+        assert b'data-nav-item="main.dashboard"' in body
+        assert b'data-nav-item="produtos.lista_produtos"' in body
+        assert b'data-nav-item="amazon.orders_page"' in body
+        assert b'data-nav-item="financeiro.custos_fixos"' in body
+        assert b'data-nav-item="pricing.calculator"' in body
+        assert b'data-nav-item="settings.index"' in body
+        # E os hrefs apontam para as rotas corretas
+        assert b'href="/produtos"' in body
+        assert b'href="/integrations/amazon/orders"' in body
+        assert b'href="/financeiro/custos-fixos"' in body
+
+    def test_marks_active_item_with_aria_current(self, client, db):
+        """Em /dashboard, o item Dashboard tem aria-current='page'."""
+        auth_client(client, db)
+        resp = client.get("/dashboard")
+        assert resp.status_code == 200
+        # Apenas o item ativo ganha aria-current="page"
+        assert b'aria-current="page"' in resp.data
+        assert b'data-nav-item="main.dashboard"' in resp.data
+
+    def test_not_rendered_when_unauthenticated(self, client, db):
+        """Páginas públicas (login) não devem ter a nav persistente."""
+        resp = client.get("/login")
+        assert resp.status_code == 200
+        # Sem auth, nada de nav (e nem header autenticado)
+        assert b'data-nav-item="main.dashboard"' not in resp.data
