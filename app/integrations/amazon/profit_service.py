@@ -8,13 +8,55 @@ from typing import Any
 
 from sqlalchemy.orm import joinedload
 
-from app import db
+from app import db, cache
 from app.models import AmazonOrder, AmazonOrderItem
 from app.models.amazon_finances import AmazonFinancialEvent
 from app.models.amazon_sku_link import AmazonSkuLink
 from app.models.product import Product
 from app.integrations.amazon.utils import utcnow, iso_z
 from app.integrations.amazon.service import sync_financial_events
+
+# ---------------------------------------------------------------------------
+# Cache helpers — generation-counter strategy
+#
+# Each user has a "cache version" (ucv) stored in the cache backend.
+# All per-order keys embed this version, so bumping it in one call
+# effectively invalidates every cached result for that user — without
+# requiring pattern-delete support (works with SimpleCache and RedisCache).
+#
+# NullCache (used in tests) makes cache.get() always return None and
+# cache.set() a no-op, so the helpers below are fully transparent in tests.
+# ---------------------------------------------------------------------------
+
+_PROFIT_TIMEOUT = 300  # seconds — 5 minutes
+_GEN_TIMEOUT = 86_400  # seconds — 1 day (generation key TTL)
+
+
+def _cache_version(user_id: int) -> int:
+    """Return the current generation counter for user_id (0 if unset)."""
+    return cache.get(f"ucv:{user_id}") or 0
+
+
+def _profit_key(user_id: int, order_id: str, tax_rate: float) -> str:
+    v = _cache_version(user_id)
+    return f"profit:v{v}:{user_id}:{order_id}:{round(tax_rate, 4)}"
+
+
+def _breakdown_key(user_id: int, order_id: str, tax_rate: float) -> str:
+    v = _cache_version(user_id)
+    return f"brkdown:v{v}:{user_id}:{order_id}:{round(tax_rate, 4)}"
+
+
+def invalidate_order_profit_cache(user_id: int, order_id: str, tax_rate: float) -> None:
+    """Invalidate cached results for a single order (called after per-order refresh)."""
+    cache.delete(_profit_key(user_id, order_id, tax_rate))
+    cache.delete(_breakdown_key(user_id, order_id, tax_rate))
+
+
+def invalidate_user_profit_cache(user_id: int) -> None:
+    """Invalidate all cached profit results for a user (called after full sync)."""
+    v = _cache_version(user_id)
+    cache.set(f"ucv:{user_id}", v + 1, timeout=_GEN_TIMEOUT)
 
 
 def _r2(x: Any) -> float:
@@ -128,7 +170,14 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
     """
     Calcula lucro líquido de um pedido a partir dos ShipmentEventList.
     Retorna dict pronto para jsonify, ou None se não houver finance events.
+    Resultado é cacheado por _PROFIT_TIMEOUT segundos; None não é cacheado
+    (ausência de eventos pode mudar após próximo sync).
     """
+    _key = _profit_key(user_id, amazon_order_id, default_tax_rate)
+    _cached = cache.get(_key)
+    if _cached is not None:
+        return _cached
+
     from app.services.profit_calc import extract_net_from_shipment_events
 
     fin_rows = db.session.scalars(
@@ -202,7 +251,7 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
     embalagem_total = _r2(embalagem_total)
     lucro = _r2(amazon_net - (cmv_total + embalagem_total + imposto))
 
-    return {
+    result = {
         "ok": True,
         "amazon_order_id": amazon_order_id,
         "mode": "real_from_finance_events",
@@ -223,13 +272,21 @@ def compute_order_profit(user_id: int, amazon_order_id: str, default_tax_rate: f
             "embalagem_source": "Product.packaging_cost by SKU",
         },
     }
+    cache.set(_key, result, timeout=_PROFIT_TIMEOUT)
+    return result
 
 
 def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax_rate: float) -> dict[str, Any]:
     """
     Detalha lucro por item de um pedido.
     Retorna dict pronto para jsonify.
+    Resultado é cacheado por _PROFIT_TIMEOUT segundos.
     """
+    _key = _breakdown_key(user_id, amazon_order_id, default_tax_rate)
+    _cached = cache.get(_key)
+    if _cached is not None:
+        return _cached
+
     from app.services.profit_calc import extract_net_from_shipment_events
 
     order = db.session.scalar(db.select(AmazonOrder).filter_by(user_id=user_id, amazon_order_id=amazon_order_id))
@@ -311,7 +368,7 @@ def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax
             "margem_pct": margem,
         })
 
-    return {
+    result = {
         "ok": True,
         "amazon_order_id": amazon_order_id,
         "order_status": order_status,
@@ -323,3 +380,5 @@ def compute_order_item_breakdown(user_id: int, amazon_order_id: str, default_tax
         "has_finance_events": bool(shipment_events),
         "has_items": bool(items),
     }
+    cache.set(_key, result, timeout=_PROFIT_TIMEOUT)
+    return result
