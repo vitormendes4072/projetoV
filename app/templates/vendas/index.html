@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% from "macros/_ui.html" import page_header, kpi_card_simple %}
+
+{% block title %}VEntregaz – Vendas{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6 py-4">
+
+  {{ page_header("Vendas", url_for('main.menu'),
+      subtitle="Analytics de pedidos Amazon: receita, top SKUs e ticket médio por período.") }}
+
+  {# ── Filtro de período ───────────────────────────────────────────────── #}
+  <div class="flex items-center gap-2 flex-wrap">
+    {% for val, label in [("7d","7 dias"),("30d","30 dias"),("90d","90 dias"),("all","Todos")] %}
+    <a href="{{ url_for('vendas.index', period=val) }}"
+       class="h-9 px-4 rounded-lg text-sm font-semibold border transition-colors
+         {% if period == val %}
+           bg-[#0d80f2] text-white border-[#0d80f2]
+         {% else %}
+           bg-white text-[#0d141c] border-[#d0dbe7] hover:bg-slate-50
+         {% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if not has_amazon_data %}
+  {# ── Estado vazio ─────────────────────────────────────────────────────── #}
+  <div class="flex flex-col items-center justify-center rounded-xl border border-[#e7edf4]
+              bg-white py-20 gap-4 shadow-sm text-center px-6">
+    <div class="flex items-center justify-center size-16 rounded-full bg-slate-100 text-slate-400">
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none"
+           viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0
+                 00-2.977 2.608l-.002.01A3 3 0 007.5 19.5h9a3 3 0 002.979-2.642l.002-.01A3
+                 3 0 0016.5 14.25H7.5zm0 0L5.106 5.272M7.5 14.25l-2.394-8.978m0
+                 0A1.125 1.125 0 004.125 3H2.25M7.5 14.25h9m-9 0H5.106"/>
+      </svg>
+    </div>
+    <div>
+      <p class="text-[#0d141c] font-semibold text-base">Nenhum pedido sincronizado</p>
+      <p class="text-[#49739c] text-sm mt-1 max-w-sm mx-auto">
+        Configure a integração com a Amazon e sincronize seus pedidos para ver os dados de vendas aqui.
+      </p>
+    </div>
+    <div class="flex gap-3 flex-wrap justify-center">
+      <a href="{{ url_for('settings.index') }}"
+         class="h-10 px-5 rounded-lg bg-[#0d80f2] text-white text-sm font-bold
+                hover:bg-blue-600 transition-colors">
+        Configurar integração →
+      </a>
+      <a href="{{ url_for('amazon.orders_page') }}"
+         class="h-10 px-5 rounded-lg border border-[#d0dbe7] bg-white text-[#0d141c]
+                text-sm font-semibold hover:bg-slate-50 transition-colors">
+        Ver pedidos
+      </a>
+    </div>
+  </div>
+
+  {% else %}
+  {# ── KPI cards ────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+    {{ kpi_card_simple("Total de Pedidos", total_orders) }}
+    {{ kpi_card_simple(
+        "Receita Bruta",
+        "R$ " ~ "%.2f"|format(receita_bruta),
+        "text-3xl font-bold text-green-600") }}
+    {{ kpi_card_simple(
+        "Ticket Médio",
+        "R$ " ~ "%.2f"|format(ticket_medio)) }}
+  </div>
+
+  {# ── Top SKUs ─────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl border border-[#e7edf4] shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-[#e7edf4] flex items-center justify-between">
+      <h2 class="text-[#0d141c] text-base font-semibold">
+        Top SKUs por Receita
+        <span class="ml-2 text-xs font-normal text-[#49739c]">— {{ period if period != "all" else "todos os períodos" }}</span>
+      </h2>
+    </div>
+
+    {% if top_skus %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-[#e7edf4] text-[#0d141c]">
+          <tr>
+            <th class="text-center px-4 py-3 font-semibold w-10">#</th>
+            <th class="text-left   px-4 py-3 font-semibold">SKU</th>
+            <th class="text-right  px-4 py-3 font-semibold">Pedidos</th>
+            <th class="text-right  px-4 py-3 font-semibold">Qtd vendida</th>
+            <th class="text-right  px-4 py-3 font-semibold">Receita (R$)</th>
+            <th class="text-left   px-4 py-3 font-semibold w-36">% da receita</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[#e7edf4]">
+          {% for sku in top_skus %}
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="px-4 py-3 text-center text-[#49739c] font-medium">{{ loop.index }}</td>
+            <td class="px-4 py-3 text-[#0d141c] font-mono text-xs">{{ sku.sku }}</td>
+            <td class="px-4 py-3 text-right text-[#0d141c]">{{ sku.orders }}</td>
+            <td class="px-4 py-3 text-right text-[#0d141c]">{{ sku.qty }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-[#0d141c]">
+              {{ "%.2f"|format(sku.revenue) }}
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-slate-100 rounded-full h-2">
+                  <div class="bg-[#0d80f2] h-2 rounded-full"
+                       style="width: {{ [sku.pct, 100] | min }}%"></div>
+                </div>
+                <span class="text-xs text-[#49739c] w-10 text-right shrink-0">
+                  {{ "%.1f"|format(sku.pct) }}%
+                </span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-12 gap-2 text-[#49739c]">
+      <p class="text-sm">Nenhum item de pedido encontrado para o período selecionado.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Link para lista completa de pedidos ──────────────────────────────── #}
+  <div class="flex justify-end">
+    <a href="{{ url_for('amazon.orders_page') }}"
+       class="inline-flex items-center gap-2 h-10 px-5 rounded-lg border border-[#d0dbe7]
+              bg-white text-[#0d141c] text-sm font-semibold hover:bg-slate-50 transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+           viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375
+                 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375
+                 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375
+                 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+      </svg>
+      Ver todos os pedidos
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

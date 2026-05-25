@@ -188,6 +188,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     from app.commands import register_commands
     from app.api import blp as api_blp
     from app.relatorios.routes import relatorios_bp
+    from app.vendas.routes import vendas_bp
 
     app.register_blueprint(auth)
     app.register_blueprint(main)
@@ -203,6 +204,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
 
     app.register_blueprint(amazon)
     app.register_blueprint(relatorios_bp)
+    app.register_blueprint(vendas_bp)
 
     # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
     smorest.init_app(app)
