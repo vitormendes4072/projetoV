@@ -1,7 +1,7 @@
 # app/settings/forms.py
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField, SelectField, FloatField # <--- Adicione PasswordField
-from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo, InputRequired
+from wtforms.validators import DataRequired, Email, Length, ValidationError, EqualTo, InputRequired, Optional
 from flask_login import current_user
 from app import db
 from app.models.user import User
@@ -32,6 +32,19 @@ class ChangePasswordForm(FlaskForm):
         EqualTo('new_password', message='As senhas não conferem.')
     ])
     submit_password = SubmitField('Atualizar Senha')
+
+class WebhookForm(FlaskForm):
+    webhook_url = StringField(
+        'URL do Webhook',
+        validators=[Optional(), Length(max=500)],
+        description='Suporta Discord, Slack e URLs genéricas (apenas https://).',
+    )
+    submit_webhook = SubmitField('Salvar Webhook')
+
+    def validate_webhook_url(self, field: StringField) -> None:  # type: ignore[override]
+        if field.data and not field.data.startswith("https://"):
+            raise ValidationError("Apenas URLs https:// são aceitas.")
+
 
 class BusinessSettingsForm(FlaskForm):
     tax_regime = SelectField('Regime Tributário', choices=[

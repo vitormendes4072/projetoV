@@ -293,6 +293,44 @@
                 <div id="amz_result" class="mt-4 text-sm"></div>
             </div>
 
+            <!-- CARD 5: WEBHOOK OUTBOUND -->
+            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
+                <h2 class="text-xl font-bold text-[#0d141c] mb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-[#0d80f2]">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    Webhook de Notificações
+                </h2>
+                <p class="text-sm text-[#49739c] mb-6">
+                    Receba alertas em tempo real no Discord, Slack ou qualquer URL HTTPS quando o sync falha ou a margem cai abaixo do limite.
+                </p>
+
+                <form method="POST" class="flex flex-col gap-5">
+                    {{ webhook_form.hidden_tag() }}
+
+                    <label class="flex flex-col gap-1">
+                        <span class="text-sm font-medium text-[#0d141c]">URL do Webhook</span>
+                        {{ webhook_form.webhook_url(
+                            class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4",
+                            placeholder="https://discord.com/api/webhooks/... ou https://hooks.slack.com/..."
+                        ) }}
+                        <span class="text-xs text-slate-400">Apenas URLs <code>https://</code>. Suporta Discord, Slack e endpoints genéricos.</span>
+                        {% for error in webhook_form.webhook_url.errors %}
+                            <span class="text-red-500 text-xs">{{ error }}</span>
+                        {% endfor %}
+                    </label>
+
+                    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+                        <button type="button" id="btn_test_webhook"
+                                class="rounded-lg border border-[#d0dbe7] bg-white text-slate-800 font-bold h-10 px-6 hover:bg-slate-50 transition-colors">
+                            Testar
+                        </button>
+                        {{ webhook_form.submit_webhook(class_="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-6 hover:bg-blue-600 transition-colors") }}
+                    </div>
+                    <p id="webhook_test_msg" class="text-sm hidden"></p>
+                </form>
+            </div>
+
         </div>
     </div>
 
@@ -367,8 +405,36 @@
     openProfileModal: {{ (form.current_password.errors | length > 0) | tojson }},
     regenApiKeyUrl: {{ url_for('settings.regenerate_api_key') | tojson }},
     hasApiKey: {{ (current_user.api_key is not none and current_user.api_key != '') | tojson }},
+    testWebhookUrl: {{ url_for('settings.test_webhook') | tojson }},
   };
 </script>
 <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const btn = document.getElementById('btn_test_webhook');
+  const msg = document.getElementById('webhook_test_msg');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    msg.className = 'text-sm hidden';
+    try {
+      const resp = await fetch(SETTINGS_INIT.testWebhookUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrf_token]').value },
+      });
+      const data = await resp.json();
+      msg.className = 'text-sm mt-1 ' + (data.ok ? 'text-green-600' : 'text-red-500');
+      msg.textContent = data.ok ? data.message : (data.error || 'Erro desconhecido.');
+    } catch (e) {
+      msg.className = 'text-sm mt-1 text-red-500';
+      msg.textContent = 'Erro de rede ao testar o webhook.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Testar';
+    }
+  });
+})();
+</script>
 
 {% endblock %}
