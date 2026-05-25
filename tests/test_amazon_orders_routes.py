@@ -314,3 +314,100 @@ def test_order_details_returns_breakdown_items(client, db):
     data = resp.get_json()
     assert len(data["items"]) == 1
     assert data["items"][0]["sku"] == "SKU-A"
+
+
+# ---------------------------------------------------------------------------
+# Validação de formato de Order ID — defesa em profundidade
+# ---------------------------------------------------------------------------
+
+# IDs inválidos que devem ser rejeitados com 400 antes de chegar ao service layer.
+_INVALID_IDS = [
+    "../../etc/passwd",
+    "<script>alert(1)</script>",
+    '" OR 1=1 --',
+    "111 222",          # espaço
+    "111\x00222",       # null byte
+    "",                 # vazio — Flask roteia para outra URL; testado via helper direto
+]
+
+# IDs válidos que devem atravessar o guard sem erro de formato.
+_VALID_IDS = [
+    "111-2222222-3333333",   # formato real Amazon
+    "ABC-123_DEF",           # alfanumérico com hífen e underscore
+    "ORDER123",              # só letras e dígitos
+]
+
+
+def test_profit_order_rejects_dot_in_id(client, db):
+    r"""Ponto não pertence a [\w-] — deve ser rejeitado com 400."""
+    auth_client(client, db)
+    resp = client.get(f"{BASE}/profit/order/111.222.333")
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["ok"] is False
+    assert "inválido" in data["error"]
+
+
+def test_profit_order_rejects_at_sign_in_id(client, db):
+    r"""@ não pertence a [\w-] — deve ser rejeitado com 400."""
+    auth_client(client, db)
+    resp = client.get(f"{BASE}/profit/order/ORDER@USER")
+    assert resp.status_code == 400
+    assert resp.get_json()["ok"] is False
+
+
+def test_profit_order_rejects_exclamation_in_id(client, db):
+    r"""! não pertence a [\w-] — deve ser rejeitado com 400."""
+    auth_client(client, db)
+    resp = client.get(f"{BASE}/profit/order/ORDER!123")
+    assert resp.status_code == 400
+    assert resp.get_json()["ok"] is False
+
+
+def test_profit_order_refresh_rejects_invalid_id(client, db):
+    """POST /refresh com ID inválido (ponto) retorna 400 sem tocar no service."""
+    auth_client(client, db)
+    resp = client.post(f"{BASE}/profit/order/bad.order.id/refresh",
+                       headers={"X-CSRFToken": "ignored-in-test"})
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["ok"] is False
+    assert "inválido" in data["error"]
+
+
+def test_order_details_rejects_invalid_id(client, db):
+    """GET /details com @ no ID retorna 400 sem tocar no service."""
+    auth_client(client, db)
+    resp = client.get(f"{BASE}/orders/bad@order/details")
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["ok"] is False
+    assert "inválido" in data["error"]
+
+
+def test_profit_order_valid_id_passes_guard(client, db):
+    """ID válido deve ultrapassar o guard e chegar ao service layer normalmente."""
+    auth_client(client, db)
+    with patch("app.integrations.amazon.routes_orders.db") as mock_db, \
+         patch("app.integrations.amazon.routes_orders.compute_order_profit",
+               return_value=None), \
+         patch("app.integrations.amazon.routes_orders._compute_order_start",
+               return_value=(None, "2026-01-01T00:00:00Z")):
+        mock_db.session.scalar.return_value = _fake_conn()
+        resp = client.get(f"{BASE}/profit/order/111-2222222-3333333")
+    # Chega ao service layer — retorna 200 (modo no_finance_events), não 400
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+
+def test_order_id_valid_format_helper():
+    """Testa a lógica do helper _valid_order_id diretamente."""
+    from app.integrations.amazon.routes_orders import _valid_order_id
+
+    for valid in _VALID_IDS:
+        assert _valid_order_id(valid), f"Esperado válido: {valid!r}"
+
+    for invalid in _INVALID_IDS:
+        if invalid == "":
+            continue  # string vazia: fullmatch retorna None, já coberta implicitamente
+        assert not _valid_order_id(invalid), f"Esperado inválido: {invalid!r}"

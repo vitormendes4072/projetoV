@@ -1,6 +1,7 @@
 import csv
 import io
 import logging
+import re
 
 from flask import Response, jsonify, render_template, request, stream_with_context
 from flask_login import login_required, current_user
@@ -18,6 +19,14 @@ from app.integrations.amazon.profit_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Defesa em profundidade: Amazon Order IDs são alfanuméricos com hífens/underscores.
+# Rejeita qualquer outro caractere antes de chegar ao service layer ou ao cache.
+_ORDER_ID_RE = re.compile(r'^[\w-]+$')
+
+
+def _valid_order_id(order_id: str) -> bool:
+    return bool(_ORDER_ID_RE.fullmatch(order_id))
 
 
 @amazon.get("/orders")
@@ -101,6 +110,8 @@ def exportar_orders_csv():
 @limiter.limit("10 per minute")
 def profit_order(amazon_order_id: str):
     """Leitura pura: retorna lucro calculado a partir dos dados locais. Não escreve no BD."""
+    if not _valid_order_id(amazon_order_id):
+        return jsonify({"ok": False, "error": "Formato de Order ID inválido"}), 400
     conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
@@ -130,6 +141,8 @@ def profit_order(amazon_order_id: str):
 @limiter.limit("5 per minute")
 def profit_order_refresh(amazon_order_id: str):
     """Dispara sync curto de finances e recalcula o lucro. Separa a escrita do GET."""
+    if not _valid_order_id(amazon_order_id):
+        return jsonify({"ok": False, "error": "Formato de Order ID inválido"}), 400
     conn = db.session.scalar(db.select(AmazonConnection).filter_by(user_id=user_key()))
     if not conn:
         return jsonify({"ok": False, "error": "Integração Amazon não configurada"}), 400
@@ -172,6 +185,8 @@ def profit_order_refresh(amazon_order_id: str):
 @login_required
 @limiter.limit("20 per minute")
 def order_details(amazon_order_id: str):
+    if not _valid_order_id(amazon_order_id):
+        return jsonify({"ok": False, "error": "Formato de Order ID inválido"}), 400
     default_tax_rate = float(getattr(current_user, "default_tax_rate", 0.0) or 0.0)
     result = compute_order_item_breakdown(user_key(), amazon_order_id, default_tax_rate)
     return jsonify(result)
