@@ -202,6 +202,17 @@ def send_margin_alerts(run_day: date | None = None, dry_run: bool = False) -> di
         mail.send(msg)
         summary["emails_sent"] += 1
 
+        # Webhook complementar (não bloqueia em caso de falha)
+        if getattr(user, "webhook_url", None):
+            try:
+                from app.notifications.webhook import notify_margin_alert
+                notify_margin_alert(user.id, breach_products)
+            except Exception:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(
+                    "Falha ao enviar webhook de margem para user_id=%s", user.id, exc_info=True
+                )
+
         for p in breach_products:
             _mark_sent(user.id, p["id"], run_day, p["margin"])
             summary["alerts_sent"] += 1

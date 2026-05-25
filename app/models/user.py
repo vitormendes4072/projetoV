@@ -30,6 +30,9 @@ class User(UserMixin, db.Model):
     # --- API KEY ---
     api_key = db.Column(db.String(64), unique=True, nullable=True, index=True)
 
+    # --- WEBHOOK ---
+    webhook_url = db.Column(db.String(500), nullable=True)
+
     # --- SEGURANÇA: invalida tokens de reset após troca de senha ---
     # Carimbado em set_password(); reset_token rejeita tokens emitidos antes deste timestamp.
     password_changed_at = db.Column(db.DateTime(timezone=True), nullable=True)
