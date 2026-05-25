@@ -2,6 +2,7 @@
 import time
 
 from flask import Blueprint, Flask, Response, jsonify
+from app import db  # noqa: E402  (importado aqui para ser patchável nos testes)
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
@@ -46,13 +47,14 @@ def livez():
 
 @monitoring_bp.get("/readyz")
 def readyz():
-    from sqlalchemy import text
+    import os
     from flask import current_app
-    from app import db
+    from sqlalchemy import text
 
     checks: dict = {}
     ok = True
 
+    # DB check
     try:
         db.session.execute(text("SELECT 1"))
         checks["db"] = "ok"
@@ -60,11 +62,18 @@ def readyz():
         checks["db"] = f"error: {exc}"
         ok = False
 
+    # Redis check
+    # Em produção a ausência de Redis também é falha — o worker RQ não funcionará.
+    # Em dev/test é opcional (FakeRedis / sem fila real).
+    _is_production = os.environ.get("APP_ENV") == "production"
     try:
         queue = current_app.extensions.get("rq_queue")
         if queue:
             queue.connection.ping()
             checks["redis"] = "ok"
+        elif _is_production:
+            checks["redis"] = "not configured"
+            ok = False
         else:
             checks["redis"] = "not configured"
     except Exception as exc:
