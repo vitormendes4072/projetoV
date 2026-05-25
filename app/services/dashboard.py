@@ -150,6 +150,8 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "complete":        _has_products and _has_conn and _has_sync,
     }
 
+    deltas = _compute_period_deltas(user_id, period)
+
     return {
         "total_products": total_products,
         "total_simulations": total_simulations,
@@ -162,6 +164,99 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "chart_margins": chart_margins,
         "margin_dist": margin_dist,
         "onboarding": onboarding,
+        **deltas,
+    }
+
+
+def _compute_period_deltas(user_id: int, period: str) -> dict:
+    """Calcula deltas período-a-período usando 1 query com CASE WHEN.
+
+    Para cada período N dias:
+      - janela atual:   [now - N, now]
+      - janela anterior: [now - 2N, now - N]
+
+    Retorna None para cada delta quando:
+      - period == "all" (sem janela anterior definida)
+      - janela anterior não tem dados (sem base de comparação)
+    """
+    _none: dict = {
+        "delta_simulations": None,
+        "delta_margin": None,
+        "delta_roi": None,
+    }
+
+    if period not in _PERIOD_DAYS:
+        return _none
+
+    days = _PERIOD_DAYS[period]
+    now = datetime.now()
+    date_from = now - timedelta(days=days)
+    prev_from = now - timedelta(days=days * 2)
+
+    row = db.session.execute(
+        db.select(
+            db.func.count(
+                sa.case((PricingHistory.created_at >= date_from, 1))
+            ).label("cur_sims"),
+            db.func.avg(
+                sa.case((PricingHistory.created_at >= date_from, PricingHistory.margin))
+            ).label("cur_margin"),
+            db.func.avg(
+                sa.case((PricingHistory.created_at >= date_from, PricingHistory.roi))
+            ).label("cur_roi"),
+            db.func.count(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    1,
+                ))
+            ).label("prev_sims"),
+            db.func.avg(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    PricingHistory.margin,
+                ))
+            ).label("prev_margin"),
+            db.func.avg(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    PricingHistory.roi,
+                ))
+            ).label("prev_roi"),
+        ).where(
+            PricingHistory.user_id == user_id,
+            PricingHistory.created_at >= prev_from,
+        )
+    ).one()
+
+    prev_sims: int = int(row.prev_sims or 0)
+
+    delta_simulations: int | None = (
+        int(row.cur_sims or 0) - prev_sims if prev_sims > 0 else None
+    )
+    delta_margin: float | None = (
+        float(row.cur_margin or 0) - float(row.prev_margin)
+        if row.prev_margin is not None
+        else None
+    )
+    delta_roi: float | None = (
+        float(row.cur_roi or 0) - float(row.prev_roi)
+        if row.prev_roi is not None
+        else None
+    )
+
+    return {
+        "delta_simulations": delta_simulations,
+        "delta_margin": delta_margin,
+        "delta_roi": delta_roi,
     }
 
 

@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 
+{# ── Macro: badge de delta período-a-período ──────────────────────────────── #}
+{% macro delta_badge(value, unit="pp") %}
+  {% if value is none %}
+    <span class="text-xs text-slate-400">— vs. período anterior</span>
+  {% elif value > 0 %}
+    <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-green-600">
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"/></svg>
+      +{{ "%.1f"|format(value) if unit == "pp" else value }}{{ unit }} vs. anterior
+    </span>
+  {% elif value < 0 %}
+    <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-red-500">
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"/></svg>
+      {{ "%.1f"|format(value) if unit == "pp" else value }}{{ unit }} vs. anterior
+    </span>
+  {% else %}
+    <span class="text-xs text-slate-400">→ sem variação vs. anterior</span>
+  {% endif %}
+{% endmacro %}
+
 {% block content %}
 <div class="flex flex-col gap-6 py-4">
 
@@ -187,7 +206,8 @@
                 </span>
             </div>
             <p class="text-3xl font-black text-[#0d141c]">{{ total_simulations }}</p>
-            <p class="text-xs text-[#49739c] group-hover:text-emerald-600 transition-colors">Ver relatório →</p>
+            {{ delta_badge(delta_simulations, unit="") }}
+            <p class="text-xs text-[#49739c] group-hover:text-emerald-600 transition-colors mt-auto">Ver relatório →</p>
         </a>
 
         <!-- Margem Média — drill-down accordion -->
@@ -205,7 +225,8 @@
             <p class="text-3xl font-black {% if avg_margin > 15 %}text-green-600{% elif avg_margin > 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
                 {{ "%.1f"|format(avg_margin) }}%
             </p>
-            <p class="text-xs text-[#49739c] group-hover:text-violet-600 transition-colors flex items-center gap-1">
+            {{ delta_badge(delta_margin, unit="pp") }}
+            <p class="text-xs text-[#49739c] group-hover:text-violet-600 transition-colors flex items-center gap-1 mt-auto">
                 Ver por SKU
                 <svg class="drill-chevron transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -225,7 +246,8 @@
                 </span>
             </div>
             <p class="text-3xl font-black text-[#0d141c]">{{ "%.0f"|format(avg_roi) }}%</p>
-            <p class="text-xs text-[#49739c] group-hover:text-amber-600 transition-colors flex items-center gap-1">
+            {{ delta_badge(delta_roi, unit="pp") }}
+            <p class="text-xs text-[#49739c] group-hover:text-amber-600 transition-colors flex items-center gap-1 mt-auto">
                 Ver por SKU
                 <svg class="drill-chevron transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
