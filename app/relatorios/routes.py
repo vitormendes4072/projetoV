@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, send_file, flash
+from flask import Blueprint, render_template, request, redirect, url_for, send_file, flash, Response
+from flask import stream_with_context
 from flask_login import login_required, current_user
 
 from app.relatorios.service import get_monthly_report, available_months
@@ -70,6 +71,34 @@ def mensal_pdf():
         mimetype="application/pdf",
         as_attachment=True,
         download_name=filename,
+    )
+
+
+@relatorios_bp.get("/exportar-fiscal")
+@login_required
+def exportar_fiscal():
+    """Exporta CSV fiscal (projeção) para o ano selecionado.
+
+    Query param:
+      - year (int, opcional): ano de referência; padrão = ano corrente
+    """
+    today = date.today()
+    try:
+        year = int(request.args.get("year", today.year))
+    except (TypeError, ValueError):
+        year = today.year
+
+    year = max(2020, min(today.year + 1, year))
+
+    from app.relatorios.fiscal_export import iter_fiscal_csv
+
+    regime = (current_user.tax_regime or "simples").lower()
+    filename = f"ventregaz_fiscal_{regime}_{year}.csv"
+
+    return Response(
+        stream_with_context(iter_fiscal_csv(current_user, year)),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
