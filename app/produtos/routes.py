@@ -176,6 +176,7 @@ def criar_produto():
             stock_quantity=form.stock_quantity.data,
             min_stock=form.min_stock.data if form.min_stock.data is not None else 5,
             image_url=form.image_url.data,
+            margin_alert_threshold=form.margin_alert_threshold.data,
             owner=current_user
         )
         db.session.add(produto)
@@ -208,6 +209,7 @@ def editar_produto(product_id):
         product.stock_quantity = form.stock_quantity.data
         product.min_stock = form.min_stock.data if form.min_stock.data is not None else 5
         product.image_url = form.image_url.data
+        product.margin_alert_threshold = form.margin_alert_threshold.data
 
         registrar_historico(product, current_user, 'Alteração Manual')
 
@@ -224,6 +226,11 @@ def editar_produto(product_id):
         form.stock_quantity.data = product.stock_quantity
         form.min_stock.data = product.min_stock
         form.image_url.data = product.image_url
+        form.margin_alert_threshold.data = (
+            float(product.margin_alert_threshold)
+            if product.margin_alert_threshold is not None
+            else None
+        )
 
     return render_template('produtos/editar.html', form=form, title="Editar Produto", product=product)
 

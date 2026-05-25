@@ -76,6 +76,27 @@ services:
       - key: CREDENTIALS_ENCRYPTION_KEY
         sync: false
 
+  # ── Cron — alertas de margem baixa (07:00 UTC) ───────────────────────────
+  - type: cron
+    name: ventregaz-margin-alerts
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    schedule: "0 7 * * *"
+    command: flask send-margin-alerts
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ventregaz-db
+          property: connectionString
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+
   # ── Redis ─────────────────────────────────────────────────────────────────
   - type: redis
     name: ventregaz-redis

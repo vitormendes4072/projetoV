@@ -84,6 +84,18 @@
                     {{ form.image_url(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">
+                        Alerta de margem mínima (%)
+                        <span class="text-xs text-slate-400 font-normal ml-1">(deixe vazio para desativar)</span>
+                    </label>
+                    {{ form.margin_alert_threshold(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0", placeholder="Ex: 15") }}
+                    {% for error in form.margin_alert_threshold.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                    <span class="text-xs text-slate-400">Você receberá um e-mail quando a margem simulada cair abaixo deste valor.</span>
+                </div>
+
             </div>
 
             <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">

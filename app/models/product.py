@@ -20,6 +20,11 @@ class Product(db.Model):
     min_stock = db.Column(db.Integer, nullable=False, default=5)
     image_url = db.Column(db.String(500), nullable=True)
 
+    # Alerta automático de margem — envia e-mail quando a última simulação
+    # vinculada ao produto fica abaixo deste threshold (%).
+    # None = sem alerta configurado.
+    margin_alert_threshold = db.Column(db.Numeric(5, 2), nullable=True)
+
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.now)
