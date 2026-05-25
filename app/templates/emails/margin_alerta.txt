@@ -1,0 +1,10 @@
+Olá, {{ user_name }}!
+
+Alertas de margem baixa ({{ run_day }}):
+
+{% for p in products -%}
+- {{ p.name }} ({{ p.sku }}): margem atual {{ "%.1f"|format(p.margin) }}% / limite {{ "%.1f"|format(p.threshold) }}%
+{% endfor %}
+
+Acesse o simulador para revisar a precificação.
+Você pode ajustar o limite de alerta editando cada produto.

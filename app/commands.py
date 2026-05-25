@@ -156,6 +156,31 @@ def register_commands(app: Flask) -> None:
         summary = send_custos_fixos_alerts_for_day(run_day=run_day, dry_run=dry_run)
         click.echo(summary)
 
+    @app.cli.command("send-margin-alerts")
+    @click.option("--date", "date_str", default="", help="Data no formato YYYY-MM-DD (opcional).")
+    @click.option("--dry-run", is_flag=True, help="Não envia e-mail, só mostra o que faria.")
+    def send_margin_alerts_cmd(date_str: str, dry_run: bool):
+        """Envia alertas de margem baixa por e-mail.
+
+        Para cada produto com threshold configurado, verifica se a última
+        simulação vinculada está abaixo do limite e envia e-mail caso ainda
+        não tenha sido enviado hoje.
+
+        Projetado para execução diária via cron externo:
+
+            0 7 * * *  flask send-margin-alerts
+        """
+        from app.financeiro.alerts_margin import send_margin_alerts
+
+        run_day = None
+        if date_str:
+            try:
+                run_day = date.fromisoformat(date_str)
+            except Exception:
+                raise click.ClickException("Data inválida. Use YYYY-MM-DD.")
+        summary = send_margin_alerts(run_day=run_day, dry_run=dry_run)
+        click.echo(summary)
+
     @app.cli.command("seed-demo")
     def seed_demo_cmd():
         """Cria (ou recria) a conta demo com dados fictícios."""
