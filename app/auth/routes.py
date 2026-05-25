@@ -18,7 +18,6 @@ auth = Blueprint('auth', __name__)
 
 # --- FUNÇÕES AUXILIARES DE E-MAIL (ASSÍNCRONAS) ---
 
-### MELHORIA DE PERFORMANCE: Função que roda em background
 def send_async_email(app, msg):
     # O Flask precisa do contexto da aplicação para acessar as configs de email dentro da Thread
     with app.app_context():
@@ -36,7 +35,6 @@ def send_reset_email(user):
     link = url_for('auth.reset_token', token=token, _external=True)
     msg.body = f'''Para redefinir sua senha, visite: {link}'''
 
-    ### MELHORIA: Dispara e esquece (não trava o usuário)
     # Passamos o 'current_app._get_current_object()' para garantir que a Thread tenha acesso às configs
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
@@ -111,7 +109,6 @@ def login():
             # Captura o argumento 'next'
             next_page = request.args.get('next')
 
-            ### MELHORIA DE SEGURANÇA: Previne Open Redirect ###
             # Se next_page existir MAS tiver um domínio (netloc), ignoramos e vamos pro dashboard
             if not next_page or urlsplit(next_page).netloc != '':
                 next_page = url_for('main.dashboard')
