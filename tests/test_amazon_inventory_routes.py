@@ -65,7 +65,8 @@ def test_sync_inventory_unauthenticated(client, db):
 
 def test_inventory_page_empty(client, db):
     auth_client(client, db)
-    with patch(f"{MODULE}.db") as mock_db:
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={}):
         mock_db.select.return_value = MagicMock()
         mock_db.paginate.return_value = _make_pagination([])
         resp = client.get(f"{BASE}/inventory")
@@ -75,7 +76,8 @@ def test_inventory_page_empty(client, db):
 def test_inventory_page_with_snapshots(client, db):
     auth_client(client, db)
     snaps = [_fake_snapshot("SKU-A"), _fake_snapshot("SKU-B")]
-    with patch(f"{MODULE}.db") as mock_db:
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={}):
         mock_db.select.return_value = MagicMock()
         mock_db.paginate.return_value = _make_pagination(snaps)
         resp = client.get(f"{BASE}/inventory")
@@ -84,12 +86,60 @@ def test_inventory_page_with_snapshots(client, db):
 
 def test_inventory_page_with_search_query(client, db):
     auth_client(client, db)
-    with patch(f"{MODULE}.db") as mock_db:
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={}):
         mock_db.select.return_value = MagicMock()
         mock_db.or_.return_value = MagicMock()
         mock_db.paginate.return_value = _make_pagination([_fake_snapshot("SKU-FOUND")])
         resp = client.get(f"{BASE}/inventory?q=SKU-FOUND")
     assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Alertas de reposição — min_stock_map integrado na página
+# ---------------------------------------------------------------------------
+
+def test_inventory_alert_banner_shown_when_below_min(client, db):
+    """Banner âmbar aparece quando algum SKU está abaixo do min_stock."""
+    auth_client(client, db)
+    snap = _fake_snapshot("SKU-LOW", qty=3)
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={"SKU-LOW": 5}):
+        mock_db.select.return_value = MagicMock()
+        mock_db.paginate.return_value = _make_pagination([snap])
+        resp = client.get(f"{BASE}/inventory")
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    assert "abaixo do mínimo" in body
+    assert "Repor" in body
+
+
+def test_inventory_alert_banner_hidden_when_above_min(client, db):
+    """Sem banner quando estoque está acima do min_stock."""
+    auth_client(client, db)
+    snap = _fake_snapshot("SKU-OK", qty=20)
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={"SKU-OK": 5}):
+        mock_db.select.return_value = MagicMock()
+        mock_db.paginate.return_value = _make_pagination([snap])
+        resp = client.get(f"{BASE}/inventory")
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    assert "abaixo do mínimo" not in body
+    assert "Repor" not in body
+
+
+def test_inventory_min_column_present(client, db):
+    """Coluna 'Mín.' aparece no cabeçalho da tabela."""
+    auth_client(client, db)
+    snaps = [_fake_snapshot("SKU-A", qty=5)]
+    with patch(f"{MODULE}.db") as mock_db, \
+         patch(f"{MODULE}.get_min_stock_map", return_value={"SKU-A": 10}):
+        mock_db.select.return_value = MagicMock()
+        mock_db.paginate.return_value = _make_pagination(snaps)
+        resp = client.get(f"{BASE}/inventory")
+    assert resp.status_code == 200
+    assert "Mín." in resp.data.decode()
 
 
 # ---------------------------------------------------------------------------
