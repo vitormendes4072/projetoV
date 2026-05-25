@@ -77,32 +77,18 @@
   </div>
 
   {# KPI Cards #}
+  {% from "macros/_ui.html" import kpi_card_simple %}
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Simulações</p>
-      <p class="text-[#0d141c] text-3xl font-bold">{{ report.total }}</p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Margem Média</p>
-      <p class="text-3xl font-bold {% if report.avg_margin > 0 %}text-green-600{% elif report.avg_margin < 0 %}text-red-600{% else %}text-[#0d141c]{% endif %}">
-        {{ "%.1f"|format(report.avg_margin) }}%
-      </p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">ROI Médio</p>
-      <p class="text-[#0d80f2] text-3xl font-bold">{{ "%.1f"|format(report.avg_roi) }}%</p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">% Lucrativas</p>
-      <p class="text-3xl font-bold {% if report.pct_profitable >= 70 %}text-green-600{% elif report.pct_profitable >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
-        {{ "%.0f"|format(report.pct_profitable) }}%
-      </p>
-    </div>
-
+    {{ kpi_card_simple("Simulações", report.total) }}
+    {{ kpi_card_simple("Margem Média",
+        "%.1f"|format(report.avg_margin) ~ "%",
+        "text-3xl font-bold " ~ ("text-green-600" if report.avg_margin > 0 else "text-red-600" if report.avg_margin < 0 else "text-[#0d141c]")) }}
+    {{ kpi_card_simple("ROI Médio",
+        "%.1f"|format(report.avg_roi) ~ "%",
+        "text-[#0d80f2]") }}
+    {{ kpi_card_simple("% Lucrativas",
+        "%.0f"|format(report.pct_profitable) ~ "%",
+        "text-3xl font-bold " ~ ("text-green-600" if report.pct_profitable >= 70 else "text-yellow-600" if report.pct_profitable >= 40 else "text-red-600")) }}
   </div>
 
   {# Tabela de simulações #}
