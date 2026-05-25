@@ -1,13 +1,14 @@
 """
 Testes para app/main/routes.py — rota /dashboard e /dashboard/drill/<metric>.
 """
+from datetime import datetime, timedelta
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.models.pricing import PricingHistory
 from app.models.product import Product
-from app.services.dashboard import _get_amazon_conn_status
+from app.services.dashboard import _get_amazon_conn_status, _compute_period_deltas
 from tests.conftest import auth_client, login, make_user
 
 
@@ -18,7 +19,9 @@ def _auth_client_and_get_user(client, db, email="u@test.com", password="senha123
     return user
 
 
-def _add_sim(db, user_id, margin, net_profit=Decimal("10.00"), index=0):
+def _add_sim(db, user_id, margin, net_profit=Decimal("10.00"), index=0,
+             days_ago=0, roi=Decimal("20.00")):
+    created = datetime.now() - timedelta(days=days_ago)
     sim = PricingHistory(
         user_id=user_id,
         title=f"Sim {index}",
@@ -30,7 +33,8 @@ def _add_sim(db, user_id, margin, net_profit=Decimal("10.00"), index=0):
         marketing=Decimal("0.00"),
         net_profit=net_profit,
         margin=Decimal(str(margin)),
-        roi=Decimal("20.00"),
+        roi=roi,
+        created_at=created,
     )
     db.session.add(sim)
     db.session.commit()
@@ -376,3 +380,74 @@ class TestDashboardDrill:
             resp = client.get("/dashboard/drill/margin?period=7d")
         assert resp.status_code == 200
         assert "Nenhuma simulação".encode() in resp.data
+
+
+# ---------------------------------------------------------------------------
+# Delta período-a-período — _compute_period_deltas
+# ---------------------------------------------------------------------------
+
+class TestPeriodDeltas:
+    """Testa _compute_period_deltas diretamente (sem HTTP)."""
+
+    def test_all_period_returns_none_deltas(self, client, db):
+        """period='all' → todos os deltas devem ser None."""
+        user = make_user(db, email="delta_all@test.com")
+        result = _compute_period_deltas(user.id, period="all")
+        assert result["delta_simulations"] is None
+        assert result["delta_margin"] is None
+        assert result["delta_roi"] is None
+
+    def test_delta_positive_when_current_margin_higher(self, client, db):
+        """Margem atual maior que período anterior → delta_margin > 0."""
+        user = make_user(db, email="delta_pos@test.com")
+        # Período anterior (15 dias atrás, dentro da janela de 7-14d para period=7d)
+        _add_sim(db, user.id, margin=10, days_ago=10, index=0)
+        # Período atual (2 dias atrás, dentro da janela de 0-7d)
+        _add_sim(db, user.id, margin=30, days_ago=2, index=1)
+
+        result = _compute_period_deltas(user.id, period="7d")
+        assert result["delta_margin"] is not None
+        assert result["delta_margin"] > 0
+
+    def test_delta_negative_when_current_margin_lower(self, client, db):
+        """Margem atual menor que período anterior → delta_margin < 0."""
+        user = make_user(db, email="delta_neg@test.com")
+        _add_sim(db, user.id, margin=30, days_ago=10, index=0)
+        _add_sim(db, user.id, margin=10, days_ago=2, index=1)
+
+        result = _compute_period_deltas(user.id, period="7d")
+        assert result["delta_margin"] is not None
+        assert result["delta_margin"] < 0
+
+    def test_delta_none_when_no_prev_period_data(self, client, db):
+        """Sem dados no período anterior → delta_margin = None."""
+        user = make_user(db, email="delta_noprev@test.com")
+        # Só há dado na janela atual (2 dias atrás)
+        _add_sim(db, user.id, margin=20, days_ago=2, index=0)
+
+        result = _compute_period_deltas(user.id, period="7d")
+        assert result["delta_margin"] is None
+
+    def test_delta_simulations_positive(self, client, db):
+        """Mais simulações no período atual → delta_simulations > 0."""
+        user = make_user(db, email="delta_sims@test.com")
+        # 1 simulação na janela anterior
+        _add_sim(db, user.id, margin=20, days_ago=10, index=0)
+        # 3 simulações na janela atual
+        for i in range(3):
+            _add_sim(db, user.id, margin=20, days_ago=2, index=i + 1)
+
+        result = _compute_period_deltas(user.id, period="7d")
+        assert result["delta_simulations"] == 2  # 3 - 1
+
+    def test_dashboard_renders_delta_badge(self, client, db):
+        """Página /dashboard renderiza badge de delta (↑ ou ↓ ou —)."""
+        user = make_user(db, email="delta_render@test.com")
+        login(client, "delta_render@test.com", "senha123")
+        _add_sim(db, user.id, margin=20, days_ago=2, index=0)
+
+        resp = client.get("/dashboard?period=30d")
+        assert resp.status_code == 200
+        body = resp.data.decode()
+        # Badge deve conter "vs. anterior" (seja positivo, negativo ou None)
+        assert "vs. anterior" in body or "— vs. período anterior" in body
