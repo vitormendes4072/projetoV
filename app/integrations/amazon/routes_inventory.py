@@ -9,6 +9,7 @@ from app.models.amazon_inventory import AmazonInventorySnapshot
 from app.integrations.amazon import amazon
 from app.integrations.amazon.utils import user_key
 from app.integrations.amazon.service import get_inventory_summaries, upsert_inventory_snapshots
+from app.integrations.amazon.inventory import get_min_stock_map
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,23 @@ def inventory_page():
         )
 
     pagination = db.paginate(stmt, page=page, per_page=50, error_out=False)
-    return render_template("amazon/inventory.html", pagination=pagination, q=q)
+
+    # Cruzar SKUs da página com min_stock dos produtos vinculados (2 queries fixas).
+    page_skus = [snap.seller_sku for snap in pagination.items]
+    min_stock_map = get_min_stock_map(user_key(), page_skus)
+    alert_count = sum(
+        1 for snap in pagination.items
+        if snap.seller_sku in min_stock_map
+        and (snap.fulfillable_qty or 0) <= min_stock_map[snap.seller_sku]
+    )
+
+    return render_template(
+        "amazon/inventory.html",
+        pagination=pagination,
+        q=q,
+        min_stock_map=min_stock_map,
+        alert_count=alert_count,
+    )
 
 
 @amazon.post("/sync_inventory")
