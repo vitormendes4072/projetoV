@@ -1,7 +1,8 @@
 """
-Testes para app/main/routes.py — rota /dashboard.
+Testes para app/main/routes.py — rota /dashboard e /dashboard/drill/<metric>.
 """
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from app.models.pricing import PricingHistory
@@ -314,3 +315,64 @@ class TestMainNav:
         assert resp.status_code == 200
         # Sem auth, nada de nav (e nem header autenticado)
         assert b'data-nav-item="main.dashboard"' not in resp.data
+
+
+# ---------------------------------------------------------------------------
+# Drill-down — GET /dashboard/drill/<metric>
+# ---------------------------------------------------------------------------
+
+def _fake_drill_rows(n=3):
+    from datetime import date
+    return [
+        SimpleNamespace(
+            title=f"SKU-{i}",
+            best_margin=20.0 - i * 5,
+            best_roi=30.0 - i * 5,
+            best_net_profit=15.0 - i * 2,
+            last_date=date(2025, 1, 1),
+            sim_count=i + 1,
+        )
+        for i in range(n)
+    ]
+
+
+class TestDashboardDrill:
+    """Testes para o endpoint de drill-down dos KPI cards."""
+
+    DRILL_MODULE = "app.services.dashboard.get_drill_data"
+
+    def test_drill_unauthenticated(self, client, db):
+        resp = client.get("/dashboard/drill/margin")
+        assert resp.status_code in (302, 401)
+
+    def test_drill_margin_returns_200_with_table(self, client, db):
+        """GET /dashboard/drill/margin retorna 200 com cabeçalho da tabela."""
+        auth_client(client, db)
+        with patch(self.DRILL_MODULE, return_value=_fake_drill_rows()):
+            resp = client.get("/dashboard/drill/margin?period=30d")
+        assert resp.status_code == 200
+        body = resp.data.decode()
+        assert "Margem" in body
+        assert "SKU-0" in body
+
+    def test_drill_roi_returns_200_with_table(self, client, db):
+        """GET /dashboard/drill/roi retorna 200 com cabeçalho da tabela."""
+        auth_client(client, db)
+        with patch(self.DRILL_MODULE, return_value=_fake_drill_rows()):
+            resp = client.get("/dashboard/drill/roi?period=30d")
+        assert resp.status_code == 200
+        assert b"ROI" in resp.data
+
+    def test_drill_invalid_metric_returns_404(self, client, db):
+        """Métrica desconhecida deve retornar 404."""
+        auth_client(client, db)
+        resp = client.get("/dashboard/drill/invalid_metric")
+        assert resp.status_code == 404
+
+    def test_drill_empty_period_shows_empty_message(self, client, db):
+        """Sem simulações no período, exibe mensagem 'Nenhuma simulação'."""
+        auth_client(client, db)
+        with patch(self.DRILL_MODULE, return_value=[]):
+            resp = client.get("/dashboard/drill/margin?period=7d")
+        assert resp.status_code == 200
+        assert "Nenhuma simulação".encode() in resp.data

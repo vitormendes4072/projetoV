@@ -163,3 +163,64 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "margin_dist": margin_dist,
         "onboarding": onboarding,
     }
+
+
+_DRILL_METRICS = {"margin", "roi"}
+
+
+def get_drill_data(
+    user_id: int,
+    period: str = "30d",
+    metric: str = "margin",
+    limit: int = 20,
+) -> list[SimpleNamespace]:
+    """Retorna top `limit` simulações agrupadas por título, ordenadas pelo
+    melhor valor do `metric` (margin ou roi) dentro do período.
+
+    Usa GROUP BY title para consolidar múltiplas simulações do mesmo SKU,
+    expondo: best_margin, best_roi, best_net_profit, last_date.
+    Resultado NÃO é cacheado — chamada sob demanda via AJAX.
+    """
+    if metric not in _DRILL_METRICS:
+        raise ValueError(f"metric must be one of {_DRILL_METRICS}")
+
+    date_from = None
+    if period in _PERIOD_DAYS:
+        date_from = datetime.now() - timedelta(days=_PERIOD_DAYS[period])
+
+    sort_col = (
+        db.func.max(PricingHistory.margin)
+        if metric == "margin"
+        else db.func.max(PricingHistory.roi)
+    )
+
+    where: list[Any] = [PricingHistory.user_id == user_id]
+    if date_from:
+        where.append(PricingHistory.created_at >= date_from)
+
+    rows = db.session.execute(
+        db.select(
+            PricingHistory.title,
+            db.func.max(PricingHistory.margin).label("best_margin"),
+            db.func.max(PricingHistory.roi).label("best_roi"),
+            db.func.max(PricingHistory.net_profit).label("best_net_profit"),
+            db.func.max(PricingHistory.created_at).label("last_date"),
+            db.func.count(PricingHistory.id).label("sim_count"),
+        )
+        .where(*where)
+        .group_by(PricingHistory.title)
+        .order_by(sort_col.desc())
+        .limit(limit)
+    ).all()
+
+    return [
+        SimpleNamespace(
+            title=r.title or "Sem título",
+            best_margin=float(r.best_margin or 0),
+            best_roi=float(r.best_roi or 0),
+            best_net_profit=float(r.best_net_profit or 0),
+            last_date=r.last_date,
+            sim_count=int(r.sim_count),
+        )
+        for r in rows
+    ]
