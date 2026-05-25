@@ -186,7 +186,7 @@ def test_monthly_aggregates_empty_year(app, db, user_simples):
 def _parse_csv(content: str) -> list[list[str]]:
     """Parse do CSV (separador ;), ignora linhas de comentário (#) e vazias."""
     reader = csv.reader(
-        [l for l in content.splitlines() if l.strip() and not l.startswith("#")],
+        [line for line in content.splitlines() if line.strip() and not line.startswith("#")],
         delimiter=";",
     )
     return list(reader)

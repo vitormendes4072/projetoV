@@ -216,7 +216,10 @@ def iter_fiscal_csv(user: "User", year: int) -> Generator[str, None, None]:
 
     if regime in ("simples", "mei"):
         headers  = _HEADERS_SIMPLES
-        make_row = lambda y, m, rec, cst: _row_simples(y, m, rec, cst, aliq_pct)
+
+        def make_row(y, m, rec, cst):
+            return _row_simples(y, m, rec, cst, aliq_pct)
+
     elif regime == "presumido":
         headers  = _HEADERS_PRESUMIDO
         make_row = _row_presumido
@@ -235,12 +238,16 @@ def iter_fiscal_csv(user: "User", year: int) -> Generator[str, None, None]:
     writer.writerow([f"# Export Fiscal — {year}"])
     writer.writerow([f"# Regime: {regime.upper()}"])
     writer.writerow([f"# Gerado em: {date.today().isoformat()}"])
-    writer.writerow([f"# PROJECAO baseada em simulacoes de precificacao"])
+    writer.writerow(["# PROJECAO baseada em simulacoes de precificacao"])
     writer.writerow([])
-    yield buf.getvalue(); buf.seek(0); buf.truncate()
+    yield buf.getvalue()
+    buf.seek(0)
+    buf.truncate()
 
     writer.writerow(headers)
-    yield buf.getvalue(); buf.seek(0); buf.truncate()
+    yield buf.getvalue()
+    buf.seek(0)
+    buf.truncate()
 
     agg = _monthly_aggregates(user.id, year)
     for month in range(1, 13):
@@ -249,4 +256,6 @@ def iter_fiscal_csv(user: "User", year: int) -> Generator[str, None, None]:
         receita = agg[month]["receita"]
         custo   = agg[month]["custo"]
         writer.writerow(make_row(year, month, receita, custo))
-        yield buf.getvalue(); buf.seek(0); buf.truncate()
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate()
