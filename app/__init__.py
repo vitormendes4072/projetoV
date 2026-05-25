@@ -103,6 +103,12 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
             raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
 
     # ---------------------------------------
+    # Sentry (antes do logging para capturar erros de init)
+    # ---------------------------------------
+    from app.sentry import init_sentry  # noqa: PLC0415
+    init_sentry(app)
+
+    # ---------------------------------------
     # Logging
     # ---------------------------------------
     from app.logging_config import configure_logging  # noqa: PLC0415

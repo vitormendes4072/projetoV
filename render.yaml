@@ -32,6 +32,8 @@ services:
         sync: false
       - key: MAIL_PASSWORD
         sync: false
+      - key: SENTRY_DSN
+        sync: false
 
   # ── RQ Worker (sync Amazon assíncrono) ───────────────────────────────────
   - type: worker
@@ -52,6 +54,8 @@ services:
           type: redis
           property: connectionString
       - key: CREDENTIALS_ENCRYPTION_KEY
+        sync: false
+      - key: SENTRY_DSN
         sync: false
 
   # ── Cron — sync Amazon diário (03:00 UTC) ────────────────────────────────
