@@ -1,17 +1,11 @@
 {% extends "base.html" %}
+{% import "macros/_ui.html" as ui %}
 
 {% block content %}
 <div class="flex flex-col gap-6 py-4 relative">
     
     <!-- Cabeçalho -->
-    <div class="flex items-center gap-4">
-        <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-        </a>
-        <div>
-            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Configurações</h1>
-        </div>
-    </div>
+    {{ ui.page_header("Configurações", url_for('main.menu'), mb="") }}
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Menu Lateral -->
@@ -33,9 +27,7 @@
         <div class="lg:col-span-2 space-y-6">
             
             <!-- CARD 1: DADOS PESSOAIS -->
-            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
-                <h2 class="text-xl font-bold text-[#0d141c] mb-6">Dados Pessoais</h2>
-                
+            {% call ui.section_card(title="Dados Pessoais") %}
                 <form method="POST" id="settingsForm" class="flex flex-col gap-5">
                     {{ form.hidden_tag() }}
                     
@@ -89,7 +81,7 @@
                         </div>
                     </div>
                 </form>
-            </div>
+            {% endcall %}
 
             <!-- CARD 2: CONFIGURAÇÃO FISCAL -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
@@ -121,7 +113,7 @@
             </div>
 
             <!-- CARD 3: ALTERAÇÃO DE SENHA (inline — sem modal) -->
-            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
+            {% call ui.section_card() %}
                 <h2 class="text-xl font-bold text-[#0d141c] mb-2">Alterar Senha</h2>
                 <p class="text-sm text-[#49739c] mb-6">Preencha os três campos abaixo para definir uma nova senha.</p>
 
@@ -161,7 +153,7 @@
                         {{ password_form.submit_password(class_="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-6 hover:bg-blue-600 transition-colors", value="Atualizar Senha") }}
                     </div>
                 </form>
-            </div>
+            {% endcall %}
 
             <!-- CARD 4: INTEGRAÇÃO AMAZON (SP-API) -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
