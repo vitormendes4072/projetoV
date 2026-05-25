@@ -181,6 +181,29 @@ def register_commands(app: Flask) -> None:
         summary = send_margin_alerts(run_day=run_day, dry_run=dry_run)
         click.echo(summary)
 
+    @app.cli.command("send-weekly-report")
+    @click.option("--date", "date_str", default="", help="Data no formato YYYY-MM-DD (opcional).")
+    @click.option("--dry-run", is_flag=True, help="Não envia e-mail, só mostra o que faria.")
+    def send_weekly_report_cmd(date_str: str, dry_run: bool):
+        """Envia relatório semanal de simulações/pedidos com prejuízo.
+
+        Detecta PricingHistory com margem negativa (e pedidos reais Amazon,
+        quando disponível) na semana corrente e envia e-mail resumido.
+        Dedupado por (user_id, week_start) — roda toda segunda-feira:
+
+            0 8 * * 1  flask send-weekly-report
+        """
+        from app.financeiro.reports_weekly import send_weekly_loss_report
+
+        run_day = None
+        if date_str:
+            try:
+                run_day = date.fromisoformat(date_str)
+            except Exception:
+                raise click.ClickException("Data inválida. Use YYYY-MM-DD.")
+        summary = send_weekly_loss_report(run_date=run_day, dry_run=dry_run)
+        click.echo(summary)
+
     @app.cli.command("seed-demo")
     def seed_demo_cmd():
         """Cria (ou recria) a conta demo com dados fictícios."""

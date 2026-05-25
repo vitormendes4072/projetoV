@@ -9,6 +9,7 @@ from .notification_settings import NotificationSettings
 from .notification_recipient import NotificationRecipient
 from .notification_log import NotificationLog
 from .margin_alert_log import MarginAlertLog
+from .weekly_report_log import WeeklyReportLog
 from .amazon import AmazonConnection, AmazonOrder, AmazonOrderItem
 from .amazon_finances import AmazonFinancialEvent
 from .amazon_sku_link import AmazonSkuLink
