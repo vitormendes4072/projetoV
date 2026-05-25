@@ -358,3 +358,46 @@ def comparativo_produto(product_id):
     tax_rate = float(getattr(current_user, 'default_tax_rate', 0.0) or 0.0)
     data = get_sku_comparison(current_user.id, product, tax_rate)
     return render_template('produtos/comparativo.html', tax_rate=tax_rate, **data)
+
+
+@produtos_bp.get('/produtos/<int:product_id>/preco-sugerido')
+@login_required
+def preco_sugerido(product_id: int):
+    """Retorna sugestão de preço ótimo via regressão linear (JSON).
+
+    Query param:
+      - target (float, opcional): margem-alvo em %; padrão = 20.0
+
+    Resposta 200::
+
+        {
+          "ok": true,
+          "suggested_price": 89.90,
+          "target_margin": 20.0,
+          "r2": 0.94,
+          "n_points": 7,
+          "confidence": "alta"
+        }
+
+    Resposta 200 quando não há dados suficientes::
+
+        {"ok": false, "reason": "dados_insuficientes"}
+    """
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        abort(403)
+
+    try:
+        target = float(request.args.get("target", 20.0))
+        target = max(-100.0, min(100.0, target))
+    except (TypeError, ValueError):
+        target = 20.0
+
+    from app.services.price_suggest import suggest_price
+
+    result = suggest_price(product_id=product_id, target_margin=target)
+
+    if result is None:
+        return jsonify({"ok": False, "reason": "dados_insuficientes"})
+
+    return jsonify({"ok": True, **result})
