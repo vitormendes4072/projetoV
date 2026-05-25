@@ -1,0 +1,63 @@
+{# Fragment HTML — sem {% extends %}. Injetado via AJAX no #drill-panel. #}
+<div class="rounded-xl border border-[#d0dbe7] bg-white shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-[#d0dbe7]">
+    <h2 class="font-bold text-[#0d141c] text-sm">
+      {% if metric == "margin" %}
+        Top SKUs por Margem
+      {% else %}
+        Top SKUs por ROI
+      {% endif %}
+      <span class="ml-2 text-xs font-normal text-[#49739c]">(período: {{ period }})</span>
+    </h2>
+    <button id="btnCloseDrill"
+      class="text-slate-400 hover:text-slate-700 transition-colors p-1 rounded"
+      aria-label="Fechar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
+
+  {% if rows %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-[#49739c] text-xs uppercase">
+        <tr>
+          <th class="px-6 py-3 text-left font-bold">Cenário / SKU</th>
+          <th class="px-6 py-3 text-right font-bold">Simulações</th>
+          <th class="px-6 py-3 text-right font-bold">Melhor Margem</th>
+          <th class="px-6 py-3 text-right font-bold">Melhor ROI</th>
+          <th class="px-6 py-3 text-right font-bold">Melhor Lucro</th>
+          <th class="px-6 py-3 text-right font-bold hidden sm:table-cell">Última sim.</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for row in rows %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-6 py-3 font-medium text-[#0d141c] max-w-[200px] truncate">{{ row.title }}</td>
+          <td class="px-6 py-3 text-right text-slate-500">{{ row.sim_count }}</td>
+          <td class="px-6 py-3 text-right font-bold
+            {% if row.best_margin > 15 %}text-green-600
+            {% elif row.best_margin > 0 %}text-yellow-600
+            {% else %}text-red-600{% endif %}">
+            {{ "%.1f"|format(row.best_margin) }}%
+          </td>
+          <td class="px-6 py-3 text-right text-slate-700">{{ "%.0f"|format(row.best_roi) }}%</td>
+          <td class="px-6 py-3 text-right font-semibold
+            {% if row.best_net_profit > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            R$ {{ "%.2f"|format(row.best_net_profit) }}
+          </td>
+          <td class="px-6 py-3 text-right text-slate-400 text-xs hidden sm:table-cell">
+            {% if row.last_date %}{{ row.last_date.strftime("%d/%m/%Y") }}{% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="px-6 py-8 text-center text-[#49739c] text-sm">
+    Nenhuma simulação encontrada para este período.
+  </div>
+  {% endif %}
+</div>

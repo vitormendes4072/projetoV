@@ -1,5 +1,5 @@
 # app/main/routes.py
-from flask import Blueprint, render_template, url_for, redirect, request
+from flask import Blueprint, render_template, url_for, redirect, request, abort
 from flask_login import login_required, current_user
 from werkzeug.routing import BuildError
 
@@ -151,6 +151,8 @@ def menu():
 
 
 _VALID_PERIODS = {"7d", "30d", "90d", "all"}
+_VALID_DRILL_METRICS = {"margin", "roi"}
+
 
 @main.route("/dashboard")
 @login_required
@@ -161,3 +163,22 @@ def dashboard():
         period = "30d"
     kpis = get_dashboard_kpis(current_user.id, period)
     return render_template("dashboard.html", period=period, **kpis)
+
+
+@main.get("/dashboard/drill/<metric>")
+@login_required
+def dashboard_drill(metric: str):
+    """Retorna o painel de drill-down (fragment HTML) para AJAX."""
+    if metric not in _VALID_DRILL_METRICS:
+        abort(404)
+    from app.services.dashboard import get_drill_data
+    period = request.args.get("period", "30d")
+    if period not in _VALID_PERIODS:
+        period = "30d"
+    rows = get_drill_data(current_user.id, period=period, metric=metric)
+    return render_template(
+        "partials/_drill_panel.html",
+        rows=rows,
+        metric=metric,
+        period=period,
+    )
