@@ -109,11 +109,10 @@ def menu():
         {
             "id": "reports",
             "title": "Relatórios",
-            "description": "Gere relatórios (CSV/PDF) e consolide indicadores por SKU e período.",
+            "description": "Margem mensal, scatter por SKU e export fiscal CSV/PDF.",
             "route": relatorios_url,
             "color": "primary",
             "enabled": relatorios_url != "#",
-            "badge": None if relatorios_url != "#" else "Em breve",
         },
 
         # ✅ EXISTE - Configurações
