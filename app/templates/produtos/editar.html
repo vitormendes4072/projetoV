@@ -140,6 +140,29 @@
         </div>
     </div>
 
+    {# ── Sugestão de Preço Ótimo ──────────────────────────────────────────── #}
+    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mt-6" id="price-suggest-card">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="text-base font-bold text-[#0d141c]">Sugestão de Preço Ótimo</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Baseado no histórico de simulações via regressão linear</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-slate-600 font-medium whitespace-nowrap">Margem-alvo</label>
+                <select id="ps-target"
+                        class="rounded-lg border border-[#d0dbe7] bg-[#f0f4f8] h-9 px-3 text-sm focus:border-[#0d80f2] focus:outline-none">
+                    <option value="10">10%</option>
+                    <option value="15">15%</option>
+                    <option value="20" selected>20%</option>
+                    <option value="25">25%</option>
+                    <option value="30">30%</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="ps-result" class="text-sm text-slate-500 italic">Carregando...</div>
+    </div>
+
     <script>
     (function () {
         var form = document.getElementById('stock-adjust-form');
@@ -174,6 +197,51 @@
                 feedback.classList.add('text-red-600');
             });
         });
+    })();
+
+    // ── Sugestão de Preço ────────────────────────────────────────────────────
+    (function () {
+        var BASE_URL = "{{ url_for('produtos.preco_sugerido', product_id=product.id) }}";
+        var resultEl = document.getElementById('ps-result');
+        var targetSel = document.getElementById('ps-target');
+        if (!resultEl || !targetSel) return;
+
+        var CONF_BADGE = {
+            alta:   '<span class="inline-block text-xs font-semibold bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5">alta confiança</span>',
+            média:  '<span class="inline-block text-xs font-semibold bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">confiança média</span>',
+            baixa:  '<span class="inline-block text-xs font-semibold bg-red-100 text-red-700 rounded px-1.5 py-0.5">baixa confiança</span>',
+        };
+
+        function fmt(n) {
+            return 'R$ ' + n.toFixed(2).replace('.', ',');
+        }
+
+        function load(target) {
+            resultEl.innerHTML = '<span class="text-slate-400 italic">Calculando...</span>';
+            fetch(BASE_URL + '?target=' + target)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.ok) {
+                        resultEl.innerHTML =
+                            '<span class="text-slate-400">Simulações insuficientes — salve ao menos 3 simulações vinculadas a este produto para gerar a sugestão.</span>';
+                        return;
+                    }
+                    var badge = CONF_BADGE[data.confidence] || '';
+                    resultEl.innerHTML =
+                        'Com base em <strong>' + data.n_points + ' simulações</strong>, ' +
+                        'para atingir <strong>' + data.target_margin + '% de margem</strong>, ' +
+                        'o preço sugerido é ' +
+                        '<strong class="text-[#0d80f2] text-base">' + fmt(data.suggested_price) + '</strong> ' +
+                        badge +
+                        ' <span class="text-slate-400 text-xs">(R² = ' + data.r2.toFixed(2) + ')</span>';
+                })
+                .catch(function () {
+                    resultEl.innerHTML = '<span class="text-slate-400 italic">Não foi possível carregar a sugestão.</span>';
+                });
+        }
+
+        load(targetSel.value);
+        targetSel.addEventListener('change', function () { load(this.value); });
     })();
     </script>
     {% endif %}
