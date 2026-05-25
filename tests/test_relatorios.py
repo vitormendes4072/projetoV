@@ -62,14 +62,31 @@ def test_relatorios_pdf_requires_auth(client):
 
 
 # ---------------------------------------------------------------------------
-# Index redireciona para /mensal com mês atual
+# Hub /relatorios/ — página de navegação
 # ---------------------------------------------------------------------------
 
-def test_index_redirects_to_mensal(logged_client):
+def test_index_renders_hub(logged_client):
     resp = logged_client.get("/relatorios/")
-    assert resp.status_code == 302
-    assert "/relatorios/mensal" in resp.headers["Location"]
-    assert "mes=" in resp.headers["Location"]
+    assert resp.status_code == 200
+    body = resp.data.decode()
+    assert "Relatório Mensal" in body
+    assert "Margem por SKU" in body
+    assert "Export Fiscal" in body
+
+
+def test_index_hub_no_months_hides_quick_access(logged_client):
+    """Sem simulações, o bloco de acesso rápido não aparece."""
+    resp = logged_client.get("/relatorios/")
+    assert resp.status_code == 200
+    assert b"Acesso r" not in resp.data  # "Acesso rápido" não renderiza
+
+
+def test_index_hub_shows_quick_access_when_data(client, db):
+    c, uid = _login_with_unique_email(client, db, "hub_data@test.com")
+    _make_sim(db, uid, year=2025, month=2)
+    resp = c.get("/relatorios/")
+    assert resp.status_code == 200
+    assert "Acesso rápido" in resp.data.decode()
 
 
 # ---------------------------------------------------------------------------

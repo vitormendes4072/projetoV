@@ -28,9 +28,16 @@ def _parse_mes(mes_str: str | None) -> tuple[int, int]:
 @relatorios_bp.get("/")
 @login_required
 def index():
-    """Redireciona para o relatório do mês atual."""
+    """Hub de relatórios — lista as ferramentas disponíveis."""
     today = date.today()
-    return redirect(url_for("relatorios.mensal", mes=f"{today.year}-{today.month:02d}"))
+    months = available_months(current_user.id)
+    current_mes = f"{today.year}-{today.month:02d}"
+    return render_template(
+        "relatorios/index.html",
+        months=months,
+        current_mes=current_mes,
+        year=today.year,
+    )
 
 
 @relatorios_bp.get("/mensal")
