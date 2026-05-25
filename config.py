@@ -86,6 +86,7 @@ class ProductionConfig(Config):
     Configurações para produção
     """
     DEBUG = False
+    SQLALCHEMY_ECHO = False  # garante que queries SQL nunca sejam logadas em produção
 
     # Em produção, não faz sentido rodar sem banco
     SQLALCHEMY_DATABASE_URI = (
