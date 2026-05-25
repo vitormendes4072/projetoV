@@ -105,8 +105,8 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     # ---------------------------------------
     # Logging
     # ---------------------------------------
-    log_level = logging.DEBUG if app.debug else logging.WARNING
-    logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
+    from app.logging_config import configure_logging  # noqa: PLC0415
+    configure_logging(app)
 
     # ---------------------------------------
     # Extensões
