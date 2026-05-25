@@ -100,6 +100,22 @@ class ProductionConfig(Config):
     CACHE_TYPE = "RedisCache"
     CACHE_REDIS_URL = os.environ.get("REDIS_URL")
 
+    # -------------------------------------------------
+    # SQLAlchemy connection pool (PostgreSQL / Supabase)
+    # -------------------------------------------------
+    # pool_pre_ping: testa cada conexão com SELECT 1 antes de usar —
+    #   essencial com Supabase/PgBouncer que fecha conexões ociosas em ~10 min.
+    # pool_recycle: descarta conexões mais antigas que 30 min, complementando
+    #   o pre_ping e evitando erros de timeout silenciosos em horários de baixo uso.
+    # pool_size / max_overflow: 10 conexões persistentes + 20 em pico de tráfego;
+    #   adequado para Gunicorn com 2–4 workers num plano Supabase padrão.
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+    }
+
 
 class TestingConfig(Config):
     TESTING = True
