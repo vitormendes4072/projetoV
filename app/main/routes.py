@@ -87,15 +87,13 @@ def menu():
             "enabled": calculator_url != "#",
         },
 
-        # ❌ Em breve (se não existir blueprint)
         {
             "id": "sales",
             "title": "Vendas",
-            "description": "Consulte pedidos, performance por período e detalhamento por SKU.",
+            "description": "Analytics de pedidos Amazon: receita, top SKUs e ticket médio por período.",
             "route": vendas_url,
             "color": "success",
-            "enabled": vendas_url != "#",
-            "badge": None if vendas_url != "#" else "Em breve",
+            "enabled": True,
         },
         {
             "id": "inventory",
