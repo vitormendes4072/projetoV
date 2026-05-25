@@ -19,6 +19,36 @@ from reportlab.platypus import (
 )
 
 # ---------------------------------------------------------------------------
+# pageCallback — rodapé desenhado via Canvas a cada página
+#
+# Usar canvas.draw* em vez de Flowables de rodapé permite:
+#   • retornar BytesIO diretamente, sem buffer.getvalue() (evita cópia)
+#   • exibir número de página ("Página N") — impossível via story
+#   • posição absoluta fora do fluxo de layout do Platypus
+# ---------------------------------------------------------------------------
+
+def _draw_page(canvas: Any, doc: Any) -> None:  # type: ignore[type-arg]
+    """Desenha o rodapé em todas as páginas via canvas callback."""
+    canvas.saveState()
+
+    x0 = doc.leftMargin
+    x1 = doc.leftMargin + doc.width
+    y_line = doc.bottomMargin - 0.3 * cm
+    y_text = doc.bottomMargin - 0.55 * cm
+
+    canvas.setStrokeColor(_SLATE)
+    canvas.setLineWidth(0.5)
+    canvas.line(x0, y_line, x1, y_line)
+
+    canvas.setFont("Helvetica", 7)
+    canvas.setFillColor(_SLATE)
+    generated_at = datetime.now().strftime("%d/%m/%Y às %H:%M")
+    canvas.drawString(x0, y_text, f"Gerado em {generated_at} pelo VEntregaz")
+    canvas.drawRightString(x1, y_text, f"Página {doc.page}")
+
+    canvas.restoreState()
+
+# ---------------------------------------------------------------------------
 # Paleta de cores VEntregaz
 # ---------------------------------------------------------------------------
 _BLUE = colors.HexColor("#0d80f2")
@@ -116,8 +146,14 @@ def _styles() -> dict:
     }
 
 
-def build_monthly_pdf(report: dict[str, Any]) -> bytes:
-    """Gera o PDF do relatório mensal de margem e retorna os bytes."""
+def build_monthly_pdf(report: dict[str, Any]) -> io.BytesIO:
+    """Gera o PDF do relatório mensal de margem.
+
+    Retorna um io.BytesIO posicionado em 0 — pronto para send_file.
+    O rodapé (linha + timestamp + número de página) é desenhado pelo
+    pageCallback _draw_page, evitando Flowables extras no story e
+    permitindo exibir o número de página real.
+    """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -248,14 +284,7 @@ def build_monthly_pdf(report: dict[str, Any]) -> bytes:
         ]))
         story.append(sim_table)
 
-    # ------------------------------------------------------------------
-    # Rodapé
-    # ------------------------------------------------------------------
-    story.append(Spacer(1, 0.8 * cm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=_SLATE))
-    story.append(Spacer(1, 0.2 * cm))
-    generated_at = datetime.now().strftime("%d/%m/%Y às %H:%M")
-    story.append(Paragraph(f"Gerado em {generated_at} pelo VEntregaz", s["footer"]))
-
-    doc.build(story)
-    return buffer.getvalue()
+    # Rodapé desenhado pelo pageCallback _draw_page — não precisa de Flowables.
+    doc.build(story, onFirstPage=_draw_page, onLaterPages=_draw_page)
+    buffer.seek(0)
+    return buffer
