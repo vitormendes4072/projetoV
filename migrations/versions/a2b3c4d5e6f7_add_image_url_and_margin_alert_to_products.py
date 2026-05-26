@@ -18,9 +18,15 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table('products', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('image_url', sa.String(500), nullable=True))
-        batch_op.add_column(sa.Column('margin_alert_threshold', sa.Numeric(5, 2), nullable=True))
+    # Usa IF NOT EXISTS para ser idempotente — image_url pode já existir
+    # no Supabase caso tenha sido adicionada manualmente antes desta migração.
+    op.execute(
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(500)"
+    )
+    op.execute(
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS "
+        "margin_alert_threshold NUMERIC(5, 2)"
+    )
 
 
 def downgrade():
