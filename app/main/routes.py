@@ -1,7 +1,8 @@
 # app/main/routes.py
-from flask import Blueprint, render_template, url_for, redirect, request, abort
+from flask import Blueprint, render_template, url_for, redirect, request, abort, jsonify
 from flask_login import login_required, current_user
 from werkzeug.routing import BuildError
+from app import limiter
 
 main = Blueprint("main", __name__)
 
@@ -14,6 +15,13 @@ def safe_url_for(endpoint: str, fallback: str = "#") -> str:
         return url_for(endpoint)
     except BuildError:
         return fallback
+
+
+@main.get("/healthz")
+@limiter.exempt
+def healthz():
+    """Health check endpoint — sem rate limit, usado pelo Render."""
+    return jsonify({"status": "ok"}), 200
 
 
 @main.route("/")
