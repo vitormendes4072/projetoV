@@ -3,11 +3,26 @@
 SaaS platform for Amazon FBA sellers — track orders, calculate real profitability, manage FBA inventory and automate pricing decisions. Built with Flask and PostgreSQL.
 
 [![CI](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml/badge.svg)](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/demo-online-brightgreen?style=flat&logo=render)](https://ventregaz.onrender.com)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1.1-000000?style=flat&logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 [![codecov](https://codecov.io/gh/vitormendes4072/projetov/branch/main/graph/badge.svg)](https://codecov.io/gh/vitormendes4072/projetov)
+
+---
+
+## Demo Online
+
+**[ventregaz.onrender.com](https://ventregaz.onrender.com)**
+
+Clique em **"Entrar como Demo"** na tela de login para acessar instantaneamente com dados sintéticos pré-carregados — sem precisar criar conta.
+
+> **Cold start:** o Render Free tier hiberna instâncias após 15 min de inatividade. O primeiro acesso pode levar ~50 segundos para acordar o servidor. Aguarde a página carregar — é comportamento esperado do plano gratuito.
+
+**Limitações da demo:**
+- Sync Amazon SP-API desativado — requer credenciais reais da SP-API, que o usuário demo não possui. Os dados de pedidos exibidos são sintéticos.
+- Worker RQ não roda no Free tier — tarefas assíncronas (importação de pedidos em background) não estão disponíveis.
 
 ---
 
