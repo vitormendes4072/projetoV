@@ -16,6 +16,7 @@ from app.models.notification_recipient import NotificationRecipient
 from app.models.notification_log import NotificationLog
 from app.models.margin_alert_log import MarginAlertLog
 from app.models.weekly_report_log import WeeklyReportLog
+from app.models.oauth_account import OAuthAccount
 
 # TEST_DATABASE_URL is set by CI (GitHub Actions postgres service).
 # DATABASE_URL from .env points to production — never used in tests.
@@ -37,6 +38,7 @@ _SQLITE_TABLES = [
     NotificationLog.__table__,
     MarginAlertLog.__table__,
     WeeklyReportLog.__table__,
+    OAuthAccount.__table__,
 ]
 
 

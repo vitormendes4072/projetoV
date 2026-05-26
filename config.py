@@ -40,6 +40,14 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # -------------------------------------------------
+    # OAuth providers (Google + GitHub)
+    # -------------------------------------------------
+    GOOGLE_CLIENT_ID     = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+    GITHUB_CLIENT_ID     = os.environ.get("GITHUB_CLIENT_ID")
+    GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+
+    # -------------------------------------------------
     # Flask-Limiter (Rate limit)
     # -------------------------------------------------
     # Em dev: memória

@@ -84,6 +84,12 @@ def index():
     # 2. LÓGICA DA SENHA (Troca de Senha) - MODAL ESCURO
     # ==========================================================
     if 'submit_password' in request.form and password_form.validate_on_submit():
+        if not current_user.password_hash:
+            # Usuário OAuth-only: definir senha pela primeira vez (sem verificar senha atual)
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash('Senha definida com sucesso! Agora você pode também fazer login por e-mail.', 'success')
+            return redirect(url_for('settings.index'))
 
         # VERIFICAÇÃO DE SENHA ATUAL (BACKEND)
         if not current_user.check_password(password_form.current_password.data):
