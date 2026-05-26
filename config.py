@@ -106,7 +106,9 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_HTTPONLY = True
 
-    CACHE_TYPE = "RedisCache"
+    # Usa RedisCache se REDIS_URL estiver definida; cai para SimpleCache
+    # no Render Free tier (sem Redis), evitando ConnectionError em cada request.
+    CACHE_TYPE = "RedisCache" if os.environ.get("REDIS_URL") else "SimpleCache"
     CACHE_REDIS_URL = os.environ.get("REDIS_URL")
 
     # -------------------------------------------------
