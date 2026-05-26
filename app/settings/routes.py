@@ -6,7 +6,7 @@ from flask_mail import Message
 from threading import Thread
 from itsdangerous import URLSafeTimedSerializer
 from app import db, mail
-from .forms import UpdateAccountForm, ChangePasswordForm, BusinessSettingsForm
+from .forms import UpdateAccountForm, ChangePasswordForm, BusinessSettingsForm, WebhookForm
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ def send_update_email(user, new_email):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps({'new_email': new_email, 'user_id': user.id}, salt='email-update')
 
-    msg = Message('Confirme seu novo E-mail - Marketplace Manager',
+    msg = Message('Confirme seu novo E-mail - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'), recipients=[new_email])
 
     link = url_for('settings.confirm_email_update', token=token, _external=True)
@@ -43,6 +43,7 @@ def index():
     account_form = UpdateAccountForm()
     password_form = ChangePasswordForm()
     business_form = BusinessSettingsForm()
+    webhook_form = WebhookForm()
 
     # Conta demo: bloqueia mudanças de perfil e senha
     if request.method == "POST" and g.is_demo and (
@@ -83,6 +84,12 @@ def index():
     # 2. LÓGICA DA SENHA (Troca de Senha) - MODAL ESCURO
     # ==========================================================
     if 'submit_password' in request.form and password_form.validate_on_submit():
+        if not current_user.password_hash:
+            # Usuário OAuth-only: definir senha pela primeira vez (sem verificar senha atual)
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash('Senha definida com sucesso! Agora você pode também fazer login por e-mail.', 'success')
+            return redirect(url_for('settings.index'))
 
         # VERIFICAÇÃO DE SENHA ATUAL (BACKEND)
         if not current_user.check_password(password_form.current_password.data):
@@ -97,6 +104,15 @@ def index():
     # ==========================================================
     # 3. LÓGICA: DADOS TRIBUTÁRIOS (Fiscal)
     # ==========================================================
+    if 'submit_webhook' in request.form:
+        if webhook_form.validate_on_submit():
+            current_user.webhook_url = webhook_form.webhook_url.data or None
+            db.session.commit()
+            flash('Webhook atualizado!', 'success')
+            return redirect(url_for('settings.index'))
+        else:
+            logger.warning("Falha ao salvar webhook: %s", webhook_form.errors)
+
     if 'submit_business' in request.form:
         if business_form.validate_on_submit():
             current_user.tax_regime = business_form.tax_regime.data
@@ -117,10 +133,30 @@ def index():
         business_form.tax_regime.data = current_user.tax_regime
         business_form.default_tax_rate.data = current_user.default_tax_rate
 
+        # Preenche webhook
+        webhook_form.webhook_url.data = current_user.webhook_url or ''
+
     return render_template('settings.html',
                            form=account_form,
                            password_form=password_form,
-                           business_form=business_form)
+                           business_form=business_form,
+                           webhook_form=webhook_form)
+
+
+@settings_bp.post('/settings/webhook/test')
+@login_required
+def test_webhook():
+    """Dispara payload de teste para a URL de webhook configurada."""
+    from app.notifications.webhook import send_test_webhook
+
+    url = current_user.webhook_url
+    if not url:
+        return jsonify({"ok": False, "error": "Nenhuma URL de webhook configurada."}), 400
+
+    ok = send_test_webhook(url=url, user_id=current_user.id)
+    if ok:
+        return jsonify({"ok": True, "message": "Webhook de teste enviado com sucesso."})
+    return jsonify({"ok": False, "error": "Falha ao enviar webhook. Verifique a URL e tente novamente."}), 502
 
 
 @settings_bp.post('/settings/api-key/regenerate')

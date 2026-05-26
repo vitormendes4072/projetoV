@@ -40,6 +40,11 @@ async function loadOrderDetails(orderId) {
     ? "Valores com taxas reais (Finances)."
     : "Valores estimados (sem Finances para este pedido).";
 
+  const refreshBtnHtml = hasFinance ? "" :
+    `<button class="btn-refresh-finances rounded border border-[#0d80f2] text-[#0d80f2] text-xs font-bold px-2.5 py-1 hover:bg-blue-50 transition-colors" data-order-id="${orderId}">
+       Buscar finances
+     </button>`;
+
   const pendingHint = (data.order_status === "Pending" && totals.revenue === 0)
     ? `<div class="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
          Pedido <b>Pendente</b>: a Amazon pode não disponibilizar valores até confirmar o pagamento.
@@ -95,9 +100,10 @@ async function loadOrderDetails(orderId) {
     </div>
 
     <div class="flex items-center justify-between mb-2">
-      <div class="text-xs text-slate-600">
-        ${note} | Imposto padrão: <b>${Number(data.imposto_rate_pct || 0).toFixed(2)}%</b>
-        ${data.order_status ? ` | Status: <b>${data.order_status}</b>` : ""}
+      <div class="text-xs text-slate-600 flex items-center gap-2 flex-wrap">
+        <span>${note} | Imposto padrão: <b>${Number(data.imposto_rate_pct || 0).toFixed(2)}%</b>
+        ${data.order_status ? ` | Status: <b>${data.order_status}</b>` : ""}</span>
+        ${refreshBtnHtml}
       </div>
       <div class="text-xs text-slate-500">Itens: <b>${data.items_count}</b></div>
     </div>
@@ -126,6 +132,32 @@ async function loadOrderDetails(orderId) {
     </div>`;
 
   row.dataset.loaded = "1";
+
+  const refreshBtn = box.querySelector(".btn-refresh-finances");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", async () => {
+      setBtnLoading(refreshBtn, true);
+      // Remove previous error messages if any
+      box.querySelectorAll(".refresh-error").forEach(el => el.remove());
+      try {
+        const r = await fetch(
+          `/integrations/amazon/profit/order/${encodeURIComponent(orderId)}/refresh`,
+          { method: "POST", headers: { "X-CSRFToken": csrfToken } }
+        );
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || ("Erro " + r.status));
+        // Reload detail row with fresh data
+        row.dataset.loaded = "";
+        await loadOrderDetails(orderId);
+      } catch (err) {
+        setBtnLoading(refreshBtn, false);
+        const errDiv = document.createElement("div");
+        errDiv.className = "refresh-error mt-2 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2";
+        errDiv.textContent = "Falha ao buscar finances: " + err.message;
+        box.prepend(errDiv);
+      }
+    });
+  }
 }
 
 const SPINNER_SVG =

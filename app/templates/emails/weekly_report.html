@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #222; max-width: 640px; margin: 0 auto;">
+    <h2 style="color: #0d141c;">Olá, {{ user_name }}!</h2>
+    <p style="color: #49739c;">
+      Relatório semanal de prejuízo — semana de <strong>{{ week_start }}</strong>
+    </p>
+
+    {% if neg_sims %}
+    <h3 style="color: #d32f2f; margin-top: 24px;">
+      Simulações com margem negativa ({{ neg_sims|length }})
+    </h3>
+    <table style="border-collapse: collapse; width: 100%;">
+      <thead>
+        <tr style="background: #f0f4f8;">
+          <th style="text-align:left; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Cenário / SKU</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Margem</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Lucro líquido</th>
+          <th style="text-align:left; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in neg_sims %}
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{{ s.title }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right; color:#d32f2f; font-weight:bold;">
+            {{ "%.1f"|format(s.margin) }}%
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right; color:#d32f2f;">
+            R$ {{ "%.2f"|format(s.net_profit) }}
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; color:#666; font-size:13px;">
+            {{ s.created_at.strftime("%d/%m/%Y") }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if neg_orders %}
+    <h3 style="color: #d32f2f; margin-top: 24px;">
+      Pedidos reais Amazon com prejuízo ({{ neg_orders|length }})
+    </h3>
+    <table style="border-collapse: collapse; width: 100%;">
+      <thead>
+        <tr style="background: #f0f4f8;">
+          <th style="text-align:left; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">SKU</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Receita</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Taxas</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Lucro líquido</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Qtd.</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in neg_orders %}
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-family: monospace;">{{ o.sku }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right;">R$ {{ "%.2f"|format(o.revenue) }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right; color:#666;">R$ {{ "%.2f"|format(o.fees) }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right; color:#d32f2f; font-weight:bold;">
+            R$ {{ "%.2f"|format(o.net_profit) }}
+          </td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right;">{{ o.qty }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <p style="margin-top: 24px; color: #666; font-size: 13px;">
+      Acesse o simulador para revisar a precificação desses produtos.<br>
+      Este relatório é enviado automaticamente toda segunda-feira.
+    </p>
+  </body>
+</html>

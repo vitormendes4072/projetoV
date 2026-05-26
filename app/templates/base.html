@@ -20,7 +20,7 @@
     <noscript>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900">
     </noscript>
-    <title>{% block title %}VEntregaz - Manager{% endblock %}</title>
+    <title>{% block title %}VEntregaz{% endblock %}</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dark.css') }}">
@@ -34,7 +34,7 @@
 <body class="bg-slate-50 text-[#0d141c]">
 
     {% if current_user.is_authenticated %}
-    <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7edf4] px-10 py-3 bg-white">
+    <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7edf4] px-4 sm:px-6 lg:px-10 py-3 bg-white">
         <div class="flex items-center gap-4 text-[#0d141c]">
             {% include 'partials/_logo.html' %}
         </div>
@@ -64,6 +64,7 @@
             </a>
         </div>
     </header>
+    {% include 'partials/_main_nav.html' %}
     {% else %}
     <button type="button" data-theme-toggle aria-label="Alternar tema"
             title="Alternar tema claro/escuro"
@@ -86,15 +87,17 @@
     <div class="max-w-[960px] mx-auto px-4 mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="p-4 mb-4 text-sm rounded-lg border
-                        {% if category == 'success' %} bg-green-50 text-green-800 border-green-200
-                        {% elif category == 'danger' %} bg-red-50 text-red-800 border-red-200
-                        {% elif category == 'warning' %} bg-yellow-50 text-yellow-800 border-yellow-200
-                        {% else %} bg-blue-50 text-blue-800 border-blue-200 {% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+                <div aria-live="polite" aria-atomic="false">
+                    {% for category, message in messages %}
+                        <div role="alert" class="p-4 mb-4 text-sm rounded-lg border
+                            {% if category == 'success' %} bg-green-50 text-green-800 border-green-200
+                            {% elif category == 'danger' %} bg-red-50 text-red-800 border-red-200
+                            {% elif category == 'warning' %} bg-yellow-50 text-yellow-800 border-yellow-200
+                            {% else %} bg-blue-50 text-blue-800 border-blue-200 {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
     </div>

@@ -20,6 +20,11 @@ class Product(db.Model):
     min_stock = db.Column(db.Integer, nullable=False, default=5)
     image_url = db.Column(db.String(500), nullable=True)
 
+    # Alerta automático de margem — envia e-mail quando a última simulação
+    # vinculada ao produto fica abaixo deste threshold (%).
+    # None = sem alerta configurado.
+    margin_alert_threshold = db.Column(db.Numeric(5, 2), nullable=True)
+
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete="CASCADE"), nullable=False, index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.now)
@@ -34,6 +39,14 @@ class Product(db.Model):
 # --- NOVA CLASSE DE HISTÓRICO ---
 class ProductHistory(db.Model):
     __tablename__ = 'product_history'
+    __table_args__ = (
+        # Cobre: WHERE product_id = X ORDER BY changed_at [ASC|DESC]
+        # (historico_produto — listagem paginada e série para gráfico)
+        db.Index('ix_product_history_product_changed', 'product_id', 'changed_at'),
+        # Cobre: WHERE user_id = X ORDER BY changed_at DESC
+        # (dashboard — recent_changes)
+        db.Index('ix_product_history_user_changed', 'user_id', 'changed_at'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey('products.id', ondelete="CASCADE"), nullable=False, index=True)

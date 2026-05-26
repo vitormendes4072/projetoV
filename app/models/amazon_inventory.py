@@ -3,7 +3,14 @@ from datetime import datetime
 
 class AmazonInventorySnapshot(db.Model):
     __tablename__ = "amazon_inventory_snapshots"
-    __table_args__ = {"schema": "public"}
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id", "marketplace_id", "seller_sku",
+            name="uq_amazon_inventory_user_marketplace_sku",
+        ),
+        db.Index("ix_amazon_inventory_user_sku", "user_id", "seller_sku"),
+        {"schema": "public"},
+    )
 
     id = db.Column(db.BigInteger, primary_key=True)
 

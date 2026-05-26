@@ -1,15 +1,33 @@
-// --- 1. Password field restore ---
+// --- 1. Password inline validation ---
 document.addEventListener("DOMContentLoaded", function() {
-    const serverNewPass = SETTINGS_INIT.serverNewPass;
-    const serverConfirmPass = SETTINGS_INIT.serverConfirmPass;
+    const passwordForm   = document.getElementById('passwordForm');
+    const newPassInput   = document.getElementById('new_pass_input');
+    const confirmInput   = document.getElementById('confirm_pass_input');
+    const errorNew       = document.getElementById('js_error_new');
+    const errorConfirm   = document.getElementById('js_error_confirm');
 
-    if (serverNewPass) {
-        const newInput = document.getElementById('new_pass_input');
-        if (newInput) newInput.value = serverNewPass;
-    }
-    if (serverConfirmPass) {
-        const confirmInput = document.getElementById('confirm_pass_input');
-        if (confirmInput) confirmInput.value = serverConfirmPass;
+    if (passwordForm && newPassInput && confirmInput) {
+        passwordForm.addEventListener('submit', function(e) {
+            errorNew.classList.add('hidden');
+            errorConfirm.classList.add('hidden');
+            newPassInput.classList.remove('border-red-500');
+            confirmInput.classList.remove('border-red-500');
+
+            let valid = true;
+            if (newPassInput.value.length > 0 && newPassInput.value.length < 8) {
+                errorNew.textContent = "A senha deve ter pelo menos 8 caracteres.";
+                errorNew.classList.remove('hidden');
+                newPassInput.classList.add('border-red-500');
+                valid = false;
+            }
+            if (newPassInput.value && confirmInput.value && newPassInput.value !== confirmInput.value) {
+                errorConfirm.textContent = "As senhas não conferem.";
+                errorConfirm.classList.remove('hidden');
+                confirmInput.classList.add('border-red-500');
+                valid = false;
+            }
+            if (!valid) e.preventDefault();
+        });
     }
 });
 
@@ -60,74 +78,26 @@ if (regimeSelect && taxInput) {
     });
 }
 
-// --- 3. Modal logic ---
-const profileModal = document.getElementById('securityModal');
+// --- 3. Modal de perfil (confirmação de identidade) ---
+const profileModal     = document.getElementById('securityModal');
 const profilePassInput = document.getElementById('current_password');
 
 function openModal() {
     profileModal.classList.remove('hidden');
     profileModal.classList.add('flex');
-    setTimeout(() => { if(profilePassInput) profilePassInput.focus(); }, 100);
+    setTimeout(() => { if (profilePassInput) profilePassInput.focus(); }, 100);
 }
 function closeModal() {
     profileModal.classList.add('hidden');
     profileModal.classList.remove('flex');
-    if(profilePassInput) profilePassInput.value = '';
-}
-
-const passModal = document.getElementById('passwordModal');
-const passInput = document.getElementById('modal_current_password');
-const newPassInput = document.getElementById('new_pass_input');
-const confirmPassInput = document.getElementById('confirm_pass_input');
-const errorNew = document.getElementById('js_error_new');
-const errorConfirm = document.getElementById('js_error_confirm');
-
-function forceOpenPasswordModal() {
-    passModal.classList.remove('hidden');
-    passModal.classList.add('flex');
-    setTimeout(() => { if(passInput) passInput.focus(); }, 100);
-}
-
-function validateAndOpenPasswordModal() {
-    errorNew.classList.add('hidden');
-    errorConfirm.classList.add('hidden');
-    newPassInput.classList.remove('border-red-500');
-    confirmPassInput.classList.remove('border-red-500');
-
-    let isValid = true;
-    const newPass = newPassInput.value;
-    const confirmPass = confirmPassInput.value;
-
-    if (newPass.length < 8) {
-        errorNew.innerText = "A senha deve ter pelo menos 8 caracteres.";
-        errorNew.classList.remove('hidden');
-        newPassInput.classList.add('border-red-500');
-        isValid = false;
-    }
-    if (newPass !== confirmPass) {
-        errorConfirm.innerText = "As senhas não conferem.";
-        errorConfirm.classList.remove('hidden');
-        confirmPassInput.classList.add('border-red-500');
-        isValid = false;
-    }
-
-    if (!isValid) return;
-    forceOpenPasswordModal();
-}
-
-function closePasswordModal() {
-    passModal.classList.add('hidden');
-    passModal.classList.remove('flex');
-    if(passInput) passInput.value = '';
+    if (profilePassInput) profilePassInput.value = '';
 }
 
 window.onclick = function(event) {
-    if (event.target == profileModal) closeModal();
-    if (event.target == passModal) closePasswordModal();
-}
+    if (event.target === profileModal) closeModal();
+};
 
 if (SETTINGS_INIT.openProfileModal) openModal();
-if (SETTINGS_INIT.openPasswordModal) forceOpenPasswordModal();
 
 // ================= AMAZON SP-API =================
 

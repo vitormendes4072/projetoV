@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, render_template, request, redirect, url_for, make_response, flash
+from flask import Blueprint, render_template, request, redirect, url_for, send_file, flash, Response
+from flask import stream_with_context
 from flask_login import login_required, current_user
 
 from app.relatorios.service import get_monthly_report, available_months
@@ -27,9 +28,16 @@ def _parse_mes(mes_str: str | None) -> tuple[int, int]:
 @relatorios_bp.get("/")
 @login_required
 def index():
-    """Redireciona para o relatório do mês atual."""
+    """Hub de relatórios — lista as ferramentas disponíveis."""
     today = date.today()
-    return redirect(url_for("relatorios.mensal", mes=f"{today.year}-{today.month:02d}"))
+    months = available_months(current_user.id)
+    current_mes = f"{today.year}-{today.month:02d}"
+    return render_template(
+        "relatorios/index.html",
+        months=months,
+        current_mes=current_mes,
+        year=today.year,
+    )
 
 
 @relatorios_bp.get("/mensal")
@@ -55,7 +63,7 @@ def mensal_pdf():
     year, month = _parse_mes(request.args.get("mes"))
     report = get_monthly_report(current_user.id, year, month)
 
-    pdf_bytes = build_monthly_pdf(report)
+    buffer = build_monthly_pdf(report)  # io.BytesIO, seeked to 0
 
     month_names = [
         "", "jan", "fev", "mar", "abr", "mai", "jun",
@@ -63,10 +71,42 @@ def mensal_pdf():
     ]
     filename = f"ventregaz_relatorio_{month_names[month]}{year}.pdf"
 
-    response = make_response(pdf_bytes)
-    response.headers["Content-Type"] = "application/pdf"
-    response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-    return response
+    # send_file lê o BytesIO em chunks e seta Content-Length automaticamente,
+    # sem copiar os bytes para um objeto bytes intermediário.
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@relatorios_bp.get("/exportar-fiscal")
+@login_required
+def exportar_fiscal():
+    """Exporta CSV fiscal (projeção) para o ano selecionado.
+
+    Query param:
+      - year (int, opcional): ano de referência; padrão = ano corrente
+    """
+    today = date.today()
+    try:
+        year = int(request.args.get("year", today.year))
+    except (TypeError, ValueError):
+        year = today.year
+
+    year = max(2020, min(today.year + 1, year))
+
+    from app.relatorios.fiscal_export import iter_fiscal_csv
+
+    regime = (current_user.tax_regime or "simples").lower()
+    filename = f"ventregaz_fiscal_{regime}_{year}.csv"
+
+    return Response(
+        stream_with_context(iter_fiscal_csv(current_user, year)),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @relatorios_bp.get("/sku")

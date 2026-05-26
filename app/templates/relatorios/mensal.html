@@ -44,36 +44,51 @@
         Exportar PDF
       </a>
       {% endif %}
+
+      {# Export fiscal anual #}
+      <div class="flex items-center gap-2">
+        <select id="fiscal-year"
+                class="h-10 rounded-lg border border-[#d0dbe7] bg-white px-3 text-sm text-[#0d141c] focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          {% for y in range(report.year, 2019, -1) %}
+          <option value="{{ y }}" {% if y == report.year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+        <a id="fiscal-export-link"
+           href="{{ url_for('relatorios.exportar_fiscal', year=report.year) }}"
+           class="flex items-center gap-2 h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors whitespace-nowrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Export Fiscal CSV
+        </a>
+      </div>
+      <script>
+      (function () {
+        var sel  = document.getElementById('fiscal-year');
+        var link = document.getElementById('fiscal-export-link');
+        var base = "{{ url_for('relatorios.exportar_fiscal') }}";
+        if (!sel || !link) return;
+        sel.addEventListener('change', function () {
+          link.href = base + '?year=' + this.value;
+        });
+      })();
+      </script>
     </div>
   </div>
 
   {# KPI Cards #}
+  {% from "macros/_ui.html" import kpi_card_simple %}
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Simulações</p>
-      <p class="text-[#0d141c] text-3xl font-bold">{{ report.total }}</p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">Margem Média</p>
-      <p class="text-3xl font-bold {% if report.avg_margin > 0 %}text-green-600{% elif report.avg_margin < 0 %}text-red-600{% else %}text-[#0d141c]{% endif %}">
-        {{ "%.1f"|format(report.avg_margin) }}%
-      </p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">ROI Médio</p>
-      <p class="text-[#0d80f2] text-3xl font-bold">{{ "%.1f"|format(report.avg_roi) }}%</p>
-    </div>
-
-    <div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
-      <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">% Lucrativas</p>
-      <p class="text-3xl font-bold {% if report.pct_profitable >= 70 %}text-green-600{% elif report.pct_profitable >= 40 %}text-yellow-600{% else %}text-red-600{% endif %}">
-        {{ "%.0f"|format(report.pct_profitable) }}%
-      </p>
-    </div>
-
+    {{ kpi_card_simple("Simulações", report.total) }}
+    {{ kpi_card_simple("Margem Média",
+        "%.1f"|format(report.avg_margin) ~ "%",
+        "text-3xl font-bold " ~ ("text-green-600" if report.avg_margin > 0 else "text-red-600" if report.avg_margin < 0 else "text-[#0d141c]")) }}
+    {{ kpi_card_simple("ROI Médio",
+        "%.1f"|format(report.avg_roi) ~ "%",
+        "text-[#0d80f2]") }}
+    {{ kpi_card_simple("% Lucrativas",
+        "%.0f"|format(report.pct_profitable) ~ "%",
+        "text-3xl font-bold " ~ ("text-green-600" if report.pct_profitable >= 70 else "text-yellow-600" if report.pct_profitable >= 40 else "text-red-600")) }}
   </div>
 
   {# Tabela de simulações #}

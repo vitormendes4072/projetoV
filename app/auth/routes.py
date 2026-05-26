@@ -18,7 +18,6 @@ auth = Blueprint('auth', __name__)
 
 # --- FUNÇÕES AUXILIARES DE E-MAIL (ASSÍNCRONAS) ---
 
-### MELHORIA DE PERFORMANCE: Função que roda em background
 def send_async_email(app, msg):
     # O Flask precisa do contexto da aplicação para acessar as configs de email dentro da Thread
     with app.app_context():
@@ -30,20 +29,19 @@ def send_async_email(app, msg):
 def send_reset_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='password-reset')
-    msg = Message('Redefinição de Senha - Marketplace Manager',
+    msg = Message('Redefinição de Senha - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.reset_token', token=token, _external=True)
     msg.body = f'''Para redefinir sua senha, visite: {link}'''
 
-    ### MELHORIA: Dispara e esquece (não trava o usuário)
     # Passamos o 'current_app._get_current_object()' para garantir que a Thread tenha acesso às configs
     Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
 def send_confirmation_email(user):
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     token = s.dumps(user.email, salt='email-confirm')
-    msg = Message('Confirme sua Conta - Marketplace Manager',
+    msg = Message('Confirme sua Conta - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     link = url_for('auth.confirm_email', token=token, _external=True)
@@ -57,12 +55,12 @@ def send_account_exists_email(user):
     Não revela a existência da conta na UI — a resposta HTTP é sempre idêntica.
     """
     reset_link  = url_for('auth.reset_request', _external=True)
-    msg = Message('Tentativa de cadastro - Marketplace Manager',
+    msg = Message('Tentativa de cadastro - VEntregaz',
                   sender=current_app.config.get('MAIL_DEFAULT_SENDER'),
                   recipients=[user.email])
     msg.body = (
         f"Recebemos uma solicitação de cadastro com este e-mail, "
-        f"mas ele já possui uma conta no Marketplace Manager.\n\n"
+        f"mas ele já possui uma conta no VEntregaz.\n\n"
         f"Se foi você, faça login normalmente. "
         f"Esqueceu a senha? Redefina aqui: {reset_link}\n\n"
         f"Se não foi você, ignore este e-mail."
@@ -111,7 +109,6 @@ def login():
             # Captura o argumento 'next'
             next_page = request.args.get('next')
 
-            ### MELHORIA DE SEGURANÇA: Previne Open Redirect ###
             # Se next_page existir MAS tiver um domínio (netloc), ignoramos e vamos pro dashboard
             if not next_page or urlsplit(next_page).netloc != '':
                 next_page = url_for('main.dashboard')
@@ -146,19 +143,44 @@ def reset_request():
 def reset_token(token):
     if current_user.is_authenticated:
         return redirect(url_for('main.dashboard'))
+
     s = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+    # 1. Valida assinatura + max_age (30 min)
     try:
         email = s.loads(token, salt='password-reset', max_age=1800)
     except Exception:
         flash('Token inválido/expirado.', 'danger')
         return redirect(url_for('auth.reset_request'))
+
     user = db.session.scalar(db.select(User).filter_by(email=email))
     if not user:
         flash('Usuário não encontrado.', 'danger')
         return redirect(url_for('auth.reset_request'))
+
+    # 2. Rejeita token já utilizado: extrai o timestamp de emissão do token
+    # e compara com password_changed_at. Se a senha foi alterada APÓS a emissão,
+    # o token é inválido — impede reutilização dentro da janela de 30 min.
+    try:
+        from datetime import timezone as _tz
+        _, token_issued_at = s.make_signer('password-reset').unsign(
+            token, return_timestamp=True
+        )
+        token_issued_at = token_issued_at.replace(tzinfo=_tz.utc)
+        if (
+            user.password_changed_at is not None
+            and token_issued_at < user.password_changed_at.replace(tzinfo=_tz.utc)
+        ):
+            flash('Este link já foi utilizado. Solicite um novo.', 'danger')
+            return redirect(url_for('auth.reset_request'))
+    except Exception:
+        # Se não conseguir extrair o timestamp (token malformado), nega por segurança
+        flash('Token inválido/expirado.', 'danger')
+        return redirect(url_for('auth.reset_request'))
+
     form = ResetPasswordForm()
     if form.validate_on_submit():
-        user.set_password(form.password.data)
+        user.set_password(form.password.data)  # carimba password_changed_at automaticamente
         db.session.commit()
         flash('Senha atualizada.', 'success')
         return redirect(url_for('auth.login'))

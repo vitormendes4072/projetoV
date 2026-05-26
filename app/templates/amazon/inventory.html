@@ -4,7 +4,7 @@
 <div class="max-w-6xl mx-auto py-6 flex flex-col gap-6">
 
   <!-- Cabeçalho -->
-  <div class="flex items-center justify-between gap-4">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div class="flex items-center gap-4">
       <a href="{{ url_for('main.menu') }}"
          class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
@@ -52,6 +52,15 @@
       </span>
     </div>
 
+    {% if alert_count > 0 %}
+    <div class="flex items-center gap-3 px-4 py-3 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="shrink-0 w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+      <span><strong>{{ alert_count }} SKU{{ 's' if alert_count != 1 }}</strong> com estoque FBA abaixo do mínimo configurado.</span>
+    </div>
+    {% endif %}
+
     {% if pagination.total == 0 %}
       <div class="p-8 text-center text-slate-600">
         {% if q %}
@@ -70,6 +79,7 @@
               <th class="text-left px-4 py-3">Seller SKU</th>
               <th class="text-left px-4 py-3 hidden md:table-cell">ASIN</th>
               <th class="text-right px-4 py-3">Disponível</th>
+              <th class="text-right px-4 py-3">Mín.</th>
               <th class="text-right px-4 py-3">Reservado</th>
               <th class="text-right px-4 py-3 hidden md:table-cell">Entrada (working)</th>
               <th class="text-right px-4 py-3 hidden md:table-cell">Entrada (enviado)</th>
@@ -83,12 +93,22 @@
                 <td class="px-4 py-3 font-mono text-xs font-bold">{{ snap.seller_sku }}</td>
                 <td class="px-4 py-3 font-mono text-xs text-slate-500 hidden md:table-cell">{{ snap.asin or "—" }}</td>
                 <td class="px-4 py-3 text-right">
+                  {% set qty = snap.fulfillable_qty or 0 %}
+                  {% set min_s = min_stock_map.get(snap.seller_sku) %}
                   <span class="font-bold
-                    {% if (snap.fulfillable_qty or 0) == 0 %}text-red-600
-                    {% elif (snap.fulfillable_qty or 0) < 10 %}text-amber-600
+                    {% if qty == 0 %}text-red-600
+                    {% elif min_s is not none and qty <= min_s %}text-amber-600
                     {% else %}text-green-700{% endif %}">
-                    {{ snap.fulfillable_qty or 0 }}
+                    {{ qty }}
                   </span>
+                  {% if min_s is not none and qty <= min_s %}
+                    <span class="ml-1 inline-block rounded px-1 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">Repor</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-right text-slate-500 text-xs">
+                  {% if min_stock_map.get(snap.seller_sku) is not none %}
+                    {{ min_stock_map.get(snap.seller_sku) }}
+                  {% else %}—{% endif %}
                 </td>
                 <td class="px-4 py-3 text-right text-slate-600">{{ snap.reserved_qty or 0 }}</td>
                 <td class="px-4 py-3 text-right text-slate-600 hidden md:table-cell">{{ snap.inbound_working_qty or 0 }}</td>
@@ -107,13 +127,13 @@
 
       <!-- Paginação -->
       {% if pagination.pages > 1 %}
-        <div class="p-4 border-t border-slate-100 flex items-center justify-between gap-4">
+        <div class="p-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <span class="text-xs text-slate-500">
             Exibindo {{ ((pagination.page - 1) * 50) + 1 }}–{{ [pagination.page * 50, pagination.total] | min }}
             de {{ pagination.total }}
           </span>
 
-          <div class="flex gap-1">
+          <div class="flex flex-wrap gap-1">
             {% if pagination.has_prev %}
               <a href="{{ url_for('amazon.inventory_page', page=pagination.prev_num, q=q) }}"
                  class="px-3 py-1.5 rounded border border-[#d0dbe7] bg-white text-sm hover:bg-slate-50">‹</a>

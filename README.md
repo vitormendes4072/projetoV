@@ -1,13 +1,28 @@
-# Marketplace Manager
+# VEntregaz
 
-SaaS web application for Amazon marketplace sellers to manage products, simulate pricing margins, and track inventory — built with Flask and PostgreSQL.
+SaaS platform for Amazon FBA sellers — track orders, calculate real profitability, manage FBA inventory and automate pricing decisions. Built with Flask and PostgreSQL.
 
 [![CI](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml/badge.svg)](https://github.com/vitormendes4072/projetoV/actions/workflows/ci.yml)
+[![Live Demo](https://img.shields.io/badge/demo-online-brightgreen?style=flat&logo=render)](https://ventregaz.onrender.com)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-3.1.1-000000?style=flat&logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 [![codecov](https://codecov.io/gh/vitormendes4072/projetov/branch/main/graph/badge.svg)](https://codecov.io/gh/vitormendes4072/projetov)
+
+---
+
+## Demo Online
+
+**[ventregaz.onrender.com](https://ventregaz.onrender.com)**
+
+Clique em **"Entrar como Demo"** na tela de login para acessar instantaneamente com dados sintéticos pré-carregados — sem precisar criar conta.
+
+> **Cold start:** o Render Free tier hiberna instâncias após 15 min de inatividade. O primeiro acesso pode levar ~50 segundos para acordar o servidor. Aguarde a página carregar — é comportamento esperado do plano gratuito.
+
+**Limitações da demo:**
+- Sync Amazon SP-API desativado — requer credenciais reais da SP-API, que o usuário demo não possui. Os dados de pedidos exibidos são sintéticos.
+- Worker RQ não roda no Free tier — tarefas assíncronas (importação de pedidos em background) não estão disponíveis.
 
 ---
 
@@ -92,6 +107,70 @@ users
       ├── amazon_finances (1:N)
       └── amazon_sku_links (1:N)
 ```
+
+---
+
+## Decisões Arquiteturais
+
+Cada escolha abaixo foi feita com trade-offs explícitos — não por familiaridade ou default.
+
+### Flask em vez de FastAPI
+
+**Decisão:** framework síncrono com Jinja2 para renderização server-side.
+
+Alternativas consideradas: FastAPI, Django.
+
+Flask foi escolhido porque o produto é majoritariamente server-side rendered — não há SPA separado, e o custo de manter um frontend React/Vue apenas para consumir uma API FastAPI não se justifica para o escopo. O ecossistema Flask-Login, Flask-WTF (CSRF), Flask-Limiter e Flask-Smorest (OpenAPI) integra sem adaptadores. FastAPI seria a escolha certa se o produto evoluísse para uma API pública ou um frontend desacoplado — e a camada REST já existe em `/api/v1` via Flask-Smorest para essa transição.
+
+---
+
+### RQ em vez de Celery
+
+**Decisão:** Redis Queue (RQ) para tarefas assíncronas (sync com Amazon SP-API).
+
+Alternativas consideradas: Celery, Dramatiq.
+
+Há exatamente um caso de uso assíncrono no sistema: disparar o job de sincronização de pedidos Amazon sem bloquear o response HTTP. RQ é Redis-nativo, tem zero configuração de broker, e um worker sobe com `rq worker`. Celery para esse único caso adicionaria: configuração de broker separado (ou Redis com serialização explícita), `CELERY_TASK_SERIALIZER`, workers multi-processo e overhead de monitoramento (Flower). RQ é a ferramenta certa quando o problema é simples — Celery é melhor quando há múltiplas filas, rate limiting por tarefa e retry policies complexas.
+
+---
+
+### Supabase em vez de PostgreSQL self-hosted
+
+**Decisão:** PostgreSQL gerenciado via Supabase no free tier.
+
+Alternativas consideradas: Railway, Render PG, Neon, VPS com Docker.
+
+Supabase entrega PostgreSQL completo com connection pooler já configurado (Transaction Pooler na porta 6543 — necessário com Flask-SQLAlchemy que abre várias conexões por request em dev). O dashboard de inspeção de dados acelera debugging sem precisar de psql. O free tier é suficiente para portfólio e a migração para qualquer outro host PostgreSQL é trivial: trocar a `DATABASE_URL`. Não há lock-in de features proprietárias — nenhuma linha do código usa a API REST do Supabase.
+
+---
+
+### Fernet em vez de JWT para credenciais Amazon
+
+**Decisão:** criptografia simétrica (Fernet) para armazenar `lwa_client_secret`, `refresh_token` e `aws_secret` no banco.
+
+Alternativas consideradas: JWT, AES-GCM direto, Vault.
+
+JWT é um formato de token de autenticação para transmissão — não para dados em repouso num banco. Fernet resolve exatamente o problema: criptografia autenticada e simétrica de blobs arbitrários, com `CREDENTIALS_ENCRYPTION_KEY` no ambiente. AES-GCM direto seria equivalente, mas exigiria gerenciar IV, tag de autenticação e padding manualmente — o que a biblioteca `cryptography` já encapsula no Fernet. Vault seria over-engineering para um produto de portfólio sem secrets rotation.
+
+---
+
+### Multi-tenancy por linha em vez de schema-per-tenant
+
+**Decisão:** `user_id` como FK em todas as tabelas + filtro obrigatório nas queries.
+
+Alternativas consideradas: schema-per-tenant (um schema PostgreSQL por usuário), banco-por-tenant.
+
+Schema-per-tenant garante isolamento total, mas torna Alembic migrations um pesadelo (cada migration precisa rodar N vezes), o connection pooling do Supabase não suporta bem e o SQLAlchemy `schema=` dinâmico por request é complexo. Multi-tenancy por linha funciona bem quando: (1) as queries sempre filtram por `user_id` — garantido pela camada de serviço; (2) há `UniqueConstraint('user_id', 'sku')` para evitar colisões; (3) o volume por tenant não exige particionamento. Para o porte deste produto, row-level tenancy é a escolha correta.
+
+---
+
+### Tailwind CLI standalone em vez de pipeline Node.js
+
+**Decisão:** binário pré-compilado do Tailwind CSS (sem Node.js, sem npm).
+
+Alternativas consideradas: npm + PostCSS + autoprefixer, CDN, Bootstrap.
+
+O binário standalone (39 MB) já inclui PostCSS, autoprefixer e os plugins `@tailwindcss/forms` e `@tailwindcss/container-queries`. Contribuidores não precisam instalar Node.js — `pip install -r requirements.txt` é suficiente para rodar o projeto. O CSS buildado é versionado (`app/static/css/tailwind.css`, 29 KB minificado), então a CI/CD também não precisa do binário. CDN seria mais simples, mas impediria purging de classes não usadas e violaria a CSP configurada com `nonce`. Bootstrap foi descartado por impor visual opinativo e dificultar customização de componentes complexos (modais, tabelas aninhadas, gráficos).
 
 ---
 

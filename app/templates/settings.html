@@ -1,17 +1,11 @@
 {% extends "base.html" %}
+{% import "macros/_ui.html" as ui %}
 
 {% block content %}
 <div class="flex flex-col gap-6 py-4 relative">
     
     <!-- Cabeçalho -->
-    <div class="flex items-center gap-4">
-        <a href="{{ url_for('main.menu') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-        </a>
-        <div>
-            <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">Configurações</h1>
-        </div>
-    </div>
+    {{ ui.page_header("Configurações", url_for('main.menu'), mb="") }}
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Menu Lateral -->
@@ -33,9 +27,7 @@
         <div class="lg:col-span-2 space-y-6">
             
             <!-- CARD 1: DADOS PESSOAIS -->
-            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
-                <h2 class="text-xl font-bold text-[#0d141c] mb-6">Dados Pessoais</h2>
-                
+            {% call ui.section_card(title="Dados Pessoais") %}
                 <form method="POST" id="settingsForm" class="flex flex-col gap-5">
                     {{ form.hidden_tag() }}
                     
@@ -63,20 +55,20 @@
                         </button>
                     </div>
 
-                    <!-- MODAL PERFIL (VERMELHO) -->
+                    <!-- MODAL PERFIL (AZUL — confirmação de identidade) -->
                     <div id="securityModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 backdrop-blur-sm">
-                        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden animate-jump-in">
-                            <div class="bg-red-50 p-4 border-b border-red-100 flex items-center gap-3">
-                                <div class="p-2 bg-red-100 rounded-full text-red-600">
+                        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
+                            <div class="bg-blue-50 p-4 border-b border-blue-100 flex items-center gap-3">
+                                <div class="p-2 bg-blue-100 rounded-full text-blue-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                 </div>
-                                <h3 class="text-lg font-bold text-[#0d141c]">Confirmação de Segurança</h3>
+                                <h3 class="text-lg font-bold text-[#0d141c]">Confirmar Identidade</h3>
                             </div>
                             <div class="p-6 flex flex-col gap-4">
                                 <p class="text-sm text-slate-600">Confirme sua senha atual para salvar as alterações.</p>
                                 <label class="flex flex-col gap-1">
                                     <span class="text-sm font-medium text-[#0d141c]">Sua senha atual</span>
-                                    {{ form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-red-500 h-12 px-4", placeholder="Digite para confirmar", id="current_password") }}
+                                    {{ form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", placeholder="Digite para confirmar", id="current_password") }}
                                     {% for error in form.current_password.errors %}
                                         <p class="text-red-500 text-xs mt-1 font-medium">{{ error }}</p>
                                     {% endfor %}
@@ -84,12 +76,12 @@
                             </div>
                             <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
                                 <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-slate-700 font-medium hover:bg-white transition-colors">Cancelar</button>
-                                {{ form.submit(class_="cursor-pointer px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors", value="Confirmar e Salvar") }}
+                                {{ form.submit(class_="cursor-pointer px-4 py-2 rounded-lg bg-[#0d80f2] text-white font-bold hover:bg-blue-600 transition-colors", value="Confirmar e Salvar") }}
                             </div>
                         </div>
                     </div>
                 </form>
-            </div>
+            {% endcall %}
 
             <!-- CARD 2: CONFIGURAÇÃO FISCAL -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
@@ -120,14 +112,24 @@
                 </form>
             </div>
 
-            <!-- CARD 3: ALTERAÇÃO DE SENHA -->
-            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
-                <h2 class="text-xl font-bold text-[#0d141c] mb-6">Alterar Senha</h2>
-                
+            <!-- CARD 3: ALTERAÇÃO DE SENHA (inline — sem modal) -->
+            {% call ui.section_card() %}
+                <h2 class="text-xl font-bold text-[#0d141c] mb-2">Alterar Senha</h2>
+                <p class="text-sm text-[#49739c] mb-6">Preencha os três campos abaixo para definir uma nova senha.</p>
+
                 <form method="POST" id="passwordForm" class="flex flex-col gap-5">
                     {{ password_form.hidden_tag() }}
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Senha Atual — inline, sem modal -->
+                        <label class="flex flex-col gap-1 md:col-span-2">
+                            <span class="text-sm font-medium text-[#0d141c]">Senha Atual</span>
+                            {{ password_form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", placeholder="Sua senha atual", id="pass_current_input") }}
+                            {% for error in password_form.current_password.errors %}
+                                <p class="text-red-500 text-xs mt-1 font-medium">{{ error }}</p>
+                            {% endfor %}
+                        </label>
+
                         <label class="flex flex-col gap-1">
                             <span class="text-sm font-medium text-[#0d141c]">Nova Senha</span>
                             {{ password_form.new_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4", id="new_pass_input", value=password_form.new_password.data or '') }}
@@ -148,38 +150,10 @@
                     </div>
 
                     <div class="pt-4 border-t border-slate-100 flex justify-end">
-                        <button type="button" onclick="validateAndOpenPasswordModal()" class="cursor-pointer rounded-lg bg-slate-800 text-white font-bold h-10 px-6 hover:bg-slate-900 transition-colors">
-                            Atualizar Senha
-                        </button>
-                    </div>
-
-                    <!-- MODAL SENHA (ESCURO) -->
-                    <div id="passwordModal" class="hidden fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 backdrop-blur-sm">
-                        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden animate-jump-in">
-                            <div class="bg-slate-800 p-4 border-b border-slate-700 flex items-center gap-3">
-                                <div class="p-2 bg-slate-700 rounded-full text-white">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                                </div>
-                                <h3 class="text-lg font-bold text-white">Confirme a Troca</h3>
-                            </div>
-                            <div class="p-6 flex flex-col gap-4">
-                                <p class="text-sm text-slate-600">Para definir sua nova senha, digite a <strong>senha atual</strong>.</p>
-                                <label class="flex flex-col gap-1">
-                                    <span class="text-sm font-medium text-[#0d141c]">Senha Atual</span>
-                                    {{ password_form.current_password(class_="form-input w-full rounded-lg border-[#d0dbe7] bg-white text-[#0d141c] focus:border-slate-800 h-12 px-4", placeholder="Senha antiga", id="modal_current_password") }}
-                                    {% for error in password_form.current_password.errors %}
-                                        <p class="text-red-500 text-xs mt-1 font-medium">{{ error }}</p>
-                                    {% endfor %}
-                                </label>
-                            </div>
-                            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                                <button type="button" onclick="closePasswordModal()" class="px-4 py-2 rounded-lg border border-[#d0dbe7] text-slate-700 font-medium hover:bg-white transition-colors">Cancelar</button>
-                                {{ password_form.submit_password(class_="cursor-pointer px-4 py-2 rounded-lg bg-slate-800 text-white font-bold hover:bg-slate-900 transition-colors", value="Confirmar Troca") }}
-                            </div>
-                        </div>
+                        {{ password_form.submit_password(class_="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-6 hover:bg-blue-600 transition-colors", value="Atualizar Senha") }}
                     </div>
                 </form>
-            </div>
+            {% endcall %}
 
             <!-- CARD 4: INTEGRAÇÃO AMAZON (SP-API) -->
             <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
@@ -311,6 +285,44 @@
                 <div id="amz_result" class="mt-4 text-sm"></div>
             </div>
 
+            <!-- CARD 5: WEBHOOK OUTBOUND -->
+            <div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm">
+                <h2 class="text-xl font-bold text-[#0d141c] mb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="text-[#0d80f2]">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                    Webhook de Notificações
+                </h2>
+                <p class="text-sm text-[#49739c] mb-6">
+                    Receba alertas em tempo real no Discord, Slack ou qualquer URL HTTPS quando o sync falha ou a margem cai abaixo do limite.
+                </p>
+
+                <form method="POST" class="flex flex-col gap-5">
+                    {{ webhook_form.hidden_tag() }}
+
+                    <label class="flex flex-col gap-1">
+                        <span class="text-sm font-medium text-[#0d141c]">URL do Webhook</span>
+                        {{ webhook_form.webhook_url(
+                            class_="form-input w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] text-[#0d141c] focus:border-[#0d80f2] h-12 px-4",
+                            placeholder="https://discord.com/api/webhooks/... ou https://hooks.slack.com/..."
+                        ) }}
+                        <span class="text-xs text-slate-400">Apenas URLs <code>https://</code>. Suporta Discord, Slack e endpoints genéricos.</span>
+                        {% for error in webhook_form.webhook_url.errors %}
+                            <span class="text-red-500 text-xs">{{ error }}</span>
+                        {% endfor %}
+                    </label>
+
+                    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+                        <button type="button" id="btn_test_webhook"
+                                class="rounded-lg border border-[#d0dbe7] bg-white text-slate-800 font-bold h-10 px-6 hover:bg-slate-50 transition-colors">
+                            Testar
+                        </button>
+                        {{ webhook_form.submit_webhook(class_="cursor-pointer rounded-lg bg-[#0d80f2] text-white font-bold h-10 px-6 hover:bg-blue-600 transition-colors") }}
+                    </div>
+                    <p id="webhook_test_msg" class="text-sm hidden"></p>
+                </form>
+            </div>
+
         </div>
     </div>
 
@@ -382,14 +394,39 @@
 
 <script nonce="{{ csp_nonce() }}">
   const SETTINGS_INIT = {
-    serverNewPass: {{ (password_form.new_password.data or '') | tojson }},
-    serverConfirmPass: {{ (password_form.confirm_password.data or '') | tojson }},
     openProfileModal: {{ (form.current_password.errors | length > 0) | tojson }},
-    openPasswordModal: {{ (password_form.current_password.errors | length > 0) | tojson }},
     regenApiKeyUrl: {{ url_for('settings.regenerate_api_key') | tojson }},
     hasApiKey: {{ (current_user.api_key is not none and current_user.api_key != '') | tojson }},
+    testWebhookUrl: {{ url_for('settings.test_webhook') | tojson }},
   };
 </script>
 <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const btn = document.getElementById('btn_test_webhook');
+  const msg = document.getElementById('webhook_test_msg');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Enviando…';
+    msg.className = 'text-sm hidden';
+    try {
+      const resp = await fetch(SETTINGS_INIT.testWebhookUrl, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': document.querySelector('[name=csrf_token]').value },
+      });
+      const data = await resp.json();
+      msg.className = 'text-sm mt-1 ' + (data.ok ? 'text-green-600' : 'text-red-500');
+      msg.textContent = data.ok ? data.message : (data.error || 'Erro desconhecido.');
+    } catch (e) {
+      msg.className = 'text-sm mt-1 text-red-500';
+      msg.textContent = 'Erro de rede ao testar o webhook.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Testar';
+    }
+  });
+})();
+</script>
 
 {% endblock %}

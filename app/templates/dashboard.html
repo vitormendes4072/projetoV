@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros/_ui.html" import delta_badge %}
 
 {% block content %}
 <div class="flex flex-col gap-6 py-4">
@@ -162,8 +163,10 @@
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Total Produtos -->
-        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+        <!-- Total Produtos — link direto -->
+        <a href="{{ url_for('produtos.lista_produtos') }}"
+           class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2
+                  hover:ring-2 hover:ring-blue-200 hover:border-blue-300 transition-all cursor-pointer group">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Produtos</span>
                 <span class="p-2 rounded-lg bg-blue-50">
@@ -171,11 +174,13 @@
                 </span>
             </div>
             <p class="text-3xl font-black text-[#0d141c]">{{ total_products }}</p>
-            <p class="text-xs text-[#49739c]">cadastrados</p>
-        </div>
+            <p class="text-xs text-[#49739c] group-hover:text-blue-500 transition-colors">Ver lista →</p>
+        </a>
 
-        <!-- Total Simulações -->
-        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+        <!-- Total Simulações — link direto -->
+        <a href="{{ url_for('relatorios.index') }}"
+           class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2
+                  hover:ring-2 hover:ring-emerald-200 hover:border-emerald-300 transition-all cursor-pointer group">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Simulações</span>
                 <span class="p-2 rounded-lg bg-emerald-50">
@@ -183,11 +188,16 @@
                 </span>
             </div>
             <p class="text-3xl font-black text-[#0d141c]">{{ total_simulations }}</p>
-            <p class="text-xs text-[#49739c]">salvas</p>
-        </div>
+            {{ delta_badge(delta_simulations, unit="") }}
+            <p class="text-xs text-[#49739c] group-hover:text-emerald-600 transition-colors mt-auto">Ver relatório →</p>
+        </a>
 
-        <!-- Margem Média -->
-        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+        <!-- Margem Média — drill-down accordion -->
+        <button type="button"
+           data-drill="margin" data-period="{{ period }}"
+           class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2 text-left w-full
+                  hover:ring-2 hover:ring-violet-200 hover:border-violet-300 transition-all cursor-pointer group
+                  aria-expanded-false">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">Margem Média</span>
                 <span class="p-2 rounded-lg bg-violet-50">
@@ -197,11 +207,20 @@
             <p class="text-3xl font-black {% if avg_margin > 15 %}text-green-600{% elif avg_margin > 0 %}text-yellow-600{% else %}text-red-600{% endif %}">
                 {{ "%.1f"|format(avg_margin) }}%
             </p>
-            <p class="text-xs text-[#49739c]">nas simulações salvas</p>
-        </div>
+            {{ delta_badge(delta_margin, unit="pp") }}
+            <p class="text-xs text-[#49739c] group-hover:text-violet-600 transition-colors flex items-center gap-1 mt-auto">
+                Ver por SKU
+                <svg class="drill-chevron transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+            </p>
+        </button>
 
-        <!-- ROI Médio -->
-        <div class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2">
+        <!-- ROI Médio — drill-down accordion -->
+        <button type="button"
+           data-drill="roi" data-period="{{ period }}"
+           class="rounded-xl border border-[#d0dbe7] bg-white p-5 shadow-sm flex flex-col gap-2 text-left w-full
+                  hover:ring-2 hover:ring-amber-200 hover:border-amber-300 transition-all cursor-pointer group">
             <div class="flex items-center justify-between">
                 <span class="text-xs font-bold uppercase tracking-wide text-[#49739c]">ROI Médio</span>
                 <span class="p-2 rounded-lg bg-amber-50">
@@ -209,9 +228,18 @@
                 </span>
             </div>
             <p class="text-3xl font-black text-[#0d141c]">{{ "%.0f"|format(avg_roi) }}%</p>
-            <p class="text-xs text-[#49739c]">nas simulações salvas</p>
-        </div>
+            {{ delta_badge(delta_roi, unit="pp") }}
+            <p class="text-xs text-[#49739c] group-hover:text-amber-600 transition-colors flex items-center gap-1 mt-auto">
+                Ver por SKU
+                <svg class="drill-chevron transition-transform duration-200" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+            </p>
+        </button>
     </div>
+
+    <!-- Painel de drill-down (injetado via AJAX) -->
+    <div id="drill-panel" class="hidden"></div>
 
     <!-- Alerta de Estoque Baixo -->
     {% if low_stock %}
@@ -384,4 +412,61 @@
 </script>
 <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endif %}
+
+<script nonce="{{ csp_nonce() }}">
+(function () {
+  const panel = document.getElementById("drill-panel");
+  if (!panel) return;
+
+  let activeMetric = null;
+
+  function closeDrill() {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    activeMetric = null;
+    document.querySelectorAll("[data-drill]").forEach(btn => {
+      btn.querySelector(".drill-chevron")?.classList.remove("rotate-180");
+    });
+  }
+
+  async function openDrill(metric, period) {
+    panel.innerHTML = '<div class="text-center py-6 text-slate-400 text-sm">Carregando…</div>';
+    panel.classList.remove("hidden");
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    try {
+      const res = await fetch(`/dashboard/drill/${metric}?period=${period}`);
+      if (!res.ok) throw new Error("Erro " + res.status);
+      panel.innerHTML = await res.text();
+      // Botão fechar dentro do partial
+      panel.querySelector("#btnCloseDrill")?.addEventListener("click", closeDrill);
+    } catch (e) {
+      panel.innerHTML = `<div class="rounded-xl border border-red-200 bg-red-50 text-red-700 px-6 py-4 text-sm">Falha ao carregar dados: ${e.message}</div>`;
+    }
+  }
+
+  document.querySelectorAll("[data-drill]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const metric  = btn.dataset.drill;
+      const period  = btn.dataset.period || "30d";
+      const chevron = btn.querySelector(".drill-chevron");
+
+      if (activeMetric === metric) {
+        // Mesmo card clicado duas vezes → fecha
+        closeDrill();
+        return;
+      }
+
+      // Reseta chevrons de todos os cards
+      document.querySelectorAll("[data-drill]").forEach(b => {
+        b.querySelector(".drill-chevron")?.classList.remove("rotate-180");
+      });
+      chevron?.classList.add("rotate-180");
+      activeMetric = metric;
+
+      await openDrill(metric, period);
+    });
+  });
+})();
+</script>
 {% endblock %}

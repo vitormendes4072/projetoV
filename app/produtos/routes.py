@@ -2,7 +2,7 @@
 import csv
 import io
 import logging
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, send_from_directory, current_app, Response, jsonify
 from flask import stream_with_context
 from flask_login import login_required, current_user
 from app import db
@@ -176,6 +176,7 @@ def criar_produto():
             stock_quantity=form.stock_quantity.data,
             min_stock=form.min_stock.data if form.min_stock.data is not None else 5,
             image_url=form.image_url.data,
+            margin_alert_threshold=form.margin_alert_threshold.data,
             owner=current_user
         )
         db.session.add(produto)
@@ -208,6 +209,7 @@ def editar_produto(product_id):
         product.stock_quantity = form.stock_quantity.data
         product.min_stock = form.min_stock.data if form.min_stock.data is not None else 5
         product.image_url = form.image_url.data
+        product.margin_alert_threshold = form.margin_alert_threshold.data
 
         registrar_historico(product, current_user, 'Alteração Manual')
 
@@ -224,6 +226,11 @@ def editar_produto(product_id):
         form.stock_quantity.data = product.stock_quantity
         form.min_stock.data = product.min_stock
         form.image_url.data = product.image_url
+        form.margin_alert_threshold.data = (
+            float(product.margin_alert_threshold)
+            if product.margin_alert_threshold is not None
+            else None
+        )
 
     return render_template('produtos/editar.html', form=form, title="Editar Produto", product=product)
 
@@ -237,9 +244,13 @@ def ajustar_estoque(product_id):
     try:
         delta = int(request.form.get('delta', 0))
     except (ValueError, TypeError):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"ok": False, "error": "Valor de ajuste inválido."}), 400
         flash('Valor de ajuste inválido.', 'danger')
         return redirect(url_for('produtos.editar_produto', product_id=product_id))
     if delta == 0:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"ok": False, "error": "Informe uma variação diferente de zero."}), 400
         flash('Informe uma variação diferente de zero.', 'warning')
         return redirect(url_for('produtos.editar_produto', product_id=product_id))
     motivo = request.form.get('motivo', '').strip() or 'Ajuste Manual'
@@ -247,8 +258,58 @@ def ajustar_estoque(product_id):
     registrar_historico(product, current_user, f'Ajuste de Estoque: {motivo}')
     db.session.commit()
     sinal = '+' if delta >= 0 else ''
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            "ok": True,
+            "new_qty": product.stock_quantity,
+            "message": f'Estoque ajustado em {sinal}{delta} un. Novo total: {product.stock_quantity}.',
+        })
     flash(f'Estoque ajustado em {sinal}{delta} un. Novo total: {product.stock_quantity}.', 'success')
     return redirect(url_for('produtos.editar_produto', product_id=product_id))
+
+
+# Whitelist de campos editáveis via PATCH inline
+_PATCH_FIELDS: dict[str, type] = {
+    "price": float,
+    "cost": float,
+    "packaging_cost": float,
+    "min_stock": int,
+    "stock_quantity": int,
+}
+
+
+@produtos_bp.route('/produtos/<int:product_id>', methods=['PATCH'])
+@login_required
+def patch_produto(product_id):
+    """Edição inline AJAX de um campo numérico do produto.
+
+    Body JSON: {"field": "price", "value": 39.90}
+    Retorna: {"ok": true, "field": "price", "new_value": 39.9}
+    """
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        return jsonify({"ok": False, "error": "Acesso negado."}), 403
+
+    data = request.get_json(silent=True) or {}
+    field = data.get("field", "")
+    raw_value = data.get("value")
+
+    if field not in _PATCH_FIELDS:
+        return jsonify({"ok": False, "error": f"Campo '{field}' não permitido."}), 400
+
+    try:
+        cast = _PATCH_FIELDS[field]
+        value = cast(raw_value)
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Valor inválido."}), 400
+
+    if cast is float and value < 0:
+        return jsonify({"ok": False, "error": "Valor não pode ser negativo."}), 400
+
+    setattr(product, field, value)
+    registrar_historico(product, current_user, f'Edição inline: {field}')
+    db.session.commit()
+    return jsonify({"ok": True, "field": field, "new_value": getattr(product, field)})
 
 
 # --- NOVA ROTA: VISUALIZAR HISTÓRICO ---
@@ -297,3 +358,46 @@ def comparativo_produto(product_id):
     tax_rate = float(getattr(current_user, 'default_tax_rate', 0.0) or 0.0)
     data = get_sku_comparison(current_user.id, product, tax_rate)
     return render_template('produtos/comparativo.html', tax_rate=tax_rate, **data)
+
+
+@produtos_bp.get('/produtos/<int:product_id>/preco-sugerido')
+@login_required
+def preco_sugerido(product_id: int):
+    """Retorna sugestão de preço ótimo via regressão linear (JSON).
+
+    Query param:
+      - target (float, opcional): margem-alvo em %; padrão = 20.0
+
+    Resposta 200::
+
+        {
+          "ok": true,
+          "suggested_price": 89.90,
+          "target_margin": 20.0,
+          "r2": 0.94,
+          "n_points": 7,
+          "confidence": "alta"
+        }
+
+    Resposta 200 quando não há dados suficientes::
+
+        {"ok": false, "reason": "dados_insuficientes"}
+    """
+    product = db.get_or_404(Product, product_id)
+    if product.owner != current_user:
+        abort(403)
+
+    try:
+        target = float(request.args.get("target", 20.0))
+        target = max(-100.0, min(100.0, target))
+    except (TypeError, ValueError):
+        target = 20.0
+
+    from app.services.price_suggest import suggest_price
+
+    result = suggest_price(product_id=product_id, target_margin=target)
+
+    if result is None:
+        return jsonify({"ok": False, "reason": "dados_insuficientes"})
+
+    return jsonify({"ok": True, **result})

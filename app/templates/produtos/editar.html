@@ -1,16 +1,12 @@
 <!--  app/templates/produtos/editar.html -->
 
 {% extends "base.html" %}
+{% from "macros/_ui.html" import page_header %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto py-8">
-    
-    <div class="flex items-center gap-4 mb-6">
-        <a href="{{ url_for('produtos.lista_produtos') }}" class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-        </a>
-        <h1 class="text-[#0d141c] text-2xl font-bold">{{ title }}</h1>
-    </div>
+
+    {{ page_header(title, url_for('produtos.lista_produtos')) }}
 
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6">
         <form method="POST">
@@ -84,6 +80,18 @@
                     {{ form.image_url(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0") }}
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-[#0d141c] mb-1">
+                        Alerta de margem mínima (%)
+                        <span class="text-xs text-slate-400 font-normal ml-1">(deixe vazio para desativar)</span>
+                    </label>
+                    {{ form.margin_alert_threshold(class_="w-full rounded-lg border-[#d0dbe7] bg-[#f0f4f8] h-12 px-4 focus:border-[#0d80f2] focus:ring-0", placeholder="Ex: 15") }}
+                    {% for error in form.margin_alert_threshold.errors %}
+                        <span class="text-red-500 text-xs">{{ error }}</span>
+                    {% endfor %}
+                    <span class="text-xs text-slate-400">Você receberá um e-mail quando a margem simulada cair abaixo deste valor.</span>
+                </div>
+
             </div>
 
             <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
@@ -96,9 +104,9 @@
     <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mt-6">
         <h2 class="text-base font-bold text-[#0d141c] mb-1">Ajuste Rápido de Estoque</h2>
         <p class="text-sm text-slate-500 mb-4">
-            Estoque atual: <span class="font-bold text-[#0d141c]">{{ product.stock_quantity }}</span> unidades
+            Estoque atual: <span id="stock-display" class="font-bold text-[#0d141c]">{{ product.stock_quantity }}</span> unidades
         </p>
-        <form method="POST" action="{{ url_for('produtos.ajustar_estoque', product_id=product.id) }}">
+        <form id="stock-adjust-form" method="POST" action="{{ url_for('produtos.ajustar_estoque', product_id=product.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="flex flex-wrap gap-4 items-end">
                 <div>
@@ -119,6 +127,7 @@
                 </button>
             </div>
         </form>
+        <div id="stock-feedback" class="mt-2 text-sm" role="status" aria-live="polite"></div>
         <div class="mt-3 flex flex-wrap gap-4">
             <a href="{{ url_for('produtos.historico_produto', product_id=product.id) }}"
                class="text-sm text-[#49739c] hover:underline">Ver histórico completo →</a>
@@ -126,6 +135,111 @@
                class="text-sm text-emerald-600 hover:underline font-medium">Comparativo margem real x estimada →</a>
         </div>
     </div>
+
+    {# ── Sugestão de Preço Ótimo ──────────────────────────────────────────── #}
+    <div class="bg-white rounded-xl border border-[#d0dbe7] shadow-sm p-6 mt-6" id="price-suggest-card">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="text-base font-bold text-[#0d141c]">Sugestão de Preço Ótimo</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Baseado no histórico de simulações via regressão linear</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="text-sm text-slate-600 font-medium whitespace-nowrap">Margem-alvo</label>
+                <select id="ps-target"
+                        class="rounded-lg border border-[#d0dbe7] bg-[#f0f4f8] h-9 px-3 text-sm focus:border-[#0d80f2] focus:outline-none">
+                    <option value="10">10%</option>
+                    <option value="15">15%</option>
+                    <option value="20" selected>20%</option>
+                    <option value="25">25%</option>
+                    <option value="30">30%</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="ps-result" class="text-sm text-slate-500 italic">Carregando...</div>
+    </div>
+
+    <script>
+    (function () {
+        var form = document.getElementById('stock-adjust-form');
+        var stockDisplay = document.getElementById('stock-display');
+        var feedback = document.getElementById('stock-feedback');
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            feedback.textContent = '';
+            feedback.className = 'mt-2 text-sm';
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(form),
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
+                if (json.ok) {
+                    stockDisplay.textContent = json.new_qty;
+                    feedback.textContent = json.message;
+                    feedback.classList.add('text-green-600');
+                    form.reset();
+                } else {
+                    feedback.textContent = json.error || 'Erro ao ajustar estoque.';
+                    feedback.classList.add('text-red-600');
+                }
+            })
+            .catch(function () {
+                feedback.textContent = 'Erro de rede. Tente novamente.';
+                feedback.classList.add('text-red-600');
+            });
+        });
+    })();
+
+    // ── Sugestão de Preço ────────────────────────────────────────────────────
+    (function () {
+        var BASE_URL = "{{ url_for('produtos.preco_sugerido', product_id=product.id) }}";
+        var resultEl = document.getElementById('ps-result');
+        var targetSel = document.getElementById('ps-target');
+        if (!resultEl || !targetSel) return;
+
+        var CONF_BADGE = {
+            alta:   '<span class="inline-block text-xs font-semibold bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5">alta confiança</span>',
+            média:  '<span class="inline-block text-xs font-semibold bg-amber-100 text-amber-700 rounded px-1.5 py-0.5">confiança média</span>',
+            baixa:  '<span class="inline-block text-xs font-semibold bg-red-100 text-red-700 rounded px-1.5 py-0.5">baixa confiança</span>',
+        };
+
+        function fmt(n) {
+            return 'R$ ' + n.toFixed(2).replace('.', ',');
+        }
+
+        function load(target) {
+            resultEl.innerHTML = '<span class="text-slate-400 italic">Calculando...</span>';
+            fetch(BASE_URL + '?target=' + target)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.ok) {
+                        resultEl.innerHTML =
+                            '<span class="text-slate-400">Simulações insuficientes — salve ao menos 3 simulações vinculadas a este produto para gerar a sugestão.</span>';
+                        return;
+                    }
+                    var badge = CONF_BADGE[data.confidence] || '';
+                    resultEl.innerHTML =
+                        'Com base em <strong>' + data.n_points + ' simulações</strong>, ' +
+                        'para atingir <strong>' + data.target_margin + '% de margem</strong>, ' +
+                        'o preço sugerido é ' +
+                        '<strong class="text-[#0d80f2] text-base">' + fmt(data.suggested_price) + '</strong> ' +
+                        badge +
+                        ' <span class="text-slate-400 text-xs">(R² = ' + data.r2.toFixed(2) + ')</span>';
+                })
+                .catch(function () {
+                    resultEl.innerHTML = '<span class="text-slate-400 italic">Não foi possível carregar a sugestão.</span>';
+                });
+        }
+
+        load(targetSel.value);
+        targetSel.addEventListener('change', function () { load(this.value); });
+    })();
+    </script>
     {% endif %}
 </div>
 {% endblock %}

@@ -18,6 +18,13 @@ class ProductForm(FlaskForm):
     stock_quantity = IntegerField('Estoque Atual', default=0)
     min_stock = IntegerField('Estoque mínimo (alerta)', validators=[Optional(), NumberRange(min=0)], default=5)
     image_url = StringField('URL da Imagem (Opcional)')
+
+    # Alerta de margem baixa — threshold em %; None desativa o alerta
+    margin_alert_threshold = FloatField(
+        'Alerta de margem mínima (%)',
+        validators=[Optional(), NumberRange(min=-100, max=100)],
+    )
+
     submit = SubmitField('Salvar Produto')
 
     # --- NOVO CÓDIGO AQUI ---

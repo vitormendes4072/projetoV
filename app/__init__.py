@@ -103,10 +103,16 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
             raise RuntimeError("CREDENTIALS_ENCRYPTION_KEY não configurada em produção.")
 
     # ---------------------------------------
+    # Sentry (antes do logging para capturar erros de init)
+    # ---------------------------------------
+    from app.sentry import init_sentry  # noqa: PLC0415
+    init_sentry(app)
+
+    # ---------------------------------------
     # Logging
     # ---------------------------------------
-    log_level = logging.DEBUG if app.debug else logging.WARNING
-    logging.basicConfig(level=log_level, format="%(levelname)s %(name)s: %(message)s")
+    from app.logging_config import configure_logging  # noqa: PLC0415
+    configure_logging(app)
 
     # ---------------------------------------
     # Extensões
@@ -173,6 +179,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     # Blueprints
     # ---------------------------------------
     from app.auth.routes import auth
+    from app.auth.oauth import oauth_bp, init_oauth
     from app.main.routes import main
     from app.precificacao.routes import pricing
     from app.settings.routes import settings_bp
@@ -182,8 +189,12 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     from app.commands import register_commands
     from app.api import blp as api_blp
     from app.relatorios.routes import relatorios_bp
+    from app.vendas.routes import vendas_bp
+    from app.estoque.routes import estoque_bp
 
+    init_oauth(app)
     app.register_blueprint(auth)
+    app.register_blueprint(oauth_bp)
     app.register_blueprint(main)
     app.register_blueprint(pricing)
     app.register_blueprint(settings_bp)
@@ -197,6 +208,8 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
 
     app.register_blueprint(amazon)
     app.register_blueprint(relatorios_bp)
+    app.register_blueprint(vendas_bp)
+    app.register_blueprint(estoque_bp)
 
     # REST API documentada (Flask-Smorest → Swagger UI em /api/docs)
     smorest.init_app(app)

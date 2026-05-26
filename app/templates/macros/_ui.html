@@ -1,0 +1,108 @@
+{#
+  app/templates/macros/_ui.html
+  ─────────────────────────────
+  Macros de UI compartilhadas entre templates.
+
+  Uso:
+    {% from "macros/_ui.html" import delta_badge, kpi_card_simple, section_card, page_header %}
+
+  Ou importação com namespace:
+    {% import "macros/_ui.html" as ui %}
+    {{ ui.delta_badge(value) }}
+    {% call ui.section_card(title="Título") %}...{% endcall %}
+#}
+
+
+{# ──────────────────────────────────────────────────────────────────────────
+   delta_badge(value, unit="pp")
+   Badge colorido de variação período-a-período.
+     value  — número float, ou None para "sem dado"
+     unit   — sufixo exibido; use "pp" para pontos percentuais, "" para unidades
+   ────────────────────────────────────────────────────────────────────────── #}
+{% macro delta_badge(value, unit="pp") %}
+  {% if value is none %}
+    <span class="text-xs text-slate-400">— vs. período anterior</span>
+  {% elif value > 0 %}
+    <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-green-600">
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18"/></svg>
+      +{{ "%.1f"|format(value) if unit == "pp" else value }}{{ unit }} vs. anterior
+    </span>
+  {% elif value < 0 %}
+    <span class="inline-flex items-center gap-0.5 text-xs font-semibold text-red-500">
+      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3"/></svg>
+      {{ "%.1f"|format(value) if unit == "pp" else value }}{{ unit }} vs. anterior
+    </span>
+  {% else %}
+    <span class="text-xs text-slate-400">→ sem variação vs. anterior</span>
+  {% endif %}
+{% endmacro %}
+
+
+{# ──────────────────────────────────────────────────────────────────────────
+   kpi_card_simple(label, value, value_class="text-[#0d141c]")
+   Card KPI minimalista: rótulo em cima + valor grande embaixo.
+   Ideal para grades de métricas de relatório.
+     label        — texto do rótulo (ex: "Margem Média")
+     value        — valor já formatado como string (ex: "24,5%")
+     value_class  — classes Tailwind para colorir o valor
+   ────────────────────────────────────────────────────────────────────────── #}
+{% macro kpi_card_simple(label, value, value_class="text-[#0d141c]") %}
+<div class="bg-white rounded-xl border border-[#e7edf4] p-5 shadow-sm">
+  <p class="text-[#49739c] text-xs font-medium uppercase tracking-wide mb-1">{{ label }}</p>
+  <p class="text-3xl font-bold {{ value_class }}">{{ value }}</p>
+</div>
+{% endmacro %}
+
+
+{# ──────────────────────────────────────────────────────────────────────────
+   section_card(title=None, extra_class="")
+   Wrapper genérico de card com borda e sombra padrão da UI.
+   O conteúdo é fornecido via bloco caller() (use {% call %}).
+     title        — se fornecido, renderiza um <h2> antes do conteúdo
+     extra_class  — classes adicionais para o div externo (ex: "overflow-hidden")
+
+   Exemplo sem título:
+     {% call ui.section_card() %}
+         <p>Conteúdo livre aqui.</p>
+     {% endcall %}
+
+   Exemplo com título:
+     {% call ui.section_card(title="Dados Pessoais") %}
+         <form>...</form>
+     {% endcall %}
+   ────────────────────────────────────────────────────────────────────────── #}
+{% macro section_card(title=None, extra_class="") %}
+<div class="rounded-xl border border-[#d0dbe7] bg-white p-6 shadow-sm {{ extra_class }}">
+  {% if title %}
+  <h2 class="text-xl font-bold text-[#0d141c] mb-6">{{ title }}</h2>
+  {% endif %}
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+
+{# ──────────────────────────────────────────────────────────────────────────
+   page_header(title, back_url, subtitle=None, mb="mb-6")
+   Cabeçalho de página com botão ← Voltar, título e subtítulo opcional.
+     title     — título principal da página
+     back_url  — URL do botão de voltar (use url_for(...))
+     subtitle  — parágrafo descritivo abaixo do título (opcional)
+     mb        — margem inferior do bloco (padrão "mb-6"; use "" para omitir)
+   ────────────────────────────────────────────────────────────────────────── #}
+{% macro page_header(title, back_url, subtitle=None, mb="mb-6") %}
+<div class="flex items-center gap-4 {{ mb }}">
+  <a href="{{ back_url }}"
+     class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#49739c] hover:bg-slate-50 shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+    </svg>
+  </a>
+  <div>
+    <h1 class="text-[#0d141c] text-[28px] font-bold leading-tight">{{ title }}</h1>
+    {% if subtitle %}
+    <p class="text-[#49739c] text-sm mt-0.5">{{ subtitle }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endmacro %}

@@ -109,7 +109,7 @@ def test_credentials_with_role_arn_includes_key():
 
 def test_with_retry_success_first_call():
     fn = MagicMock(return_value={"ok": True})
-    with patch("app.integrations.amazon.service.time.sleep") as mock_sleep:
+    with patch("app.integrations.amazon.service.client.time.sleep") as mock_sleep:
         result = _with_retry(fn, max_retries=3)
     assert result == {"ok": True}
     fn.assert_called_once()
@@ -119,7 +119,7 @@ def test_with_retry_success_first_call():
 def test_with_retry_none_response_retries_then_succeeds():
     success = {"data": "ok"}
     fn = MagicMock(side_effect=[None, None, success])
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         result = _with_retry(fn, max_retries=5)
     assert result == success
     assert fn.call_count == 3
@@ -128,7 +128,7 @@ def test_with_retry_none_response_retries_then_succeeds():
 def test_with_retry_throttled_then_succeeds():
     success = {"data": "ok"}
     fn = MagicMock(side_effect=[_Throttled(), _Throttled(), success])
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         result = _with_retry(fn, max_retries=5)
     assert result == success
     assert fn.call_count == 3
@@ -137,7 +137,7 @@ def test_with_retry_throttled_then_succeeds():
 def test_with_retry_network_error_then_succeeds():
     success = {"data": "ok"}
     fn = MagicMock(side_effect=[ConnectionError("timeout"), success])
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         result = _with_retry(fn, max_retries=3)
     assert result == success
     assert fn.call_count == 2
@@ -145,7 +145,7 @@ def test_with_retry_network_error_then_succeeds():
 
 def test_with_retry_all_throttled_reraises():
     fn = MagicMock(side_effect=_Throttled())
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         with pytest.raises(SellingApiRequestThrottledException):
             _with_retry(fn, max_retries=3)
     assert fn.call_count == 3
@@ -153,7 +153,7 @@ def test_with_retry_all_throttled_reraises():
 
 def test_with_retry_all_none_raises_runtime_error():
     fn = MagicMock(return_value=None)
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         with pytest.raises(RuntimeError, match="None"):
             _with_retry(fn, max_retries=3, ctx="test_ctx")
     assert fn.call_count == 3
@@ -161,7 +161,7 @@ def test_with_retry_all_none_raises_runtime_error():
 
 def test_with_retry_non_retryable_raises_immediately():
     fn = MagicMock(side_effect=ValueError("unexpected error"))
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         with pytest.raises(ValueError, match="unexpected error"):
             _with_retry(fn, max_retries=5)
     fn.assert_called_once()
@@ -170,16 +170,15 @@ def test_with_retry_non_retryable_raises_immediately():
 def test_with_retry_os_error_is_retryable():
     success = {"data": "ok"}
     fn = MagicMock(side_effect=[OSError("connection reset"), success])
-    with patch("app.integrations.amazon.service.time.sleep"):
+    with patch("app.integrations.amazon.service.client.time.sleep"):
         result = _with_retry(fn, max_retries=3)
     assert result == success
 
 
 def test_with_retry_sleep_called_on_throttle():
     fn = MagicMock(side_effect=[_Throttled(), {"ok": True}])
-    with patch("app.integrations.amazon.service.time.sleep") as mock_sleep:
+    with patch("app.integrations.amazon.service.client.time.sleep") as mock_sleep:
         _with_retry(fn, max_retries=3, base_sleep=1.0)
-    # Sleep must have been called once (after the throttle)
     assert mock_sleep.call_count == 1
 
 

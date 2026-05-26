@@ -11,6 +11,26 @@ from app import cache, db
 from app.models.pricing import PricingHistory
 from app.models.product import Product, ProductHistory
 
+
+def _get_amazon_conn_status(user_id: int) -> tuple[bool, bool]:
+    """Retorna (has_conn, has_sync) para o usuário.
+
+    Apenas consulta o BD quando o dialeto é PostgreSQL — AmazonConnection
+    usa schema="public" que não existe no SQLite.  Para outros dialetos
+    retorna (False, False) explicitamente, sem engolir exceções genéricas.
+    """
+    if db.engine.dialect.name != "postgresql":
+        return False, False
+
+    from app.models.amazon import AmazonConnection
+
+    conn = db.session.scalar(
+        db.select(AmazonConnection).filter_by(user_id=user_id)
+    )
+    has_conn = conn is not None
+    has_sync = has_conn and conn.last_sync_at is not None
+    return has_conn, has_sync
+
 _PERIOD_DAYS = {"7d": 7, "30d": 30, "90d": 90}
 
 
@@ -117,19 +137,10 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
 
     # ------------------------------------------------------------------
     # Onboarding — detecta conclusão de cada etapa de setup
-    # try/except: AmazonConnection usa schema="public" que não existe
-    # no SQLite dos testes, então falha silenciosamente → False.
+    # _get_amazon_conn_status verifica o dialeto antes de consultar,
+    # evitando exceção em SQLite (AmazonConnection usa schema="public").
     # ------------------------------------------------------------------
-    try:
-        from app.models.amazon import AmazonConnection
-        _conn = db.session.scalar(
-            db.select(AmazonConnection).filter_by(user_id=user_id)
-        )
-        _has_conn = _conn is not None
-        _has_sync = _has_conn and _conn.last_sync_at is not None
-    except Exception:
-        _has_conn = False
-        _has_sync = False
+    _has_conn, _has_sync = _get_amazon_conn_status(user_id)
 
     _has_products = total_products > 0
     onboarding = {
@@ -138,6 +149,8 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "has_amazon_sync": _has_sync,
         "complete":        _has_products and _has_conn and _has_sync,
     }
+
+    deltas = _compute_period_deltas(user_id, period)
 
     return {
         "total_products": total_products,
@@ -151,4 +164,158 @@ def get_dashboard_kpis(user_id: int, period: str = "30d") -> dict:
         "chart_margins": chart_margins,
         "margin_dist": margin_dist,
         "onboarding": onboarding,
+        **deltas,
     }
+
+
+def _compute_period_deltas(user_id: int, period: str) -> dict:
+    """Calcula deltas período-a-período usando 1 query com CASE WHEN.
+
+    Para cada período N dias:
+      - janela atual:   [now - N, now]
+      - janela anterior: [now - 2N, now - N]
+
+    Retorna None para cada delta quando:
+      - period == "all" (sem janela anterior definida)
+      - janela anterior não tem dados (sem base de comparação)
+    """
+    _none: dict = {
+        "delta_simulations": None,
+        "delta_margin": None,
+        "delta_roi": None,
+    }
+
+    if period not in _PERIOD_DAYS:
+        return _none
+
+    days = _PERIOD_DAYS[period]
+    now = datetime.now()
+    date_from = now - timedelta(days=days)
+    prev_from = now - timedelta(days=days * 2)
+
+    row = db.session.execute(
+        db.select(
+            db.func.count(
+                sa.case((PricingHistory.created_at >= date_from, 1))
+            ).label("cur_sims"),
+            db.func.avg(
+                sa.case((PricingHistory.created_at >= date_from, PricingHistory.margin))
+            ).label("cur_margin"),
+            db.func.avg(
+                sa.case((PricingHistory.created_at >= date_from, PricingHistory.roi))
+            ).label("cur_roi"),
+            db.func.count(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    1,
+                ))
+            ).label("prev_sims"),
+            db.func.avg(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    PricingHistory.margin,
+                ))
+            ).label("prev_margin"),
+            db.func.avg(
+                sa.case((
+                    sa.and_(
+                        PricingHistory.created_at >= prev_from,
+                        PricingHistory.created_at < date_from,
+                    ),
+                    PricingHistory.roi,
+                ))
+            ).label("prev_roi"),
+        ).where(
+            PricingHistory.user_id == user_id,
+            PricingHistory.created_at >= prev_from,
+        )
+    ).one()
+
+    prev_sims: int = int(row.prev_sims or 0)
+
+    delta_simulations: int | None = (
+        int(row.cur_sims or 0) - prev_sims if prev_sims > 0 else None
+    )
+    delta_margin: float | None = (
+        float(row.cur_margin or 0) - float(row.prev_margin)
+        if row.prev_margin is not None
+        else None
+    )
+    delta_roi: float | None = (
+        float(row.cur_roi or 0) - float(row.prev_roi)
+        if row.prev_roi is not None
+        else None
+    )
+
+    return {
+        "delta_simulations": delta_simulations,
+        "delta_margin": delta_margin,
+        "delta_roi": delta_roi,
+    }
+
+
+_DRILL_METRICS = {"margin", "roi"}
+
+
+def get_drill_data(
+    user_id: int,
+    period: str = "30d",
+    metric: str = "margin",
+    limit: int = 20,
+) -> list[SimpleNamespace]:
+    """Retorna top `limit` simulações agrupadas por título, ordenadas pelo
+    melhor valor do `metric` (margin ou roi) dentro do período.
+
+    Usa GROUP BY title para consolidar múltiplas simulações do mesmo SKU,
+    expondo: best_margin, best_roi, best_net_profit, last_date.
+    Resultado NÃO é cacheado — chamada sob demanda via AJAX.
+    """
+    if metric not in _DRILL_METRICS:
+        raise ValueError(f"metric must be one of {_DRILL_METRICS}")
+
+    date_from = None
+    if period in _PERIOD_DAYS:
+        date_from = datetime.now() - timedelta(days=_PERIOD_DAYS[period])
+
+    sort_col = (
+        db.func.max(PricingHistory.margin)
+        if metric == "margin"
+        else db.func.max(PricingHistory.roi)
+    )
+
+    where: list[Any] = [PricingHistory.user_id == user_id]
+    if date_from:
+        where.append(PricingHistory.created_at >= date_from)
+
+    rows = db.session.execute(
+        db.select(
+            PricingHistory.title,
+            db.func.max(PricingHistory.margin).label("best_margin"),
+            db.func.max(PricingHistory.roi).label("best_roi"),
+            db.func.max(PricingHistory.net_profit).label("best_net_profit"),
+            db.func.max(PricingHistory.created_at).label("last_date"),
+            db.func.count(PricingHistory.id).label("sim_count"),
+        )
+        .where(*where)
+        .group_by(PricingHistory.title)
+        .order_by(sort_col.desc())
+        .limit(limit)
+    ).all()
+
+    return [
+        SimpleNamespace(
+            title=r.title or "Sem título",
+            best_margin=float(r.best_margin or 0),
+            best_roi=float(r.best_roi or 0),
+            best_net_profit=float(r.best_net_profit or 0),
+            last_date=r.last_date,
+            sim_count=int(r.sim_count),
+        )
+        for r in rows
+    ]

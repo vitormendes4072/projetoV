@@ -1,0 +1,20 @@
+Olá, {{ user_name }}!
+
+Relatório semanal de prejuízo — semana de {{ week_start }}
+
+{% if neg_sims -%}
+SIMULAÇÕES COM MARGEM NEGATIVA ({{ neg_sims|length }}):
+{% for s in neg_sims -%}
+- {{ s.title }}: margem {{ "%.1f"|format(s.margin) }}% | lucro R$ {{ "%.2f"|format(s.net_profit) }} | {{ s.created_at.strftime("%d/%m/%Y") }}
+{% endfor %}
+{% endif -%}
+
+{% if neg_orders -%}
+PEDIDOS REAIS AMAZON COM PREJUÍZO ({{ neg_orders|length }}):
+{% for o in neg_orders -%}
+- SKU {{ o.sku }}: receita R$ {{ "%.2f"|format(o.revenue) }} | taxas R$ {{ "%.2f"|format(o.fees) }} | lucro R$ {{ "%.2f"|format(o.net_profit) }} | qtd {{ o.qty }}
+{% endfor %}
+{% endif -%}
+
+Acesse o simulador para revisar a precificação desses produtos.
+Este relatório é enviado automaticamente toda segunda-feira.

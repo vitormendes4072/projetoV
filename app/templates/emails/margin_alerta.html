@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <body style="font-family: Arial, sans-serif; color: #222;">
+    <h2>Olá, {{ user_name }}!</h2>
+    <p>Os produtos abaixo estão com margem abaixo do limite configurado ({{ run_day }}).</p>
+
+    <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+      <thead>
+        <tr style="background: #f0f4f8;">
+          <th style="text-align:left; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Produto</th>
+          <th style="text-align:left; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">SKU</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Margem atual</th>
+          <th style="text-align:right; padding: 8px 12px; border-bottom: 1px solid #d0dbe7;">Limite</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+        <tr>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee;">{{ p.name }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; font-family: monospace;">{{ p.sku }}</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right; color: #d32f2f; font-weight: bold;">{{ "%.1f"|format(p.margin) }}%</td>
+          <td style="padding: 8px 12px; border-bottom: 1px solid #eee; text-align:right;">{{ "%.1f"|format(p.threshold) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <p style="margin-top: 20px; color: #666; font-size: 13px;">
+      Acesse o simulador para revisar a precificação desses produtos.
+      <br>Você pode ajustar o limite de alerta editando cada produto.
+    </p>
+  </body>
+</html>

@@ -1,0 +1,49 @@
+## render.yaml — Infraestrutura como código para Render.com (Free tier)
+##
+## Referência: https://render.com/docs/blueprint-spec
+## Para ativar: conecte o repositório em dashboard.render.com → "New Blueprint"
+##
+## Nota: este arquivo declara apenas o serviço Web (gunicorn).
+## O banco de dados é o Supabase externo (DATABASE_URL preenchida manualmente).
+## O worker RQ não roda no Free tier — o sync Amazon SP-API não está disponível
+## na demo; o usuário demo usa dados sintéticos gerados por `flask seed-demo`.
+
+services:
+  - type: web
+    name: ventregaz
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT "app:create_app()"
+    releaseCommand: flask db upgrade
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: FLASK_APP
+        value: "app:create_app()"
+      # Secrets — preencha no Render Dashboard (os valores nunca ficam neste arquivo)
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CREDENTIALS_ENCRYPTION_KEY
+        sync: false
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USE_TLS
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false

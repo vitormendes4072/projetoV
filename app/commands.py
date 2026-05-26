@@ -130,6 +130,17 @@ def _do_seed_demo():
     return user.id
 
 
+def _fetch_all_amazon_connections():
+    """Retorna todas as AmazonConnection do banco.
+
+    Função auxiliar separada para facilitar mock nos testes
+    (AmazonConnection usa schema="public", inexistente no SQLite).
+    """
+    from app import db
+    from app.models.amazon import AmazonConnection
+    return db.session.scalars(db.select(AmazonConnection)).all()
+
+
 def register_commands(app: Flask) -> None:
     @app.cli.command("send-alerts")
     @click.option("--date", "date_str", default="", help="Data no formato YYYY-MM-DD (opcional).")
@@ -145,8 +156,96 @@ def register_commands(app: Flask) -> None:
         summary = send_custos_fixos_alerts_for_day(run_day=run_day, dry_run=dry_run)
         click.echo(summary)
 
+    @app.cli.command("send-margin-alerts")
+    @click.option("--date", "date_str", default="", help="Data no formato YYYY-MM-DD (opcional).")
+    @click.option("--dry-run", is_flag=True, help="Não envia e-mail, só mostra o que faria.")
+    def send_margin_alerts_cmd(date_str: str, dry_run: bool):
+        """Envia alertas de margem baixa por e-mail.
+
+        Para cada produto com threshold configurado, verifica se a última
+        simulação vinculada está abaixo do limite e envia e-mail caso ainda
+        não tenha sido enviado hoje.
+
+        Projetado para execução diária via cron externo:
+
+            0 7 * * *  flask send-margin-alerts
+        """
+        from app.financeiro.alerts_margin import send_margin_alerts
+
+        run_day = None
+        if date_str:
+            try:
+                run_day = date.fromisoformat(date_str)
+            except Exception:
+                raise click.ClickException("Data inválida. Use YYYY-MM-DD.")
+        summary = send_margin_alerts(run_day=run_day, dry_run=dry_run)
+        click.echo(summary)
+
+    @app.cli.command("send-weekly-report")
+    @click.option("--date", "date_str", default="", help="Data no formato YYYY-MM-DD (opcional).")
+    @click.option("--dry-run", is_flag=True, help="Não envia e-mail, só mostra o que faria.")
+    def send_weekly_report_cmd(date_str: str, dry_run: bool):
+        """Envia relatório semanal de simulações/pedidos com prejuízo.
+
+        Detecta PricingHistory com margem negativa (e pedidos reais Amazon,
+        quando disponível) na semana corrente e envia e-mail resumido.
+        Dedupado por (user_id, week_start) — roda toda segunda-feira:
+
+            0 8 * * 1  flask send-weekly-report
+        """
+        from app.financeiro.reports_weekly import send_weekly_loss_report
+
+        run_day = None
+        if date_str:
+            try:
+                run_day = date.fromisoformat(date_str)
+            except Exception:
+                raise click.ClickException("Data inválida. Use YYYY-MM-DD.")
+        summary = send_weekly_loss_report(run_date=run_day, dry_run=dry_run)
+        click.echo(summary)
+
     @app.cli.command("seed-demo")
     def seed_demo_cmd():
         """Cria (ou recria) a conta demo com dados fictícios."""
         user_id = _do_seed_demo()
         click.echo(f"Conta demo criada. email={DEMO_EMAIL}  user_id={user_id}")
+
+    @app.cli.command("amazon-daily-sync")
+    @click.option("--dry-run", is_flag=True, help="Lista conexões sem enfileirar jobs.")
+    @click.option("--days", default=1, show_default=True, help="Janela de sync em dias.")
+    def amazon_daily_sync_cmd(dry_run: bool, days: int):
+        """Enfileira job_sync_full para cada usuário com integração Amazon ativa.
+
+        Projetado para execução diária via cron externo (Render Cron Jobs,
+        Heroku Scheduler, crontab):
+
+            0 3 * * *  flask amazon-daily-sync
+
+        Com --dry-run lista as conexões sem enfileirar nada.
+        """
+        import logging
+        log = logging.getLogger(__name__)
+
+        conns = _fetch_all_amazon_connections()
+
+        if not conns:
+            click.echo("amazon-daily-sync: nenhuma conexão Amazon encontrada. 0 jobs enfileirados.")
+            return
+
+        if dry_run:
+            click.echo(f"[dry-run] {len(conns)} conexão(ões) encontrada(s) — nenhum job enfileirado:")
+            for conn in conns:
+                click.echo(f"  user_id={conn.user_id}  conn_id={conn.id}  marketplace={conn.marketplace_id}")
+            return
+
+        from app.integrations.amazon.jobs import job_sync_full
+
+        queue = app.extensions["rq_queue"]
+        enqueued = 0
+        for conn in conns:
+            job = queue.enqueue(job_sync_full, conn.user_id, conn.id, days, job_timeout=600)
+            log.info("amazon-daily-sync: enfileirado user_id=%s conn_id=%s job_id=%s", conn.user_id, conn.id, job.id)
+            click.echo(f"  enfileirado user_id={conn.user_id}  conn_id={conn.id}  job_id={job.id}")
+            enqueued += 1
+
+        click.echo(f"amazon-daily-sync: {enqueued} job(s) enfileirado(s).")

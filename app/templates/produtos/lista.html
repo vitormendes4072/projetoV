@@ -3,7 +3,7 @@
 {% block content %}
 <div class="flex flex-col gap-6 py-4">
     
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div class="flex items-center gap-4">
             <div class="p-2 rounded-lg bg-white border border-[#d0dbe7] text-[#0d141c]">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
@@ -13,8 +13,8 @@
                 <p class="text-[#49739c] text-sm">Gerencie seu inventário e preços</p>
             </div>
         </div>
-        
-        <div class="flex items-center gap-2">
+
+        <div class="flex flex-wrap items-center gap-2">
             <a href="{{ url_for('produtos.exportar_csv') }}"
                 class="cursor-pointer rounded-lg bg-white border border-[#d0dbe7] text-[#0d141c] font-bold h-10 px-4 flex items-center gap-2 hover:bg-slate-50 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5 0-4.5 4.5M12 3v13.5m0 0 4.5-4.5" /></svg>
@@ -62,8 +62,20 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <div class="font-medium">R$ {{ "%.2f"|format(product.price) }}</div>
-                            <div class="text-xs text-slate-500">Custo: R$ {{ "%.2f"|format(product.cost) }}</div>
+                            <div class="font-medium inline-edit-cell cursor-pointer hover:text-[#0d80f2] transition-colors"
+                                 data-field="price"
+                                 data-product-id="{{ product.id }}"
+                                 data-value="{{ product.price }}"
+                                 title="Clique para editar o pre&#231;o">
+                                R$ {{ "%.2f"|format(product.price) }}
+                            </div>
+                            <div class="text-xs text-slate-500 inline-edit-cell cursor-pointer hover:text-[#0d80f2] transition-colors"
+                                 data-field="cost"
+                                 data-product-id="{{ product.id }}"
+                                 data-value="{{ product.cost }}"
+                                 title="Clique para editar o custo">
+                                Custo: R$ {{ "%.2f"|format(product.cost) }}
+                            </div>
                         </td>
                         <td class="px-6 py-4 text-right">
                             <span class="px-2 py-1 rounded-full text-xs font-bold
@@ -171,4 +183,77 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+(function () {
+    document.querySelectorAll('.inline-edit-cell').forEach(function (cell) {
+        cell.addEventListener('click', function () {
+            if (cell.querySelector('input')) return; // already editing
+
+            var field = cell.dataset.field;
+            var productId = cell.dataset.productId;
+            var originalValue = parseFloat(cell.dataset.value);
+            var originalText = cell.textContent.trim();
+
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.min = '0';
+            input.value = originalValue.toFixed(2);
+            input.className = 'w-24 rounded border border-[#0d80f2] px-2 py-1 text-right text-sm focus:outline-none';
+
+            cell.textContent = '';
+            cell.appendChild(input);
+            input.focus();
+            input.select();
+
+            var saved = false;
+
+            function revert() {
+                cell.textContent = originalText;
+            }
+
+            function save() {
+                if (saved) return;
+                saved = true;
+
+                var newValue = parseFloat(input.value);
+                if (isNaN(newValue) || newValue < 0) { revert(); return; }
+                if (newValue === originalValue) { revert(); return; }
+
+                fetch('/produtos/' + productId, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ field: field, value: newValue }),
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (json) {
+                    if (json.ok) {
+                        var formatted = parseFloat(json.new_value).toFixed(2);
+                        cell.dataset.value = json.new_value;
+                        cell.textContent = field === 'price'
+                            ? 'R$ ' + formatted
+                            : 'Custo: R$ ' + formatted;
+                        cell.classList.add('text-green-600');
+                        setTimeout(function () { cell.classList.remove('text-green-600'); }, 1500);
+                    } else {
+                        revert();
+                        alert(json.error || 'Erro ao salvar.');
+                    }
+                })
+                .catch(function () { revert(); });
+            }
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+                if (e.key === 'Escape') { saved = true; revert(); }
+            });
+        });
+    });
+})();
+</script>
 {% endblock %}

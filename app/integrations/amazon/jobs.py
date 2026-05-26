@@ -18,22 +18,32 @@ def job_sync_orders(user_id: int, conn_id: int, days: int = 30) -> dict:
     from app.integrations.amazon.service import sync_orders_and_items
     from app.integrations.amazon.utils import utcnow, iso_z, compute_sync_start
 
-    conn = db.session.get(AmazonConnection, conn_id)
-    if not conn or conn.user_id != user_id:
-        raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
+    try:
+        conn = db.session.get(AmazonConnection, conn_id)
+        if not conn or conn.user_id != user_id:
+            raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
 
-    start = compute_sync_start(conn, days_default=days)
-    start_iso = iso_z(start)
+        start = compute_sync_start(conn, days_default=days)
+        start_iso = iso_z(start)
 
-    orders_upserted, items_inserted, returned = sync_orders_and_items(
-        conn, user_id=user_id, created_after_iso=start_iso
-    )
-    conn.last_sync_at = utcnow()
-    db.session.add(conn)
-    db.session.commit()
+        orders_upserted, items_inserted, returned = sync_orders_and_items(
+            conn, user_id=user_id, created_after_iso=start_iso
+        )
+        conn.last_sync_at = utcnow()
+        db.session.add(conn)
+        db.session.commit()
 
-    logger.info("job_sync_orders user=%s orders=%s items=%s", user_id, orders_upserted, items_inserted)
-    return {"from": start_iso, "orders": orders_upserted, "items": items_inserted, "returned": returned}
+        logger.info("job_sync_orders user=%s orders=%s items=%s", user_id, orders_upserted, items_inserted)
+        return {"from": start_iso, "orders": orders_upserted, "items": items_inserted, "returned": returned}
+
+    except Exception as exc:
+        logger.exception("job_sync_orders falhou user=%s conn=%s", user_id, conn_id)
+        try:
+            from app.notifications.webhook import notify_sync_failure
+            notify_sync_failure(user_id, str(exc))
+        except Exception:
+            logger.warning("job_sync_orders: falha ao enviar webhook de erro", exc_info=True)
+        raise
 
 
 def job_sync_finances(user_id: int, conn_id: int, days: int = 7) -> dict:
@@ -44,29 +54,43 @@ def job_sync_finances(user_id: int, conn_id: int, days: int = 7) -> dict:
     from app.integrations.amazon.service import sync_financial_events
     from app.integrations.amazon.utils import utcnow, iso_z, compute_sync_start
 
-    conn = db.session.get(AmazonConnection, conn_id)
-    if not conn or conn.user_id != user_id:
-        raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
+    try:
+        conn = db.session.get(AmazonConnection, conn_id)
+        if not conn or conn.user_id != user_id:
+            raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
 
-    start = compute_sync_start(conn, days_default=days)
-    start_iso = iso_z(start)
+        start = compute_sync_start(conn, days_default=days)
+        start_iso = iso_z(start)
 
-    db.session.execute(
-        db.delete(AmazonFinancialEvent)
-        .where(
-            AmazonFinancialEvent.user_id == user_id,
-            AmazonFinancialEvent.posted_date >= start,
+        db.session.execute(
+            db.delete(AmazonFinancialEvent)
+            .where(
+                AmazonFinancialEvent.user_id == user_id,
+                AmazonFinancialEvent.posted_date >= start,
+            )
         )
-    )
-    db.session.flush()
+        db.session.flush()
 
-    events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)
-    conn.last_sync_at = utcnow()
-    db.session.add(conn)
-    db.session.commit()
+        events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)
+        conn.last_sync_at = utcnow()
+        db.session.add(conn)
+        db.session.commit()
 
-    logger.info("job_sync_finances user=%s events=%s", user_id, events_count)
-    return {"from": start_iso, "financial_events": events_count}
+        # Finance events mudaram — invalida todo o cache de profit do usuário.
+        from app.integrations.amazon.profit_service import invalidate_user_profit_cache
+        invalidate_user_profit_cache(user_id)
+
+        logger.info("job_sync_finances user=%s events=%s", user_id, events_count)
+        return {"from": start_iso, "financial_events": events_count}
+
+    except Exception as exc:
+        logger.exception("job_sync_finances falhou user=%s conn=%s", user_id, conn_id)
+        try:
+            from app.notifications.webhook import notify_sync_failure
+            notify_sync_failure(user_id, str(exc))
+        except Exception:
+            logger.warning("job_sync_finances: falha ao enviar webhook de erro", exc_info=True)
+        raise
 
 
 def job_sync_full(user_id: int, conn_id: int, days: int = 30) -> dict:
@@ -77,38 +101,52 @@ def job_sync_full(user_id: int, conn_id: int, days: int = 30) -> dict:
     from app.integrations.amazon.service import sync_orders_and_items, sync_financial_events
     from app.integrations.amazon.utils import utcnow, iso_z, compute_sync_start
 
-    conn = db.session.get(AmazonConnection, conn_id)
-    if not conn or conn.user_id != user_id:
-        raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
+    try:
+        conn = db.session.get(AmazonConnection, conn_id)
+        if not conn or conn.user_id != user_id:
+            raise ValueError(f"AmazonConnection {conn_id} não encontrada para user {user_id}")
 
-    now = utcnow()
-    start = compute_sync_start(conn, days_default=days)
-    start_iso = iso_z(start)
+        now = utcnow()
+        start = compute_sync_start(conn, days_default=days)
+        start_iso = iso_z(start)
 
-    orders_count, items_count, returned = sync_orders_and_items(
-        conn, user_id=user_id, created_after_iso=start_iso
-    )
-
-    db.session.execute(
-        db.delete(AmazonFinancialEvent)
-        .where(
-            AmazonFinancialEvent.user_id == user_id,
-            AmazonFinancialEvent.posted_date >= start,
+        orders_count, items_count, returned = sync_orders_and_items(
+            conn, user_id=user_id, created_after_iso=start_iso
         )
-    )
-    db.session.flush()
 
-    events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)
+        db.session.execute(
+            db.delete(AmazonFinancialEvent)
+            .where(
+                AmazonFinancialEvent.user_id == user_id,
+                AmazonFinancialEvent.posted_date >= start,
+            )
+        )
+        db.session.flush()
 
-    conn.last_sync_at = now
-    db.session.add(conn)
-    db.session.commit()
+        events_count = sync_financial_events(conn, user_id=user_id, posted_after_iso=start_iso)
 
-    logger.info("job_sync_full user=%s orders=%s items=%s events=%s", user_id, orders_count, items_count, events_count)
-    return {
-        "from": start_iso,
-        "orders": orders_count,
-        "items": items_count,
-        "returned_orders": returned,
-        "financial_events": events_count,
-    }
+        conn.last_sync_at = now
+        db.session.add(conn)
+        db.session.commit()
+
+        # Finance events mudaram — invalida todo o cache de profit do usuário.
+        from app.integrations.amazon.profit_service import invalidate_user_profit_cache
+        invalidate_user_profit_cache(user_id)
+
+        logger.info("job_sync_full user=%s orders=%s items=%s events=%s", user_id, orders_count, items_count, events_count)
+        return {
+            "from": start_iso,
+            "orders": orders_count,
+            "items": items_count,
+            "returned_orders": returned,
+            "financial_events": events_count,
+        }
+
+    except Exception as exc:
+        logger.exception("job_sync_full falhou user=%s conn=%s", user_id, conn_id)
+        try:
+            from app.notifications.webhook import notify_sync_failure
+            notify_sync_failure(user_id, str(exc))
+        except Exception:
+            logger.warning("job_sync_full: falha ao enviar webhook de erro", exc_info=True)
+        raise
