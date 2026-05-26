@@ -69,7 +69,7 @@ def test_oauth_login_google_redirects(client, db):
         MagicMock(status_code=302, headers={"Location": "https://accounts.google.com/o/oauth2/auth"})
     with patch("app.auth.oauth.oauth") as mock_oauth:
         mock_oauth.create_client.return_value = mock_client
-        resp = client.get("/auth/login/google")
+        client.get("/auth/login/google")
     mock_client.authorize_redirect.assert_called_once()
 
 
@@ -80,7 +80,7 @@ def test_oauth_login_github_redirects(client, db):
         MagicMock(status_code=302, headers={"Location": "https://github.com/login/oauth/authorize"})
     with patch("app.auth.oauth.oauth") as mock_oauth:
         mock_oauth.create_client.return_value = mock_client
-        resp = client.get("/auth/login/github")
+        client.get("/auth/login/github")
     mock_client.authorize_redirect.assert_called_once()
 
 
