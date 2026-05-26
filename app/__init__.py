@@ -179,6 +179,7 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     # Blueprints
     # ---------------------------------------
     from app.auth.routes import auth
+    from app.auth.oauth import oauth_bp, init_oauth
     from app.main.routes import main
     from app.precificacao.routes import pricing
     from app.settings.routes import settings_bp
@@ -191,7 +192,9 @@ def create_app(config_name: str | None = None, test_config: dict | None = None) 
     from app.vendas.routes import vendas_bp
     from app.estoque.routes import estoque_bp
 
+    init_oauth(app)
     app.register_blueprint(auth)
+    app.register_blueprint(oauth_bp)
     app.register_blueprint(main)
     app.register_blueprint(pricing)
     app.register_blueprint(settings_bp)

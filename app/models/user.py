@@ -20,7 +20,8 @@ class User(UserMixin, db.Model):
 
     # index=True melhora performance no login
     email = db.Column(db.String(150), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(256), nullable=False)
+    # nullable=True: usuários que criaram conta via OAuth não têm senha local
+    password_hash = db.Column(db.String(256), nullable=True)
     confirmed = db.Column(db.Boolean, default=False, nullable=False)
 
     # --- CAMPOS TRIBUTÁRIOS ---
@@ -60,7 +61,9 @@ class User(UserMixin, db.Model):
         now = datetime.now(timezone.utc)
         self.password_changed_at = now.replace(microsecond=0)
 
-    def check_password(self, password):
+    def check_password(self, password: str) -> bool:
+        if not self.password_hash:
+            return False  # usuário OAuth-only sem senha local
         return check_password_hash(self.password_hash, password)
 
     def generate_api_key(self) -> str:

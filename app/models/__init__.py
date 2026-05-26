@@ -14,3 +14,4 @@ from .amazon import AmazonConnection, AmazonOrder, AmazonOrderItem
 from .amazon_finances import AmazonFinancialEvent
 from .amazon_sku_link import AmazonSkuLink
 from .amazon_inventory import AmazonInventorySnapshot
+from .oauth_account import OAuthAccount
