@@ -30,5 +30,13 @@ Thumbs.db
 tools/
 node_modules/
 
-# 8. Worktrees do Claude
+# 8. Worktrees e arquivos internos do Claude Code
 .claude/
+CLAUDE.md
+EVALUATION.md
+*.md.bak
+
+# 9. Cobertura de testes
+.coverage
+coverage.xml
+htmlcov/
